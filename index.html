@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Single-page global market dashboard with live TradingView and FRED embeds for stocks, bonds, currencies, and commodities."
+    />
+    <title>Global Market Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <header class="top-bar">
+      <div class="brand">🌍 Global Market Dashboard</div>
+      <button
+        class="menu-toggle"
+        type="button"
+        aria-label="Toggle navigation"
+        aria-expanded="false"
+        aria-controls="primary-navigation"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <nav class="nav-links" id="primary-navigation" aria-label="Section navigation">
+        <ul>
+          <li><a href="#stocks">Stocks</a></li>
+          <li><a href="#bonds">Bonds</a></li>
+          <li><a href="#currencies">Currencies</a></li>
+          <li><a href="#commodities">Commodities</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main id="main-content">
+      <section class="intro">
+        <p>
+          A lightweight personal market observatory featuring live embeds from
+          TradingView and FRED. Tap any card to launch the full interactive
+          chart in a new tab.
+        </p>
+      </section>
+
+      <section id="stocks" class="dashboard-section">
+        <div class="section-header">
+          <h2>Stock Markets</h2>
+          <p>Major equity benchmarks across the U.S. and Asia.</p>
+        </div>
+        <div class="cards-grid">
+          <a
+            class="card"
+            href="https://www.tradingview.com/symbols/SP-SPX/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <div class="card-header">
+              <h3>S&amp;P 500</h3>
+              <p>Large-cap U.S. equities snapshot.</p>
+            </div>
+            <div class="card-body">
+              <div class="tradingview-widget-container">
+                <div class="tradingview-widget-container__widget"></div>
+                <script
+                  type="text/javascript"
+                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
+                  async
+                >
+{
+  "symbol": "SP:SPX",
+  "width": "100%",
+  "height": "240",
+  "locale": "en",
+  "dateRange": "12M",
+  "colorTheme": "light",
+  "trendLineColor": "#009688",
+  "underLineColor": "rgba(0, 150, 136, 0.25)",
+  "isTransparent": false,
+  "autosize": true
+}
+                </script>
+              </div>
+            </div>
+          </a>
+
+          <a
+            class="card"
+            href="https://www.tradingview.com/symbols/NASDAQ-IXIC/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <div class="card-header">
+              <h3>NASDAQ</h3>
+              <p>Growth and tech-heavy U.S. composite.</p>
+            </div>
+            <div class="card-body">
+              <div class="tradingview-widget-container">
+                <div class="tradingview-widget-container__widget"></div>
+                <script
+                  type="text/javascript"
+                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
+                  async
+                >
+{
+  "symbol": "NASDAQ:IXIC",
+  "width": "100%",
+  "height": "240",
+  "locale": "en",
+  "dateRange": "12M",
+  "colorTheme": "light",
+  "trendLineColor": "#009688",
+  "underLineColor": "rgba(0, 150, 136, 0.25)",
+  "isTransparent": false,
+  "autosize": true
+}
+                </script>
+              </div>
+            </div>
+          </a>
+
+          <a
+            class="card"
+            href="https://www.tradingview.com/symbols/TWSE-TAIEX/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <div class="card-header">
+              <h3>Taiwan Weighted Index</h3>
+              <p>Semiconductor-led performance barometer.</p>
+            </div>
+            <div class="card-body">
+              <div class="tradingview-widget-container">
+                <div class="tradingview-widget-container__widget"></div>
+                <script
+                  type="text/javascript"
+                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
+                  async
+                >
+{
+  "symbol": "TWSE:TAIEX",
+  "width": "100%",
+  "height": "240",
+  "locale": "en",
+  "dateRange": "12M",
+  "colorTheme": "light",
+  "trendLineColor": "#009688",
+  "underLineColor": "rgba(0, 150, 136, 0.25)",
+  "isTransparent": false,
+  "autosize": true
+}
+                </script>
+              </div>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <section id="bonds" class="dashboard-section">
+        <div class="section-header">
+          <h2>U.S. Treasury Yield</h2>
+          <p>FRED 10-year constant maturity treasury rate.</p>
+        </div>
+        <div class="cards-grid single">
+          <a
+            class="card"
+            href="https://fred.stlouisfed.org/series/DGS10"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <div class="card-header">
+              <h3>US Treasury 10Y</h3>
+              <p>Macro benchmark for global discount rates.</p>
+            </div>
+            <div class="card-body">
+              <div class="iframe-wrapper">
+                <iframe
+                  title="10-Year Treasury Constant Maturity Rate"
+                  src="https://fred.stlouisfed.org/graph/fredgraph.html?id=DGS10&cosd=2010-01-01&height=300"
+                  scrolling="no"
+                  frameborder="0"
+                  loading="lazy"
+                ></iframe>
+              </div>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <section id="currencies" class="dashboard-section">
+        <div class="section-header">
+          <h2>Currencies</h2>
+          <p>Dollar strength vs. broad basket and the Japanese yen.</p>
+        </div>
+        <div class="cards-grid">
+          <a
+            class="card"
+            href="https://www.tradingview.com/symbols/TVC-DXY/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <div class="card-header">
+              <h3>US Dollar Index (DXY)</h3>
+              <p>Measures USD against a major currency basket.</p>
+            </div>
+            <div class="card-body">
+              <div class="tradingview-widget-container">
+                <div class="tradingview-widget-container__widget"></div>
+                <script
+                  type="text/javascript"
+                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
+                  async
+                >
+{
+  "symbol": "TVC:DXY",
+  "width": "100%",
+  "height": "240",
+  "locale": "en",
+  "dateRange": "12M",
+  "colorTheme": "light",
+  "trendLineColor": "#003366",
+  "underLineColor": "rgba(0, 51, 102, 0.25)",
+  "isTransparent": false,
+  "autosize": true
+}
+                </script>
+              </div>
+            </div>
+          </a>
+
+          <a
+            class="card"
+            href="https://www.tradingview.com/symbols/FX-USDJPY/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <div class="card-header">
+              <h3>USD / JPY</h3>
+              <p>Key rate for global carry and risk sentiment.</p>
+            </div>
+            <div class="card-body">
+              <div class="tradingview-widget-container">
+                <div class="tradingview-widget-container__widget"></div>
+                <script
+                  type="text/javascript"
+                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
+                  async
+                >
+{
+  "symbol": "FX:USDJPY",
+  "width": "100%",
+  "height": "240",
+  "locale": "en",
+  "dateRange": "12M",
+  "colorTheme": "light",
+  "trendLineColor": "#003366",
+  "underLineColor": "rgba(0, 51, 102, 0.25)",
+  "isTransparent": false,
+  "autosize": true
+}
+                </script>
+              </div>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <section id="commodities" class="dashboard-section">
+        <div class="section-header">
+          <h2>Commodities</h2>
+          <p>Energy and precious metals benchmarks.</p>
+        </div>
+        <div class="cards-grid">
+          <a
+            class="card"
+            href="https://www.tradingview.com/symbols/TVC-USOIL/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <div class="card-header">
+              <h3>WTI Crude Oil</h3>
+              <p>Gauge for global growth and inflation pressures.</p>
+            </div>
+            <div class="card-body">
+              <div class="tradingview-widget-container">
+                <div class="tradingview-widget-container__widget"></div>
+                <script
+                  type="text/javascript"
+                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
+                  async
+                >
+{
+  "symbol": "TVC:USOIL",
+  "width": "100%",
+  "height": "240",
+  "locale": "en",
+  "dateRange": "12M",
+  "colorTheme": "light",
+  "trendLineColor": "#009688",
+  "underLineColor": "rgba(0, 150, 136, 0.25)",
+  "isTransparent": false,
+  "autosize": true
+}
+                </script>
+              </div>
+            </div>
+          </a>
+
+          <a
+            class="card"
+            href="https://www.tradingview.com/symbols/TVC-GOLD/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <div class="card-header">
+              <h3>Gold</h3>
+              <p>Store of value and macro hedge signal.</p>
+            </div>
+            <div class="card-body">
+              <div class="tradingview-widget-container">
+                <div class="tradingview-widget-container__widget"></div>
+                <script
+                  type="text/javascript"
+                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
+                  async
+                >
+{
+  "symbol": "TVC:GOLD",
+  "width": "100%",
+  "height": "240",
+  "locale": "en",
+  "dateRange": "12M",
+  "colorTheme": "light",
+  "trendLineColor": "#003366",
+  "underLineColor": "rgba(0, 51, 102, 0.25)",
+  "isTransparent": false,
+  "autosize": true
+}
+                </script>
+              </div>
+            </div>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        Data and charts are provided by their respective platforms. This
+        dashboard is for informational purposes only.
+      </p>
+    </footer>
+
+    <script>
+      const menuToggle = document.querySelector(".menu-toggle");
+      const nav = document.querySelector(".nav-links");
+      const navLinks = nav.querySelectorAll("a");
+
+      const closeMenu = () => {
+        nav.classList.remove("open");
+        menuToggle.setAttribute("aria-expanded", "false");
+      };
+
+      menuToggle.addEventListener("click", () => {
+        const isOpen = nav.classList.toggle("open");
+        menuToggle.setAttribute("aria-expanded", String(isOpen));
+      });
+
+      navLinks.forEach((link) => {
+        link.addEventListener("click", () => {
+          if (window.matchMedia("(max-width: 720px)").matches) {
+            closeMenu();
+          }
+        });
+      });
+
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          closeMenu();
+        }
+      });
+    </script>
+  </body>
+</html>
