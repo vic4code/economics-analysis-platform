@@ -137,5 +137,3 @@ Because the dashboard is a static site, you can use the included `serve.py` help
    * `http://localhost:8000` for your computer.
    * `http://<your-local-ip>:8000` for other devices (open this on your phone while connected to the same Wi‑Fi).
 4. When you are done, press `Ctrl+C` in the terminal to stop the server.
-
-Need a different port? Run `python3 serve.py --port 8080`. If you only need desktop preview, use `python3 serve.py --host 127.0.0.1`.
