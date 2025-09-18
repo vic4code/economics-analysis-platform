@@ -122,3 +122,18 @@ Below: grid of 6–7 cards, each showing a chart (stocks, bonds, FX, commodities
 On mobile: cards stack vertically, easy to scroll.
 
 Each card has a title + chart + optional note.
+
+🛠️ Local Preview (Desktop & Mobile)
+
+Because the dashboard is a static site, you can use the included `serve.py` helper to run a local HTTP server and review it from any device on the same network.
+
+1. Make sure Python 3.8+ is installed.
+2. From the project root, run:
+   ```bash
+   python3 serve.py
+   ```
+   This binds to `0.0.0.0:8000` so both your computer and your phone/tablet can reach it.
+3. The script prints two URLs:
+   * `http://localhost:8000` for your computer.
+   * `http://<your-local-ip>:8000` for other devices (open this on your phone while connected to the same Wi‑Fi).
+4. When you are done, press `Ctrl+C` in the terminal to stop the server.
