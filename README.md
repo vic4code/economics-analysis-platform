@@ -1,212 +1,141 @@
-# Global Liquidity Dashboard (MVP)
+🌍 Global Market Dashboard
 
-## Overview
-**Global Liquidity Dashboard** is a web application that tracks **global money supply (liquidity), market risk sentiment, and cross‑asset performance**.  
-This **MVP** (minimum viable product) focuses on three core indicators to validate the data pipeline and UI:
-- **M2 (US Broad Money Supply)** – proxy for overall liquidity (FRED: `M2SL`)
-- **VIX (Volatility Index)** – proxy for market risk sentiment
-- **S&P 500 Index** – proxy for equity performance
+A minimal, responsive, and visually clean web application that aggregates key global financial indicators into a single-page dashboard. Designed for quick observation of the world’s markets without setting up any backend or database.
 
-> Goal: provide a simple, reproducible way to observe the relationship between **Liquidity → Sentiment → Assets** and establish a modular foundation for future expansion (rates, FX, commodities, crypto, real estate, global asset structure).
+🎯 Project Goal
 
----
+Provide a one-stop glance at global markets: stocks, bonds, currencies, and commodities.
 
-## Features
-- **ETL (Python)** – fetches time series (FRED + Yahoo Finance) and stores them locally
-- **Backend (FastAPI)** – serves normalized time series via `/timeseries` endpoint
-- **Frontend (Streamlit)** – interactive charts:
-  - *Chart 1*: **M2 YoY%** vs **S&P500** (overlay)
-  - *Chart 2*: **VIX** (line)
-  - Indicator dropdown & date range control
-- **Transforms** – `none | yoy | mom | z` applied on the server
-- **Config via .env** – keys and toggles decoupled from code
+Use public embeds (TradingView, FRED, etc.) instead of managing raw data.
 
----
+Deliver a mobile-friendly, RWD interface for smooth usage on desktop and smartphones.
 
-## Architecture
-```
-[ FRED API / Yahoo Finance ] → [ ETL Job (etl.py) ] → [ SQLite (timeseries.db) ]
-                                                        ↓
-                                            [ FastAPI Backend (/timeseries) ]
-                                                        ↓
-                                            [ Streamlit Frontend (app.py) ]
-```
+Serve as a personalized financial observatory, lightweight yet expandable.
 
-### Tech Stack
-- **Python 3.10+**
-- **FastAPI + Uvicorn** (backend)
-- **Streamlit** (frontend)
-- **SQLite** (MVP storage; upgrade path: Postgres + TimescaleDB)
-- **Pandas / Requests** (ETL & transforms)
-- **python-dotenv** (configuration)
+📊 Dashboard Components
+1. Stock Markets
 
----
+S&P 500
 
-## Project Structure (suggested)
-```
-.
-├─ app.py               # Streamlit frontend
-├─ backend.py           # FastAPI service
-├─ etl.py               # ETL job to fetch & load data
-├─ requirements.txt     # Python dependencies
-├─ .env                 # Environment variables (not committed)
-├─ data/
-│  └─ timeseries.db     # SQLite database (auto-created by ETL)
-└─ README.md
-```
+NASDAQ
 
----
+Taiwan Weighted Index
 
-## Data Sources (MVP)
-- **FRED**: M2 – `M2SL`
-- **Yahoo Finance** (via yfinance or HTTP): **VIX** (symbol: `^VIX`), **S&P500** (symbol: `^GSPC`)
+2. Bonds
 
-> Production upgrades: Postgres/TimescaleDB, Redis cache, additional sources (TIC, CFTC, Case‑Shiller, DXY, Gold, BTC/ETH, ETF flows, central bank balance sheets).
+US Treasury 10Y Yield Curve (FRED embed)
 
----
+3. Currencies
 
-## Getting Started
+US Dollar Index (DXY)
 
-### 1) Prerequisites
-- Python **3.10+**
-- A FRED API key (free): https://fred.stlouisfed.org/docs/api/api_key.html
+USD/JPY
 
-### 2) Create and activate a virtual environment
-```bash
-python -m venv venv
-source venv/bin/activate            # Windows: venv\Scripts\activate
-```
+4. Commodities
 
-### 3) Install dependencies
-```bash
-pip install -r requirements.txt
-```
+WTI Crude Oil
 
-### 4) Configure environment variables
-Create a `.env` file in the project root:
-```bash
-FRED_API_KEY=your_fred_api_key
-DB_URL=sqlite:///data/timeseries.db   # keep default for MVP
-```
+Gold
 
-### 5) Run ETL (fetch & load data)
-```bash
-python etl.py
-```
-This will:
-- fetch **M2SL** from FRED, **^VIX** and **^GSPC** from Yahoo Finance
-- create `data/timeseries.db` (if not exists)
-- upsert the series into a `timeseries` table
+🎨 Frontend Style Guide
 
-### 6) Start the backend (FastAPI)
-```bash
-uvicorn backend:app --reload
-```
-API docs available at: `http://127.0.0.1:8000/docs`
+Layout:
 
-### 7) Start the frontend (Streamlit)
-```bash
-streamlit run app.py
-```
+Responsive grid (2 columns on desktop, 1 column on mobile).
 
----
+Each indicator inside a Card UI with subtle shadow and rounded corners.
 
-## API Reference (MVP)
+Color Palette:
 
-### `GET /timeseries`
-Return normalized time series.
+Background: light gray or off-white (#f9f9f9)
 
-**Query Params**
-- `code` *(string, required)*: indicator code (e.g., `M2SL`, `^VIX`, `^GSPC`)
-- `from` *(YYYY-MM-DD, optional)*
-- `to` *(YYYY-MM-DD, optional)*
-- `transform` *(enum, optional)*: `none | yoy | mom | z`
+Cards: white (#ffffff)
 
-**Example**
-```
-GET /timeseries?code=M2SL&from=2010-01-01&transform=yoy
-```
+Text: dark gray (#333333)
 
-**Response**
-```json
-{
-  "code": "M2SL",
-  "transform": "yoy",
-  "points": [
-    { "ts": "2010-01-01", "v": 1.9 },
-    { "ts": "2010-02-01", "v": 2.1 }
-  ],
-  "meta": { "freq": "M", "source": "FRED", "unit": "pct_yoy" }
-}
-```
+Accent: teal (#009688) or navy (#003366)
 
----
+Typography:
 
-## Data Model (SQLite MVP)
+Headings: bold, clean sans-serif (e.g., Inter, Roboto)
 
-**Table: `timeseries`**
-| column          | type      | note                                 |
-|-----------------|-----------|--------------------------------------|
-| id              | INTEGER PK| autoincrement                        |
-| indicator_code  | TEXT      | e.g., `M2SL`, `^VIX`, `^GSPC`        |
-| ts_date         | DATE      | timestamp                            |
-| value           | REAL      | numeric value                        |
-| freq            | TEXT      | `D`/`W`/`M`                          |
-| source          | TEXT      | `FRED`/`YF`                          |
-| unit            | TEXT      | e.g., `level`, `index`, `pct`        |
-| sa              | INTEGER   | 1/0, seasonally adjusted flag        |
-| created_at      | DATETIME  | insert time                          |
-| updated_at      | DATETIME  | last update                          |
+Body: regular sans-serif
 
-**Unique index**: `(indicator_code, ts_date)`
+Keep text minimal (title + short note).
 
----
+Interactions:
 
-## Frontend (Streamlit) MVP
-- Sidebar:
-  - Indicator selector (`M2SL`, `^GSPC`, `^VIX`)
-  - Date range
-  - Transform switch (`none`, `yoy`, `mom`, `z`)
-- Charts:
-  - **M2 YoY% vs S&P 500 overlay**
-  - **VIX** line chart
-- Notes:
-  - Show last update time & source
-  - Display data availability window
+Hover on card → slight scale-up & shadow glow.
 
----
+Cards clickable for full-page TradingView/FRED link.
 
-## Development & Scripts
-- **Lint/format**: recommend `ruff` + `black`
-- **Testing**: `pytest` (unit tests for ETL, transforms, API)
-- **Makefile** (optional):
-  ```makefile
-  etl:        ## run ETL
-	python etl.py
-  api:        ## run API
-	uvicorn backend:app --reload
-  ui:         ## run Streamlit
-	streamlit run app.py
-  ```
+📱 Responsive Design (RWD)
 
----
+Desktop:
 
-## Roadmap
-- Add **US yield curve** (2Y/10Y, `T10Y2Y`), **DXY**, **Gold**, **BTC/ETH**
-- Add **ETF flows**, **CFTC COT**, **TIC**, **Case‑Shiller**, **Mortgage rates**
-- Implement **GLI‑lite** (composite of major CB balance sheets + M2 YoY; minus RRP/TGA when available)
-- Migrate to **Postgres + TimescaleDB**, add **Redis** cache
-- Add **Backtesting module** (liquidity/risk regimes → allocation rules)
-- Add **Docker Compose** & **CI/CD (GitHub Actions)**
+Grid layout, 2×N cards.
 
----
+Charts fill ~40–45% width each.
 
-## Notes & Disclaimers
-- This MVP is for **research/education**. Data may be delayed or revised by providers.
-- Be mindful of **rate limits** and **terms of use** for each data source.
-- Do not commit secrets; use `.env` and a secrets manager in production.
+Tablet / Mobile:
 
----
+Collapse into single-column stack.
 
-## License
-MIT License
+Cards scale to 100% width.
+
+Navigation bar converts to hamburger menu.
+
+🚀 How It Works
+
+Use TradingView embed widgets for stocks, FX, commodities.
+
+Use FRED iframe embed for bond yields.
+
+Combine into one HTML file (no backend, no DB).
+
+Add a minimal CSS file (or TailwindCSS) for clean styling + RWD.
+
+📂 Project Structure
+global-market-dashboard/
+├── index.html      # main dashboard page with embeds
+├── style.css       # custom styling (cards, grid, RWD)
+└── README.md       # project documentation
+
+✨ Future Extensions
+
+Add fear/greed index widget for market sentiment.
+
+Add event timeline section (earnings, FOMC meetings).
+
+Add personal notes panel for daily observations.
+
+Add dark mode toggle.
+
+📸 Mockup Idea
+
+Imagine a clean white dashboard:
+
+Top header: “🌍 Global Market Dashboard”
+
+Below: grid of 6–7 cards, each showing a chart (stocks, bonds, FX, commodities).
+
+On mobile: cards stack vertically, easy to scroll.
+
+Each card has a title + chart + optional note.
+
+🛠️ Local Preview (Desktop & Mobile)
+
+Because the dashboard is a static site, you can use the included `serve.py` helper to run a local HTTP server and review it from any device on the same network.
+
+1. Make sure Python 3.8+ is installed.
+2. From the project root, run:
+   ```bash
+   python3 serve.py
+   ```
+   This binds to `0.0.0.0:8000` so both your computer and your phone/tablet can reach it.
+3. The script prints two URLs:
+   * `http://localhost:8000` for your computer.
+   * `http://<your-local-ip>:8000` for other devices (open this on your phone while connected to the same Wi‑Fi).
+4. When you are done, press `Ctrl+C` in the terminal to stop the server.
+
+Need a different port? Run `python3 serve.py --port 8080`. If you only need desktop preview, use `python3 serve.py --host 127.0.0.1`.
