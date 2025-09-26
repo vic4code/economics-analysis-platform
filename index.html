@@ -37,6 +37,7 @@
           <li><a href="#bonds">Bonds</a></li>
           <li><a href="#currencies">Currencies</a></li>
           <li><a href="#commodities">Commodities</a></li>
+          <li><a href="#timeline">Macro Timeline</a></li>
         </ul>
       </nav>
     </header>
@@ -44,9 +45,9 @@
     <main id="main-content">
       <section class="intro">
         <p>
-          A lightweight personal market observatory featuring live embeds from
-          TradingView and FRED. Tap any card to launch the full interactive
-          chart in a new tab.
+          A lightweight personal market observatory featuring interactive TradingView charts and FRED data embeds.
+          Zoom, pan, and study each chart without leaving the dashboard, then dive into the macro timeline for upcoming
+          catalysts.
         </p>
       </section>
 
@@ -56,110 +57,89 @@
           <p>Major equity benchmarks across the U.S. and Asia.</p>
         </div>
         <div class="cards-grid">
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/SP-SPX/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <article class="card">
             <div class="card-header">
-              <h3>S&amp;P 500</h3>
-              <p>Large-cap U.S. equities snapshot.</p>
+              <h3>S&amp;P 500 (SPY)</h3>
+              <p>ETF proxy tracking the benchmark U.S. equities index.</p>
             </div>
             <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "SP:SPX",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#009688",
-  "underLineColor": "rgba(0, 150, 136, 0.25)",
-  "isTransparent": false,
-  "autosize": true
-}
-                </script>
+              <div class="tradingview-widget-container card-chart">
+                <div
+                  id="tv-spx"
+                  class="chart-container"
+                  data-tv-symbol="AMEX:SPY"
+                  data-tv-range="12M"
+                  aria-label="Interactive price chart for the SPDR S&amp;P 500 ETF"
+                ></div>
               </div>
             </div>
-          </a>
+            <div class="card-footer">
+              <a
+                class="card-link"
+                href="https://www.tradingview.com/symbols/AMEX-SPY/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open on TradingView
+              </a>
+            </div>
+          </article>
 
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/NASDAQ-IXIC/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <article class="card">
             <div class="card-header">
               <h3>NASDAQ</h3>
               <p>Growth and tech-heavy U.S. composite.</p>
             </div>
             <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "NASDAQ:IXIC",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#009688",
-  "underLineColor": "rgba(0, 150, 136, 0.25)",
-  "isTransparent": false,
-  "autosize": true
-}
-                </script>
+              <div class="tradingview-widget-container card-chart">
+                <div
+                  id="tv-nasdaq"
+                  class="chart-container"
+                  data-tv-symbol="NASDAQ:IXIC"
+                  data-tv-range="12M"
+                  aria-label="Interactive price chart for the NASDAQ Composite"
+                ></div>
               </div>
             </div>
-          </a>
+            <div class="card-footer">
+              <a
+                class="card-link"
+                href="https://www.tradingview.com/symbols/NASDAQ-IXIC/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open on TradingView
+              </a>
+            </div>
+          </article>
 
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/TWSE-TAIEX/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <article class="card">
             <div class="card-header">
               <h3>Taiwan Weighted Index</h3>
               <p>Semiconductor-led performance barometer.</p>
             </div>
             <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "TWSE:TAIEX",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#009688",
-  "underLineColor": "rgba(0, 150, 136, 0.25)",
-  "isTransparent": false,
-  "autosize": true
-}
-                </script>
+              <div class="tradingview-widget-container card-chart">
+                <div
+                  id="tv-taiex"
+                  class="chart-container"
+                  data-tv-symbol="TWSE:TAIEX"
+                  data-tv-range="12M"
+                  aria-label="Interactive price chart for the Taiwan Weighted Index"
+                ></div>
               </div>
             </div>
-          </a>
+            <div class="card-footer">
+              <a
+                class="card-link"
+                href="https://www.tradingview.com/symbols/TWSE-TAIEX/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open on TradingView
+              </a>
+            </div>
+          </article>
         </div>
       </section>
 
@@ -169,12 +149,7 @@
           <p>FRED 10-year constant maturity treasury rate.</p>
         </div>
         <div class="cards-grid single">
-          <a
-            class="card"
-            href="https://fred.stlouisfed.org/series/DGS10"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <article class="card">
             <div class="card-header">
               <h3>US Treasury 10Y</h3>
               <p>Macro benchmark for global discount rates.</p>
@@ -187,10 +162,21 @@
                   scrolling="no"
                   frameborder="0"
                   loading="lazy"
+                  referrerpolicy="no-referrer-when-downgrade"
                 ></iframe>
               </div>
             </div>
-          </a>
+            <div class="card-footer">
+              <a
+                class="card-link"
+                href="https://fred.stlouisfed.org/series/DGS10"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View full series on FRED
+              </a>
+            </div>
+          </article>
         </div>
       </section>
 
@@ -200,75 +186,61 @@
           <p>Dollar strength vs. broad basket and the Japanese yen.</p>
         </div>
         <div class="cards-grid">
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/TVC-DXY/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <article class="card">
             <div class="card-header">
               <h3>US Dollar Index (DXY)</h3>
               <p>Measures USD against a major currency basket.</p>
             </div>
             <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "TVC:DXY",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#003366",
-  "underLineColor": "rgba(0, 51, 102, 0.25)",
-  "isTransparent": false,
-  "autosize": true
-}
-                </script>
+              <div class="tradingview-widget-container card-chart">
+                <div
+                  id="tv-dxy"
+                  class="chart-container"
+                  data-tv-symbol="TVC:DXY"
+                  data-tv-range="12M"
+                  aria-label="Interactive price chart for the US Dollar Index"
+                ></div>
               </div>
             </div>
-          </a>
+            <div class="card-footer">
+              <a
+                class="card-link"
+                href="https://www.tradingview.com/symbols/TVC-DXY/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open on TradingView
+              </a>
+            </div>
+          </article>
 
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/FX-USDJPY/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <article class="card">
             <div class="card-header">
               <h3>USD / JPY</h3>
               <p>Key rate for global carry and risk sentiment.</p>
             </div>
             <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "FX:USDJPY",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#003366",
-  "underLineColor": "rgba(0, 51, 102, 0.25)",
-  "isTransparent": false,
-  "autosize": true
-}
-                </script>
+              <div class="tradingview-widget-container card-chart">
+                <div
+                  id="tv-usdjpy"
+                  class="chart-container"
+                  data-tv-symbol="FX:USDJPY"
+                  data-tv-range="12M"
+                  aria-label="Interactive price chart for the USD/JPY exchange rate"
+                ></div>
               </div>
             </div>
-          </a>
+            <div class="card-footer">
+              <a
+                class="card-link"
+                href="https://www.tradingview.com/symbols/FX-USDJPY/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open on TradingView
+              </a>
+            </div>
+          </article>
         </div>
       </section>
 
@@ -278,112 +250,217 @@
           <p>Energy and precious metals benchmarks.</p>
         </div>
         <div class="cards-grid">
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/TVC-USOIL/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <article class="card">
             <div class="card-header">
               <h3>WTI Crude Oil</h3>
               <p>Gauge for global growth and inflation pressures.</p>
             </div>
             <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "TVC:USOIL",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#009688",
-  "underLineColor": "rgba(0, 150, 136, 0.25)",
-  "isTransparent": false,
-  "autosize": true
-}
-                </script>
+              <div class="tradingview-widget-container card-chart">
+                <div
+                  id="tv-usoil"
+                  class="chart-container"
+                  data-tv-symbol="TVC:USOIL"
+                  data-tv-range="12M"
+                  aria-label="Interactive price chart for WTI crude oil"
+                ></div>
               </div>
             </div>
-          </a>
+            <div class="card-footer">
+              <a
+                class="card-link"
+                href="https://www.tradingview.com/symbols/TVC-USOIL/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open on TradingView
+              </a>
+            </div>
+          </article>
 
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/TVC-GOLD/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <article class="card">
             <div class="card-header">
               <h3>Gold</h3>
               <p>Store of value and macro hedge signal.</p>
             </div>
             <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "TVC:GOLD",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#003366",
-  "underLineColor": "rgba(0, 51, 102, 0.25)",
-  "isTransparent": false,
-  "autosize": true
-}
-                </script>
+              <div class="tradingview-widget-container card-chart">
+                <div
+                  id="tv-gold"
+                  class="chart-container"
+                  data-tv-symbol="TVC:GOLD"
+                  data-tv-range="12M"
+                  aria-label="Interactive price chart for gold"
+                ></div>
               </div>
             </div>
-          </a>
+            <div class="card-footer">
+              <a
+                class="card-link"
+                href="https://www.tradingview.com/symbols/TVC-GOLD/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open on TradingView
+              </a>
+            </div>
+          </article>
         </div>
+      </section>
+
+      <section id="timeline" class="dashboard-section timeline-section">
+        <div class="section-header">
+          <h2>Global Macro Timeline</h2>
+          <p>Upcoming policy decisions and economic events that move markets.</p>
+        </div>
+        <ol class="timeline" aria-label="Upcoming macroeconomic events"></ol>
       </section>
     </main>
 
     <footer class="site-footer">
       <p>
-        Data and charts are provided by their respective platforms. This
-        dashboard is for informational purposes only.
+        Data and charts are provided by their respective platforms. This dashboard is for informational purposes only.
       </p>
     </footer>
 
+    <script src="https://s3.tradingview.com/tv.js"></script>
     <script>
-      const menuToggle = document.querySelector(".menu-toggle");
-      const nav = document.querySelector(".nav-links");
-      const navLinks = nav.querySelectorAll("a");
+      document.addEventListener("DOMContentLoaded", () => {
+        const menuToggle = document.querySelector(".menu-toggle");
+        const nav = document.querySelector(".nav-links");
+        const navLinks = nav.querySelectorAll("a");
 
-      const closeMenu = () => {
-        nav.classList.remove("open");
-        menuToggle.setAttribute("aria-expanded", "false");
-      };
+        const closeMenu = () => {
+          nav.classList.remove("open");
+          menuToggle.setAttribute("aria-expanded", "false");
+        };
 
-      menuToggle.addEventListener("click", () => {
-        const isOpen = nav.classList.toggle("open");
-        menuToggle.setAttribute("aria-expanded", String(isOpen));
-      });
+        menuToggle.addEventListener("click", () => {
+          const isOpen = nav.classList.toggle("open");
+          menuToggle.setAttribute("aria-expanded", String(isOpen));
+        });
 
-      navLinks.forEach((link) => {
-        link.addEventListener("click", () => {
-          if (window.matchMedia("(max-width: 720px)").matches) {
+        navLinks.forEach((link) => {
+          link.addEventListener("click", () => {
+            if (window.matchMedia("(max-width: 720px)").matches) {
+              closeMenu();
+            }
+          });
+        });
+
+        window.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") {
             closeMenu();
           }
         });
-      });
 
-      window.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-          closeMenu();
+        const tradingViewContainers = document.querySelectorAll(".chart-container[data-tv-symbol]");
+
+        if (window.TradingView) {
+          tradingViewContainers.forEach((container) => {
+            const symbol = container.dataset.tvSymbol;
+            if (!symbol || !container.id) {
+              return;
+            }
+
+            new TradingView.widget({
+              autosize: true,
+              symbol,
+              interval: container.dataset.tvInterval || "D",
+              timezone: container.dataset.tvTimezone || "Etc/UTC",
+              theme: "light",
+              style: "1",
+              locale: "en",
+              toolbar_bg: "#f1f3f6",
+              enable_publishing: false,
+              allow_symbol_change: false,
+              hide_side_toolbar: true,
+              withdateranges: true,
+              range: container.dataset.tvRange || "12M",
+              support_host: "https://www.tradingview.com",
+              container_id: container.id,
+            });
+          });
+        } else if (tradingViewContainers.length) {
+          tradingViewContainers.forEach((container) => {
+            container.classList.add("chart-unavailable");
+            container.innerHTML =
+              '<p class="chart-fallback">TradingView charts are unavailable right now. Please refresh the page.</p>';
+          });
+        }
+
+        const timelineEvents = [
+          {
+            date: "18 Sep 2024",
+            title: "FOMC interest rate decision",
+            description: "Federal Reserve updates its policy rate and releases a fresh Summary of Economic Projections.",
+            tag: "Monetary Policy",
+          },
+          {
+            date: "10 Oct 2024",
+            title: "US CPI release (September)",
+            description: "Inflation print will guide expectations for year-end rate policy and Treasury yield direction.",
+            tag: "Inflation",
+          },
+          {
+            date: "24 Oct 2024",
+            title: "ECB Governing Council meeting",
+            description: "Eurozone rate guidance and balance sheet commentary set the tone for EUR crosses.",
+            tag: "Central Banks",
+          },
+          {
+            date: "05 Nov 2024",
+            title: "U.S. presidential election",
+            description: "Outcome shapes fiscal policy, trade stance, and sector leadership for 2025.",
+            tag: "Political",
+          },
+          {
+            date: "03 Dec 2024",
+            title: "OPEC+ policy meeting",
+            description: "Oil supply targets and forward guidance influence energy prices and inflation expectations.",
+            tag: "Energy",
+          },
+          {
+            date: "21 Jan 2025",
+            title: "World Economic Forum annual meeting",
+            description: "Global leaders converge in Davos to discuss growth outlooks and investment priorities.",
+            tag: "Global Summit",
+          },
+        ];
+
+        const timelineList = document.querySelector(".timeline");
+        if (timelineList) {
+          const fragment = document.createDocumentFragment();
+          timelineEvents.forEach((event) => {
+            const item = document.createElement("li");
+
+            const date = document.createElement("div");
+            date.className = "timeline-date";
+            date.textContent = event.date;
+
+            const content = document.createElement("div");
+            content.className = "timeline-content";
+
+            const title = document.createElement("h3");
+            title.textContent = event.title;
+
+            const description = document.createElement("p");
+            description.textContent = event.description;
+
+            content.append(title, description);
+
+            if (event.tag) {
+              const tag = document.createElement("span");
+              tag.className = "event-tag";
+              tag.textContent = event.tag;
+              content.appendChild(tag);
+            }
+
+            item.append(date, content);
+            fragment.appendChild(item);
+          });
+
+          timelineList.appendChild(fragment);
         }
       });
     </script>
