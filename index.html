@@ -306,6 +306,7 @@
             </div>
           </article>
         </div>
+        <ol class="timeline" aria-label="Upcoming macroeconomic events"></ol>
       </section>
 
       <section id="timeline" class="dashboard-section timeline-section">
@@ -323,28 +324,22 @@
       </p>
     </footer>
 
-    <script src="https://s3.tradingview.com/tv.js" id="tradingview-widget-script" defer></script>
+    <script src="https://s3.tradingview.com/tv.js"></script>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         const menuToggle = document.querySelector(".menu-toggle");
         const nav = document.querySelector(".nav-links");
-        const navLinks = nav ? nav.querySelectorAll("a") : [];
+        const navLinks = nav.querySelectorAll("a");
 
         const closeMenu = () => {
-          if (!nav || !menuToggle) {
-            return;
-          }
-
           nav.classList.remove("open");
           menuToggle.setAttribute("aria-expanded", "false");
         };
 
-        if (menuToggle && nav) {
-          menuToggle.addEventListener("click", () => {
-            const isOpen = nav.classList.toggle("open");
-            menuToggle.setAttribute("aria-expanded", String(isOpen));
-          });
-        }
+        menuToggle.addEventListener("click", () => {
+          const isOpen = nav.classList.toggle("open");
+          menuToggle.setAttribute("aria-expanded", String(isOpen));
+        });
 
         navLinks.forEach((link) => {
           link.addEventListener("click", () => {
@@ -362,18 +357,14 @@
 
         const tradingViewContainers = document.querySelectorAll(".chart-container[data-tv-symbol]");
 
-        const initializeTradingViewCharts = () => {
-          if (!window.TradingView || !tradingViewContainers.length) {
-            return;
-          }
-
+        if (window.TradingView) {
           tradingViewContainers.forEach((container) => {
             const symbol = container.dataset.tvSymbol;
             if (!symbol || !container.id) {
               return;
             }
 
-            new window.TradingView.widget({
+            new TradingView.widget({
               autosize: true,
               symbol,
               interval: container.dataset.tvInterval || "D",
@@ -391,36 +382,86 @@
               container_id: container.id,
             });
           });
-        };
-
-        const showTradingViewFallback = () => {
+        } else if (tradingViewContainers.length) {
           tradingViewContainers.forEach((container) => {
             container.classList.add("chart-unavailable");
             container.innerHTML =
               '<p class="chart-fallback">TradingView charts are unavailable right now. Please refresh the page.</p>';
           });
-        };
+        }
 
-        if (window.TradingView && typeof window.TradingView.widget === "function") {
-          initializeTradingViewCharts();
-        } else if (tradingViewContainers.length) {
-          const tradingViewScript = document.getElementById("tradingview-widget-script");
+        const timelineEvents = [
+          {
+            date: "18 Sep 2024",
+            title: "FOMC interest rate decision",
+            description: "Federal Reserve updates its policy rate and releases a fresh Summary of Economic Projections.",
+            tag: "Monetary Policy",
+          },
+          {
+            date: "10 Oct 2024",
+            title: "US CPI release (September)",
+            description: "Inflation print will guide expectations for year-end rate policy and Treasury yield direction.",
+            tag: "Inflation",
+          },
+          {
+            date: "24 Oct 2024",
+            title: "ECB Governing Council meeting",
+            description: "Eurozone rate guidance and balance sheet commentary set the tone for EUR crosses.",
+            tag: "Central Banks",
+          },
+          {
+            date: "05 Nov 2024",
+            title: "U.S. presidential election",
+            description: "Outcome shapes fiscal policy, trade stance, and sector leadership for 2025.",
+            tag: "Political",
+          },
+          {
+            date: "03 Dec 2024",
+            title: "OPEC+ policy meeting",
+            description: "Oil supply targets and forward guidance influence energy prices and inflation expectations.",
+            tag: "Energy",
+          },
+          {
+            date: "21 Jan 2025",
+            title: "World Economic Forum annual meeting",
+            description: "Global leaders converge in Davos to discuss growth outlooks and investment priorities.",
+            tag: "Global Summit",
+          },
+        ];
 
-          if (tradingViewScript) {
-            tradingViewScript.addEventListener("load", () => {
-              if (window.TradingView && typeof window.TradingView.widget === "function") {
-                initializeTradingViewCharts();
-              } else {
-                showTradingViewFallback();
-              }
-            });
+        const timelineList = document.querySelector(".timeline");
+        if (timelineList) {
+          const fragment = document.createDocumentFragment();
+          timelineEvents.forEach((event) => {
+            const item = document.createElement("li");
 
-            tradingViewScript.addEventListener("error", showTradingViewFallback, {
-              once: true,
-            });
-          } else {
-            showTradingViewFallback();
-          }
+            const date = document.createElement("div");
+            date.className = "timeline-date";
+            date.textContent = event.date;
+
+            const content = document.createElement("div");
+            content.className = "timeline-content";
+
+            const title = document.createElement("h3");
+            title.textContent = event.title;
+
+            const description = document.createElement("p");
+            description.textContent = event.description;
+
+            content.append(title, description);
+
+            if (event.tag) {
+              const tag = document.createElement("span");
+              tag.className = "event-tag";
+              tag.textContent = event.tag;
+              content.appendChild(tag);
+            }
+
+            item.append(date, content);
+            fragment.appendChild(item);
+          });
+
+          timelineList.appendChild(fragment);
         }
 
         const timelineList = document.querySelector(".timeline");
