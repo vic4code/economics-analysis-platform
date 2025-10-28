@@ -348,6 +348,7 @@
             </div>
           </a>
         </div>
+        <ol class="timeline" aria-label="Upcoming macroeconomic events"></ol>
       </section>
     </main>
 
@@ -385,6 +386,219 @@
         if (event.key === "Escape") {
           closeMenu();
         }
+
+        const timelineList = document.querySelector(".timeline");
+        const timelineSection = document.querySelector(".timeline-section");
+
+        const renderTimelineStatus = (message, type = "status") => {
+          if (!timelineList) {
+            return;
+          }
+
+          timelineList.innerHTML = "";
+          const statusItem = document.createElement("li");
+          statusItem.className = `timeline-${type}`;
+          statusItem.textContent = message;
+          timelineList.appendChild(statusItem);
+        };
+
+        const formatDisplayDate = (date) =>
+          date.toLocaleString(undefined, {
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+          });
+
+        const normaliseTime = (value) => {
+          if (!value) {
+            return "00:00:00";
+          }
+
+          if (/^\d{2}:\d{2}$/.test(value)) {
+            return `${value}:00`;
+          }
+
+          return value;
+        };
+
+        const parseEventDate = (event) => {
+          if (!event || !event.date) {
+            return null;
+          }
+
+          const [datePart, timePart] = event.date.split(" ");
+          const baseDate = datePart || event.date;
+          const time = event.time ? normaliseTime(event.time) : normaliseTime(timePart);
+
+          const isoCandidate = `${baseDate}T${time || "00:00:00"}`;
+
+          const utcCandidate = Date.parse(`${isoCandidate}Z`);
+          if (!Number.isNaN(utcCandidate)) {
+            return new Date(utcCandidate);
+          }
+
+          const localCandidate = Date.parse(isoCandidate);
+          if (!Number.isNaN(localCandidate)) {
+            return new Date(localCandidate);
+          }
+
+          return null;
+        };
+
+        const buildTimelineItem = (event) => {
+          const item = document.createElement("li");
+
+          const eventDate = parseEventDate(event);
+          const dateElement = document.createElement("div");
+          dateElement.className = "timeline-date";
+          if (eventDate) {
+            dateElement.textContent = formatDisplayDate(eventDate);
+          } else {
+            dateElement.textContent = event.date || "Upcoming";
+          }
+
+          const content = document.createElement("div");
+          content.className = "timeline-content";
+
+          const title = document.createElement("h3");
+          title.textContent = event.event || event.title || "Economic release";
+
+          const details = document.createElement("p");
+          const info = [];
+          if (event.country) {
+            info.push(event.country);
+          }
+          if (event.importance) {
+            info.push(event.importance);
+          }
+          if (event.category && !event.importance) {
+            info.push(event.category);
+          }
+          if (event.consensus != null) {
+            info.push(`Forecast: ${event.consensus}`);
+          }
+          if (event.actual != null) {
+            info.push(`Actual: ${event.actual}`);
+          }
+          if (event.previous != null) {
+            info.push(`Previous: ${event.previous}`);
+          }
+
+          if (info.length) {
+            details.textContent = info.join(" • ");
+          } else if (event.description) {
+            details.textContent = event.description;
+          } else {
+            details.textContent = "Upcoming economic data";
+          }
+
+          content.append(title, details);
+
+          const tagValue = event.importance || event.category || "";
+          if (tagValue) {
+            const tag = document.createElement("span");
+            tag.className = "event-tag";
+            tag.textContent = tagValue;
+            content.appendChild(tag);
+          }
+
+          item.append(dateElement, content);
+          return { item, eventDate };
+        };
+
+        const fallbackEvents = [
+          {
+            date: new Date().toISOString(),
+            title: "FOMC press conference",
+            description: "Federal Reserve chair provides color on the latest policy decision.",
+            category: "Monetary Policy",
+          },
+          {
+            date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+            title: "US Nonfarm Payrolls",
+            description: "Employment data that often swings risk sentiment and USD crosses.",
+            category: "Labor Market",
+          },
+          {
+            date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
+            title: "Eurozone CPI Flash",
+            description: "Inflation snapshot guiding ECB expectations.",
+            category: "Inflation",
+          },
+        ];
+
+        const loadEconomicCalendar = async () => {
+          if (!timelineList) {
+            return;
+          }
+
+          renderTimelineStatus("Loading upcoming releases…");
+
+          const now = new Date();
+          const formatDateParam = (date) => date.toISOString().split("T")[0];
+          const start = formatDateParam(now);
+          const end = formatDateParam(new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000));
+          const calendarEndpoint =
+            "https://financialmodelingprep.com/api/v3/economic_calendar" +
+            `?from=${start}&to=${end}&apikey=demo`;
+
+          try {
+            const response = await fetch(calendarEndpoint);
+            if (!response.ok) {
+              throw new Error(`Request failed with status ${response.status}`);
+            }
+
+            const payload = await response.json();
+            if (!Array.isArray(payload) || payload.length === 0) {
+              throw new Error("No upcoming events");
+            }
+
+            const upcoming = payload
+              .map((event) => {
+                const { item, eventDate } = buildTimelineItem(event);
+                return { item, eventDate };
+              })
+              .filter(({ eventDate }) => eventDate && eventDate.getTime() >= now.getTime())
+              .sort((a, b) => a.eventDate - b.eventDate)
+              .slice(0, 10);
+
+            timelineList.innerHTML = "";
+
+            if (!upcoming.length) {
+              renderTimelineStatus("No upcoming releases in the next few days.");
+              return;
+            }
+
+            const fragment = document.createDocumentFragment();
+            upcoming.forEach(({ item }) => fragment.appendChild(item));
+            timelineList.appendChild(fragment);
+
+            if (timelineSection) {
+              timelineSection.setAttribute(
+                "data-calendar-source",
+                "financialmodelingprep.com/api/v3/economic_calendar"
+              );
+            }
+          } catch (error) {
+            renderTimelineStatus(
+              "Unable to load live economic releases right now. Please try again later.",
+              "error"
+            );
+            if (timelineSection) {
+              timelineSection.setAttribute("data-calendar-error", String(error));
+            }
+
+            const fragment = document.createDocumentFragment();
+            fallbackEvents.forEach((event) => {
+              const { item } = buildTimelineItem(event);
+              fragment.appendChild(item);
+            });
+            timelineList.appendChild(fragment);
+          }
+        };
+
+        loadEconomicCalendar();
       });
     </script>
   </body>
