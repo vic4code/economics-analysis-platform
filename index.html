@@ -3,466 +3,450 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta
-      name="description"
-      content="Single-page global market dashboard with live TradingView and FRED embeds for stocks, bonds, currencies, and commodities."
-    />
-    <title>Global Market Dashboard</title>
+    <title>Arcadia Village - Pixel Bug Catcher</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Work+Sans:wght@400;600&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <a class="skip-link" href="#main-content">Skip to main content</a>
-    <header class="top-bar">
-      <div class="brand">🌍 Global Market Dashboard</div>
-      <button
-        class="menu-toggle"
-        type="button"
-        aria-label="Toggle navigation"
-        aria-expanded="false"
-        aria-controls="primary-navigation"
-      >
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-      <nav class="nav-links" id="primary-navigation" aria-label="Section navigation">
-        <ul>
-          <li><a href="#stocks">Stocks</a></li>
-          <li><a href="#bonds">Bonds</a></li>
-          <li><a href="#currencies">Currencies</a></li>
-          <li><a href="#commodities">Commodities</a></li>
-          <li><a href="#timeline">Macro Timeline</a></li>
-        </ul>
-      </nav>
+    <header class="page-header">
+      <div class="title">Arcadia Village</div>
+      <p class="tagline">Take a stroll, chat with your neighbors, and catch wild bugs.</p>
     </header>
 
-    <main id="main-content">
-      <section class="intro">
-        <p>
-          A lightweight personal market observatory featuring interactive TradingView charts and FRED data embeds.
-          Zoom, pan, and study each chart without leaving the dashboard, then dive into the macro timeline for upcoming
-          catalysts.
-        </p>
-      </section>
+    <main class="layout">
+      <section class="info-panel">
+        <h2>How to Play</h2>
+        <ul>
+          <li>Use the <span class="key">arrow keys</span> or <span class="key">WASD</span> to walk around.</li>
+          <li>Stand next to a villager and press <span class="key">Space</span> to chat.</li>
+          <li>Walk over a bug and press <span class="key">Space</span> to catch it.</li>
+          <li>Each villager shares clues about the best bug spots.</li>
+        </ul>
 
-      <section id="stocks" class="dashboard-section">
-        <div class="section-header">
-          <h2>Stock Markets</h2>
-          <p>Major equity benchmarks across the U.S. and Asia.</p>
-        </div>
-        <div class="cards-grid">
-          <article class="card">
-            <div class="card-header">
-              <h3>S&amp;P 500 (SPY)</h3>
-              <p>ETF proxy tracking the benchmark U.S. equities index.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container card-chart">
-                <div
-                  id="tv-spx"
-                  class="chart-container"
-                  data-tv-symbol="AMEX:SPY"
-                  data-tv-range="12M"
-                  aria-label="Interactive price chart for the SPDR S&amp;P 500 ETF"
-                ></div>
-              </div>
-            </div>
-            <div class="card-footer">
-              <a
-                class="card-link"
-                href="https://www.tradingview.com/symbols/AMEX-SPY/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Open on TradingView
-              </a>
-            </div>
-          </article>
-
-          <article class="card">
-            <div class="card-header">
-              <h3>NASDAQ</h3>
-              <p>Growth and tech-heavy U.S. composite.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container card-chart">
-                <div
-                  id="tv-nasdaq"
-                  class="chart-container"
-                  data-tv-symbol="NASDAQ:IXIC"
-                  data-tv-range="12M"
-                  aria-label="Interactive price chart for the NASDAQ Composite"
-                ></div>
-              </div>
-            </div>
-            <div class="card-footer">
-              <a
-                class="card-link"
-                href="https://www.tradingview.com/symbols/NASDAQ-IXIC/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Open on TradingView
-              </a>
-            </div>
-          </article>
-
-          <article class="card">
-            <div class="card-header">
-              <h3>Taiwan Weighted Index</h3>
-              <p>Semiconductor-led performance barometer.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container card-chart">
-                <div
-                  id="tv-taiex"
-                  class="chart-container"
-                  data-tv-symbol="TWSE:TAIEX"
-                  data-tv-range="12M"
-                  aria-label="Interactive price chart for the Taiwan Weighted Index"
-                ></div>
-              </div>
-            </div>
-            <div class="card-footer">
-              <a
-                class="card-link"
-                href="https://www.tradingview.com/symbols/TWSE-TAIEX/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Open on TradingView
-              </a>
-            </div>
-          </article>
+        <div class="bug-log">
+          <h3>Bug Log</h3>
+          <ul id="bugLog"></ul>
         </div>
       </section>
 
-      <section id="bonds" class="dashboard-section">
-        <div class="section-header">
-          <h2>U.S. Treasury Yield</h2>
-          <p>FRED 10-year constant maturity treasury rate.</p>
+      <section class="game-panel">
+        <div class="game-wrapper">
+          <canvas id="gameCanvas" width="320" height="240" aria-label="Arcadia Village top-down map"></canvas>
+          <div id="prompt" role="status" aria-live="polite"></div>
+          <div id="dialogueBox" role="dialog" aria-modal="true" aria-hidden="true">
+            <div class="dialogue-speaker" id="dialogueSpeaker"></div>
+            <p id="dialogueText"></p>
+            <div class="dialogue-hint">Press Space to continue</div>
+          </div>
+          <div id="statusMessage" aria-live="polite"></div>
         </div>
-        <div class="cards-grid single">
-          <article class="card">
-            <div class="card-header">
-              <h3>US Treasury 10Y</h3>
-              <p>Macro benchmark for global discount rates.</p>
-            </div>
-            <div class="card-body">
-              <div class="iframe-wrapper">
-                <iframe
-                  title="10-Year Treasury Constant Maturity Rate"
-                  src="https://fred.stlouisfed.org/graph/fredgraph.html?id=DGS10&cosd=2010-01-01&height=300"
-                  scrolling="no"
-                  frameborder="0"
-                  loading="lazy"
-                  referrerpolicy="no-referrer-when-downgrade"
-                ></iframe>
-              </div>
-            </div>
-            <div class="card-footer">
-              <a
-                class="card-link"
-                href="https://fred.stlouisfed.org/series/DGS10"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                View full series on FRED
-              </a>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section id="currencies" class="dashboard-section">
-        <div class="section-header">
-          <h2>Currencies</h2>
-          <p>Dollar strength vs. broad basket and the Japanese yen.</p>
-        </div>
-        <div class="cards-grid">
-          <article class="card">
-            <div class="card-header">
-              <h3>US Dollar Index (DXY)</h3>
-              <p>Measures USD against a major currency basket.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container card-chart">
-                <div
-                  id="tv-dxy"
-                  class="chart-container"
-                  data-tv-symbol="TVC:DXY"
-                  data-tv-range="12M"
-                  aria-label="Interactive price chart for the US Dollar Index"
-                ></div>
-              </div>
-            </div>
-            <div class="card-footer">
-              <a
-                class="card-link"
-                href="https://www.tradingview.com/symbols/TVC-DXY/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Open on TradingView
-              </a>
-            </div>
-          </article>
-
-          <article class="card">
-            <div class="card-header">
-              <h3>USD / JPY</h3>
-              <p>Key rate for global carry and risk sentiment.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container card-chart">
-                <div
-                  id="tv-usdjpy"
-                  class="chart-container"
-                  data-tv-symbol="FX:USDJPY"
-                  data-tv-range="12M"
-                  aria-label="Interactive price chart for the USD/JPY exchange rate"
-                ></div>
-              </div>
-            </div>
-            <div class="card-footer">
-              <a
-                class="card-link"
-                href="https://www.tradingview.com/symbols/FX-USDJPY/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Open on TradingView
-              </a>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section id="commodities" class="dashboard-section">
-        <div class="section-header">
-          <h2>Commodities</h2>
-          <p>Energy and precious metals benchmarks.</p>
-        </div>
-        <div class="cards-grid">
-          <article class="card">
-            <div class="card-header">
-              <h3>WTI Crude Oil</h3>
-              <p>Gauge for global growth and inflation pressures.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container card-chart">
-                <div
-                  id="tv-usoil"
-                  class="chart-container"
-                  data-tv-symbol="TVC:USOIL"
-                  data-tv-range="12M"
-                  aria-label="Interactive price chart for WTI crude oil"
-                ></div>
-              </div>
-            </div>
-            <div class="card-footer">
-              <a
-                class="card-link"
-                href="https://www.tradingview.com/symbols/TVC-USOIL/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Open on TradingView
-              </a>
-            </div>
-          </article>
-
-          <article class="card">
-            <div class="card-header">
-              <h3>Gold</h3>
-              <p>Store of value and macro hedge signal.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container card-chart">
-                <div
-                  id="tv-gold"
-                  class="chart-container"
-                  data-tv-symbol="TVC:GOLD"
-                  data-tv-range="12M"
-                  aria-label="Interactive price chart for gold"
-                ></div>
-              </div>
-            </div>
-            <div class="card-footer">
-              <a
-                class="card-link"
-                href="https://www.tradingview.com/symbols/TVC-GOLD/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Open on TradingView
-              </a>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section id="timeline" class="dashboard-section timeline-section">
-        <div class="section-header">
-          <h2>Global Macro Timeline</h2>
-          <p>Upcoming policy decisions and economic events that move markets.</p>
-        </div>
-        <ol class="timeline" aria-label="Upcoming macroeconomic events"></ol>
       </section>
     </main>
 
-    <footer class="site-footer">
-      <p>
-        Data and charts are provided by their respective platforms. This dashboard is for informational purposes only.
-      </p>
-    </footer>
-
-    <script src="https://s3.tradingview.com/tv.js"></script>
     <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        const menuToggle = document.querySelector(".menu-toggle");
-        const nav = document.querySelector(".nav-links");
-        const navLinks = nav.querySelectorAll("a");
+      const TILE_SIZE = 16;
+      const SCALE = 3;
+      const MAP_WIDTH = 20;
+      const MAP_HEIGHT = 15;
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+      ctx.imageSmoothingEnabled = false;
+      canvas.style.width = `${MAP_WIDTH * TILE_SIZE * SCALE}px`;
+      canvas.style.height = `${MAP_HEIGHT * TILE_SIZE * SCALE}px`;
 
-        const closeMenu = () => {
-          nav.classList.remove("open");
-          menuToggle.setAttribute("aria-expanded", "false");
-        };
+      const promptEl = document.getElementById("prompt");
+      const dialogueBox = document.getElementById("dialogueBox");
+      const dialogueSpeaker = document.getElementById("dialogueSpeaker");
+      const dialogueText = document.getElementById("dialogueText");
+      const statusMessage = document.getElementById("statusMessage");
+      const bugLogList = document.getElementById("bugLog");
 
-        menuToggle.addEventListener("click", () => {
-          const isOpen = nav.classList.toggle("open");
-          menuToggle.setAttribute("aria-expanded", String(isOpen));
+      const mapLayout = [
+        "11111111111111111111",
+        "10000000022000000001",
+        "10222200022000022201",
+        "10000000000000000001",
+        "10033333000033333001",
+        "10030003000030003001",
+        "10033333022233333001",
+        "10000000000000000001",
+        "10222002222200222001",
+        "10000000000000000001",
+        "10000000000000000001",
+        "10000000000000000001",
+        "10000000000000000001",
+        "10000000000000000001",
+        "11111111111111111111",
+      ];
+
+      const tileStyles = {
+        0: "#78a83b", // grass
+        1: "#305060", // water/walls
+        2: "#d5a253", // path
+        3: "#3c8d2f", // trees
+      };
+
+      const blockingTiles = new Set(["1", "3"]);
+
+      const villagers = [
+        {
+          name: "Mira",
+          tileX: 6,
+          tileY: 4,
+          palette: ["#ffb6c1", "#d45c8c"],
+          dialogue: [
+            "These woods buzz at sunset. Try the grove to the east!",
+            "If you stay still, the rare glowbeetle may land nearby.",
+            "Bring me a shimmerwing if you find one!",
+          ],
+          dialogueIndex: 0,
+        },
+        {
+          name: "Theo",
+          tileX: 13,
+          tileY: 8,
+          palette: ["#ffe7a7", "#c58b39"],
+          dialogue: [
+            "You can spot river sprites near the water when it's quiet.",
+            "I catalog every bug you find. Check the log to see your progress!",
+          ],
+          dialogueIndex: 0,
+        },
+        {
+          name: "Jun",
+          tileX: 9,
+          tileY: 11,
+          palette: ["#a3d7ff", "#456da8"],
+          dialogue: [
+            "Arcadia's bugs love bright flowers. Paths make them skittish.",
+            "Thanks for keeping our village lively, explorer!",
+          ],
+          dialogueIndex: 0,
+        },
+      ];
+
+      const bugTypes = [
+        { name: "Glowbeetle", color: "#a2f5ff" },
+        { name: "Amber Moth", color: "#f7b733" },
+        { name: "Night Ladybug", color: "#d7263d" },
+        { name: "Azure Cricket", color: "#62b0ff" },
+        { name: "Shimmerwing", color: "#d4a4ff" },
+      ];
+
+      const bugCounts = {};
+      bugTypes.forEach((bug) => {
+        bugCounts[bug.name] = 0;
+      });
+
+      function updateBugLog() {
+        bugLogList.innerHTML = "";
+        bugTypes.forEach((bug) => {
+          const item = document.createElement("li");
+          item.innerHTML = `<span class="bug-swatch" style="background:${bug.color}"></span>${bug.name}<span class="count">${bugCounts[bug.name]}</span>`;
+          bugLogList.appendChild(item);
         });
+      }
 
-        navLinks.forEach((link) => {
-          link.addEventListener("click", () => {
-            if (window.matchMedia("(max-width: 720px)").matches) {
-              closeMenu();
-            }
-          });
-        });
+      updateBugLog();
 
-        window.addEventListener("keydown", (event) => {
-          if (event.key === "Escape") {
-            closeMenu();
+      const player = {
+        tileX: 10,
+        tileY: 7,
+        pixelX: 10 * TILE_SIZE,
+        pixelY: 7 * TILE_SIZE,
+        targetX: 10 * TILE_SIZE,
+        targetY: 7 * TILE_SIZE,
+        moving: false,
+        speed: 4,
+      };
+
+      function spawnBug() {
+        let attempts = 0;
+        while (attempts < 100) {
+          const tileX = Math.floor(Math.random() * MAP_WIDTH);
+          const tileY = Math.floor(Math.random() * MAP_HEIGHT);
+          const tile = mapLayout[tileY][tileX];
+          if (blockingTiles.has(tile)) {
+            attempts++;
+            continue;
           }
-        });
-
-        const tradingViewContainers = document.querySelectorAll(".chart-container[data-tv-symbol]");
-
-        if (window.TradingView) {
-          tradingViewContainers.forEach((container) => {
-            const symbol = container.dataset.tvSymbol;
-            if (!symbol || !container.id) {
-              return;
-            }
-
-            new TradingView.widget({
-              autosize: true,
-              symbol,
-              interval: container.dataset.tvInterval || "D",
-              timezone: container.dataset.tvTimezone || "Etc/UTC",
-              theme: "light",
-              style: "1",
-              locale: "en",
-              toolbar_bg: "#f1f3f6",
-              enable_publishing: false,
-              allow_symbol_change: false,
-              hide_side_toolbar: true,
-              withdateranges: true,
-              range: container.dataset.tvRange || "12M",
-              support_host: "https://www.tradingview.com",
-              container_id: container.id,
-            });
-          });
-        } else if (tradingViewContainers.length) {
-          tradingViewContainers.forEach((container) => {
-            container.classList.add("chart-unavailable");
-            container.innerHTML =
-              '<p class="chart-fallback">TradingView charts are unavailable right now. Please refresh the page.</p>';
-          });
+          if (villagers.some((v) => v.tileX === tileX && v.tileY === tileY)) {
+            attempts++;
+            continue;
+          }
+          if (tileX === player.tileX && tileY === player.tileY) {
+            attempts++;
+            continue;
+          }
+          const type = bugTypes[Math.floor(Math.random() * bugTypes.length)];
+          return {
+            tileX,
+            tileY,
+            type,
+            wobble: Math.random() * Math.PI * 2,
+          };
         }
+        return null;
+      }
 
-        const timelineEvents = [
-          {
-            date: "18 Sep 2024",
-            title: "FOMC interest rate decision",
-            description: "Federal Reserve updates its policy rate and releases a fresh Summary of Economic Projections.",
-            tag: "Monetary Policy",
-          },
-          {
-            date: "10 Oct 2024",
-            title: "US CPI release (September)",
-            description: "Inflation print will guide expectations for year-end rate policy and Treasury yield direction.",
-            tag: "Inflation",
-          },
-          {
-            date: "24 Oct 2024",
-            title: "ECB Governing Council meeting",
-            description: "Eurozone rate guidance and balance sheet commentary set the tone for EUR crosses.",
-            tag: "Central Banks",
-          },
-          {
-            date: "05 Nov 2024",
-            title: "U.S. presidential election",
-            description: "Outcome shapes fiscal policy, trade stance, and sector leadership for 2025.",
-            tag: "Political",
-          },
-          {
-            date: "03 Dec 2024",
-            title: "OPEC+ policy meeting",
-            description: "Oil supply targets and forward guidance influence energy prices and inflation expectations.",
-            tag: "Energy",
-          },
-          {
-            date: "21 Jan 2025",
-            title: "World Economic Forum annual meeting",
-            description: "Global leaders converge in Davos to discuss growth outlooks and investment priorities.",
-            tag: "Global Summit",
-          },
-        ];
+      const bugs = [];
+      for (let i = 0; i < 4; i++) {
+        const bug = spawnBug();
+        if (bug) {
+          bugs.push(bug);
+        }
+      }
 
-        const timelineList = document.querySelector(".timeline");
-        if (timelineList) {
-          const fragment = document.createDocumentFragment();
-          timelineEvents.forEach((event) => {
-            const item = document.createElement("li");
+      let activeVillager = null;
+      let dialogueActive = false;
+      let messageTimer = 0;
 
-            const date = document.createElement("div");
-            date.className = "timeline-date";
-            date.textContent = event.date;
+      function isBlocked(tileX, tileY) {
+        if (tileX < 0 || tileY < 0 || tileX >= MAP_WIDTH || tileY >= MAP_HEIGHT) {
+          return true;
+        }
+        const tile = mapLayout[tileY][tileX];
+        if (blockingTiles.has(tile)) {
+          return true;
+        }
+        if (villagers.some((v) => v.tileX === tileX && v.tileY === tileY)) {
+          return true;
+        }
+        return false;
+      }
 
-            const content = document.createElement("div");
-            content.className = "timeline-content";
+      function attemptMove(dx, dy) {
+        if (player.moving || dialogueActive) {
+          return;
+        }
+        const nextTileX = player.tileX + dx;
+        const nextTileY = player.tileY + dy;
+        if (isBlocked(nextTileX, nextTileY)) {
+          return;
+        }
+        player.tileX = nextTileX;
+        player.tileY = nextTileY;
+        player.targetX = player.tileX * TILE_SIZE;
+        player.targetY = player.tileY * TILE_SIZE;
+        player.moving = true;
+      }
 
-            const title = document.createElement("h3");
-            title.textContent = event.title;
+      function handleInteraction() {
+        if (dialogueActive) {
+          advanceDialogue();
+          return;
+        }
+        const villager = villagers.find(
+          (v) => Math.abs(v.tileX - player.tileX) + Math.abs(v.tileY - player.tileY) === 1
+        );
+        if (villager) {
+          openDialogue(villager);
+          return;
+        }
+        const bug = bugs.find((b) => b.tileX === player.tileX && b.tileY === player.tileY);
+        if (bug) {
+          catchBug(bug);
+        }
+      }
 
-            const description = document.createElement("p");
-            description.textContent = event.description;
+      function openDialogue(villager) {
+        activeVillager = villager;
+        dialogueActive = true;
+        dialogueBox.setAttribute("aria-hidden", "false");
+        dialogueBox.classList.add("visible");
+        dialogueSpeaker.textContent = villager.name;
+        const line = villager.dialogue[villager.dialogueIndex];
+        dialogueText.textContent = line;
+        villager.dialogueIndex = (villager.dialogueIndex + 1) % villager.dialogue.length;
+      }
 
-            content.append(title, description);
+      function advanceDialogue() {
+        dialogueActive = false;
+        dialogueBox.setAttribute("aria-hidden", "true");
+        dialogueBox.classList.remove("visible");
+        activeVillager = null;
+      }
 
-            if (event.tag) {
-              const tag = document.createElement("span");
-              tag.className = "event-tag";
-              tag.textContent = event.tag;
-              content.appendChild(tag);
-            }
+      function catchBug(bug) {
+        bugCounts[bug.type.name] += 1;
+        updateBugLog();
+        setStatusMessage(`Caught a ${bug.type.name}!`);
+        const index = bugs.indexOf(bug);
+        if (index !== -1) {
+          bugs.splice(index, 1);
+        }
+        const newBug = spawnBug();
+        if (newBug) {
+          bugs.push(newBug);
+        }
+      }
 
-            item.append(date, content);
-            fragment.appendChild(item);
-          });
+      function setStatusMessage(text) {
+        statusMessage.textContent = text;
+        statusMessage.classList.add("visible");
+        messageTimer = 120; // frames
+      }
 
-          timelineList.appendChild(fragment);
+      window.addEventListener("keydown", (event) => {
+        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "Spacebar", "w", "a", "s", "d", "W", "A", "S", "D", "Enter"].includes(event.key)) {
+          event.preventDefault();
+        }
+        switch (event.key) {
+          case "ArrowUp":
+          case "w":
+          case "W":
+            attemptMove(0, -1);
+            break;
+          case "ArrowDown":
+          case "s":
+          case "S":
+            attemptMove(0, 1);
+            break;
+          case "ArrowLeft":
+          case "a":
+          case "A":
+            attemptMove(-1, 0);
+            break;
+          case "ArrowRight":
+          case "d":
+          case "D":
+            attemptMove(1, 0);
+            break;
+          case " ":
+          case "Spacebar":
+          case "Enter":
+            handleInteraction();
+            break;
         }
       });
+
+      function updatePlayer() {
+        if (!player.moving) {
+          return;
+        }
+        const dx = player.targetX - player.pixelX;
+        const dy = player.targetY - player.pixelY;
+        if (Math.abs(dx) <= player.speed && Math.abs(dy) <= player.speed) {
+          player.pixelX = player.targetX;
+          player.pixelY = player.targetY;
+          player.moving = false;
+          return;
+        }
+        if (dx !== 0) {
+          player.pixelX += Math.sign(dx) * player.speed;
+        }
+        if (dy !== 0) {
+          player.pixelY += Math.sign(dy) * player.speed;
+        }
+      }
+
+      function drawTile(x, y, color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+      }
+
+      function drawMap() {
+        for (let y = 0; y < MAP_HEIGHT; y++) {
+          for (let x = 0; x < MAP_WIDTH; x++) {
+            const tile = mapLayout[y][x];
+            const color = tileStyles[tile] || "#78a83b";
+            drawTile(x, y, color);
+            if (tile === "3") {
+              ctx.fillStyle = "#1f5b1a";
+              ctx.fillRect(x * TILE_SIZE + 4, y * TILE_SIZE + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+            }
+          }
+        }
+      }
+
+      function drawVillager(villager) {
+        const baseX = villager.tileX * TILE_SIZE;
+        const baseY = villager.tileY * TILE_SIZE;
+        ctx.fillStyle = villager.palette[1];
+        ctx.fillRect(baseX + 4, baseY + 8, TILE_SIZE - 8, TILE_SIZE - 4);
+        ctx.fillStyle = villager.palette[0];
+        ctx.fillRect(baseX + 4, baseY + 2, TILE_SIZE - 8, TILE_SIZE - 8);
+        ctx.fillStyle = "#000";
+        ctx.fillRect(baseX + 6, baseY + 6, 2, 2);
+        ctx.fillRect(baseX + TILE_SIZE - 8, baseY + 6, 2, 2);
+      }
+
+      function drawBug(bug, time) {
+        const wobble = Math.sin(time / 250 + bug.wobble) * 1.5;
+        const baseX = bug.tileX * TILE_SIZE + TILE_SIZE / 2;
+        const baseY = bug.tileY * TILE_SIZE + TILE_SIZE / 2 + wobble;
+        ctx.fillStyle = bug.type.color;
+        ctx.beginPath();
+        ctx.ellipse(baseX, baseY, 4, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#222";
+        ctx.fillRect(baseX - 1, baseY - 1, 2, 2);
+      }
+
+      function drawPlayer(time) {
+        ctx.fillStyle = "#f6e7cb";
+        ctx.fillRect(player.pixelX + 5, player.pixelY + 4, 6, 6);
+        ctx.fillStyle = "#000";
+        const blink = Math.sin(time / 500) > 0 ? 1 : 0;
+        ctx.fillRect(player.pixelX + 6, player.pixelY + 6, 1, 1 - blink);
+        ctx.fillRect(player.pixelX + 9, player.pixelY + 6, 1, 1 - blink);
+        ctx.fillStyle = "#5b3a29";
+        ctx.fillRect(player.pixelX + 3, player.pixelY, 10, 6);
+        ctx.fillStyle = "#4a7a2f";
+        ctx.fillRect(player.pixelX + 3, player.pixelY + 10, 10, 6);
+        ctx.fillRect(player.pixelX + 4, player.pixelY + 16, 3, 6);
+        ctx.fillRect(player.pixelX + 9, player.pixelY + 16, 3, 6);
+      }
+
+      function updatePrompt() {
+        let text = "";
+        if (!dialogueActive) {
+          const villager = villagers.find(
+            (v) => Math.abs(v.tileX - player.tileX) + Math.abs(v.tileY - player.tileY) === 1
+          );
+          if (villager) {
+            text = `Press Space to talk to ${villager.name}`;
+          } else {
+            const bug = bugs.find((b) => b.tileX === player.tileX && b.tileY === player.tileY);
+            if (bug) {
+              text = `Press Space to catch the ${bug.type.name}`;
+            }
+          }
+        }
+        promptEl.textContent = text;
+        promptEl.classList.toggle("visible", Boolean(text));
+      }
+
+      function updateStatusMessage() {
+        if (messageTimer > 0) {
+          messageTimer -= 1;
+          if (messageTimer === 0) {
+            statusMessage.textContent = "";
+            statusMessage.classList.remove("visible");
+          }
+        }
+      }
+
+      function gameLoop(time) {
+        updatePlayer();
+        updatePrompt();
+        updateStatusMessage();
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawMap();
+        bugs.forEach((bug) => drawBug(bug, time));
+        villagers.forEach(drawVillager);
+        drawPlayer(time);
+
+        requestAnimationFrame(gameLoop);
+      }
+
+      requestAnimationFrame(gameLoop);
     </script>
   </body>
 </html>
