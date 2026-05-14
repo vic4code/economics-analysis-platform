@@ -1,605 +1,1076 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta
-      name="description"
-      content="Single-page global market dashboard with live TradingView and FRED embeds for stocks, bonds, currencies, and commodities."
-    />
-    <title>Global Market Dashboard</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <a class="skip-link" href="#main-content">Skip to main content</a>
-    <header class="top-bar">
-      <div class="brand">🌍 Global Market Dashboard</div>
-      <button
-        class="menu-toggle"
-        type="button"
-        aria-label="Toggle navigation"
-        aria-expanded="false"
-        aria-controls="primary-navigation"
-      >
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-      <nav class="nav-links" id="primary-navigation" aria-label="Section navigation">
-        <ul>
-          <li><a href="#stocks">Stocks</a></li>
-          <li><a href="#bonds">Bonds</a></li>
-          <li><a href="#currencies">Currencies</a></li>
-          <li><a href="#commodities">Commodities</a></li>
-        </ul>
-      </nav>
-    </header>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fund Flow Dashboard | 全球資金流向</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
 
-    <main id="main-content">
-      <section class="intro">
-        <p>
-          A lightweight personal market observatory featuring live embeds from
-          TradingView and FRED. Tap any card to launch the full interactive
-          chart in a new tab.
-        </p>
-      </section>
+<!-- ── Top Bar ─────────────────────────────────────────────────── -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <span class="brand-icon">⚡</span>
+    <span class="brand-name">Fund Flow</span>
+    <span class="brand-sub">全球資金流向分析</span>
+  </div>
 
-      <section id="stocks" class="dashboard-section">
-        <div class="section-header">
-          <h2>Stock Markets</h2>
-          <p>Major equity benchmarks across the U.S. and Asia.</p>
+  <div class="topbar-period" id="periodBar">
+    <button class="period-btn active" data-period="1d">1D</button>
+    <button class="period-btn" data-period="5d">5D</button>
+    <button class="period-btn" data-period="1m">1M</button>
+    <button class="period-btn" data-period="3m">3M</button>
+    <button class="period-btn" data-period="6m">6M</button>
+    <button class="period-btn" data-period="1y">1Y</button>
+    <button class="period-btn" data-period="ytd">YTD</button>
+  </div>
+
+  <div class="topbar-meta">
+    <span class="data-badge">⚙ Mock Data</span>
+    <span class="update-time" id="updateTime">—</span>
+  </div>
+</header>
+
+<!-- ── Tab Navigation ───────────────────────────────────────────── -->
+<nav class="tab-nav">
+  <button class="tab-btn active" data-tab="overview">📊 Overview</button>
+  <button class="tab-btn" data-tab="trends">📈 Trend Analysis</button>
+  <button class="tab-btn" data-tab="backtest">🔬 Backtest</button>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     TAB: OVERVIEW
+══════════════════════════════════════════════════════════════════ -->
+<main id="tab-overview" class="tab-panel active">
+
+  <!-- Summary stat cards -->
+  <section class="stat-row" id="statCards">
+    <div class="stat-card" id="cardBest">
+      <div class="stat-label">🔥 最強</div>
+      <div class="stat-symbol">—</div>
+      <div class="stat-change positive">—</div>
+      <div class="stat-sector">—</div>
+    </div>
+    <div class="stat-card" id="cardWorst">
+      <div class="stat-label">🧊 最弱</div>
+      <div class="stat-symbol">—</div>
+      <div class="stat-change negative">—</div>
+      <div class="stat-sector">—</div>
+    </div>
+    <div class="stat-card" id="cardHotSector">
+      <div class="stat-label">🌊 熱門板塊</div>
+      <div class="stat-symbol">—</div>
+      <div class="stat-change positive">—</div>
+      <div class="stat-sector">加權平均漲幅</div>
+    </div>
+    <div class="stat-card" id="cardMkt">
+      <div class="stat-label">📍 大盤 SPY</div>
+      <div class="stat-symbol" id="spyPrice">—</div>
+      <div class="stat-change" id="spyChange">—</div>
+      <div class="stat-sector">S&amp;P 500 ETF</div>
+    </div>
+  </section>
+
+  <!-- Heatmap -->
+  <section class="panel">
+    <div class="panel-header">
+      <h2>全球資金熱力圖</h2>
+      <span class="panel-hint">色塊大小 = 市值規模 ／ 顏色深淺 = 漲跌幅</span>
+    </div>
+    <div class="heatmap-wrap">
+      <canvas id="heatmapCanvas"></canvas>
+    </div>
+    <div class="heatmap-legend">
+      <span class="legend-label">跌 &lt; −3%</span>
+      <div class="legend-bar"></div>
+      <span class="legend-label">漲 &gt; +3%</span>
+    </div>
+  </section>
+
+  <!-- Sector bar chart -->
+  <section class="panel">
+    <div class="panel-header">
+      <h2>板塊漲跌排行</h2>
+      <span class="panel-hint">各板塊加權平均漲跌幅</span>
+    </div>
+    <div class="chart-wrap medium">
+      <canvas id="sectorBarChart"></canvas>
+    </div>
+  </section>
+
+  <!-- ETF ranking table -->
+  <section class="panel">
+    <div class="panel-header">
+      <h2>ETF 漲跌排行</h2>
+      <button class="icon-btn" id="sortToggle" title="切換排序">↕</button>
+    </div>
+    <div class="table-wrap">
+      <table class="etf-table" id="etfTable">
+        <thead>
+          <tr>
+            <th>代碼</th><th>名稱</th><th>板塊</th>
+            <th>現價</th><th>漲跌 %</th>
+          </tr>
+        </thead>
+        <tbody id="etfTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     TAB: TREND ANALYSIS
+══════════════════════════════════════════════════════════════════ -->
+<main id="tab-trends" class="tab-panel">
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>多標的趨勢比較</h2>
+      <span class="panel-hint">選擇最多 6 個標的進行比較（基準化 = 起點 100）</span>
+    </div>
+
+    <div class="symbol-picker" id="symbolPicker"></div>
+
+    <div class="chart-wrap tall">
+      <canvas id="trendChart"></canvas>
+    </div>
+
+    <!-- Correlation heatmap -->
+    <div class="panel-header" style="margin-top:2rem">
+      <h2>相關性矩陣</h2>
+      <span class="panel-hint">所選標的間的收益率相關係數</span>
+    </div>
+    <div class="corr-wrap" id="corrMatrix"></div>
+  </section>
+
+</main>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     TAB: BACKTEST
+══════════════════════════════════════════════════════════════════ -->
+<main id="tab-backtest" class="tab-panel">
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>投資組合回測</h2>
+      <span class="panel-hint">配置各 ETF 權重，系統計算歷史績效並與 S&amp;P 500 比較</span>
+    </div>
+
+    <!-- Weight builder -->
+    <div class="backtest-builder">
+      <div class="builder-controls">
+        <label class="field-label">回測區間</label>
+        <div class="bt-period-row">
+          <button class="bt-period-btn active" data-btperiod="1y">1 年</button>
+          <button class="bt-period-btn" data-btperiod="3y">3 年</button>
+          <button class="bt-period-btn" data-btperiod="5y">5 年</button>
         </div>
-        <div class="cards-grid">
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/SP-SPX/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="card-header">
-              <h3>S&amp;P 500</h3>
-              <p>Large-cap U.S. equities snapshot.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "SP:SPX",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#009688",
-  "underLineColor": "rgba(0, 150, 136, 0.25)",
-  "isTransparent": false,
-  "autosize": true
+        <label class="field-label" style="margin-top:1rem">快速模板</label>
+        <div class="template-row">
+          <button class="template-btn" data-tpl="aggressive">進攻型</button>
+          <button class="template-btn" data-tpl="balanced">均衡型</button>
+          <button class="template-btn" data-tpl="defensive">防禦型</button>
+          <button class="template-btn" data-tpl="crypto">加密貨幣</button>
+        </div>
+      </div>
+
+      <div class="weight-grid" id="weightGrid"></div>
+
+      <div class="builder-actions">
+        <div class="alloc-total">
+          已配置：<span id="allocTotal">0</span>% &nbsp;
+          <span id="allocWarn" class="alloc-warn hidden">需配置 100%</span>
+        </div>
+        <button class="run-btn" id="runBacktest">▶ 執行回測</button>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="backtestResults" class="hidden">
+      <div class="stats-row" id="btStatCards"></div>
+      <div class="chart-wrap tall" style="margin-top:1.5rem">
+        <canvas id="btChart"></canvas>
+      </div>
+      <div class="bt-composition" id="btComposition"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Loading overlay -->
+<div class="loader-overlay" id="loader">
+  <div class="loader-spinner"></div>
+  <div class="loader-text">載入市場數據中…</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  Constants & State
+// ═══════════════════════════════════════════════════════════════
+
+const SECTOR_COLORS = {
+  "Crypto":        "#f7931a",
+  "Technology":    "#4a90e2",
+  "Real Estate":   "#8b6d4f",
+  "Energy":        "#e67e22",
+  "Healthcare":    "#27ae60",
+  "Financials":    "#8e44ad",
+  "Consumer":      "#e91e8c",
+  "Industrials":   "#607d8b",
+  "Materials":     "#795548",
+  "Utilities":     "#00bcd4",
+  "Bonds":         "#3f51b5",
+  "Commodities":   "#ffc107",
+  "International": "#ff9800",
+  "Broad Market":  "#9e9e9e",
+};
+
+const TEMPLATES = {
+  aggressive: {QQQ:25, SMH:20, IBIT:15, XLE:10, XLF:10, XLY:10, EEM:10},
+  balanced:   {SPY:30, QQQ:20, GLD:10, AGG:15, VNQ:10, EEM:10, XLE:5},
+  defensive:  {AGG:30, TLT:20, XLP:15, XLU:10, GLD:15, VNQ:10},
+  crypto:     {IBIT:50, BITO:30, QQQ:10, ARKK:10},
+};
+
+let state = {
+  quotes:    [],
+  period:    "1d",
+  btPeriod:  "1y",
+  sortAsc:   false,
+  selected:  ["QQQ","XLK","GLD","TLT","VNQ","IBIT"],
+  weights:   {...TEMPLATES.balanced},
+  trendChart:  null,
+  sectorChart: null,
+  btChart:     null,
+  trendSeriesCache: {},
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  API helpers
+// ═══════════════════════════════════════════════════════════════
+
+async function apiFetch(path) {
+  const r = await fetch(path);
+  if (!r.ok) throw new Error(`API ${path} → ${r.status}`);
+  return r.json();
 }
-                </script>
-              </div>
-            </div>
-          </a>
 
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/NASDAQ-IXIC/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="card-header">
-              <h3>NASDAQ</h3>
-              <p>Growth and tech-heavy U.S. composite.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "NASDAQ:IXIC",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#009688",
-  "underLineColor": "rgba(0, 150, 136, 0.25)",
-  "isTransparent": false,
-  "autosize": true
+// ═══════════════════════════════════════════════════════════════
+//  Colour helpers
+// ═══════════════════════════════════════════════════════════════
+
+function changeColor(pct, alpha = 1) {
+  const clamp = Math.max(-6, Math.min(6, pct));
+  if (clamp >= 0) {
+    const t = clamp / 6;
+    const g = Math.round(80 + t * 155);
+    return `rgba(0,${g},60,${alpha})`;
+  } else {
+    const t = -clamp / 6;
+    const r = Math.round(80 + t * 160);
+    return `rgba(${r},20,20,${alpha})`;
+  }
 }
-                </script>
-              </div>
-            </div>
-          </a>
 
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/TWSE-TAIEX/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="card-header">
-              <h3>Taiwan Weighted Index</h3>
-              <p>Semiconductor-led performance barometer.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "TWSE:TAIEX",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#009688",
-  "underLineColor": "rgba(0, 150, 136, 0.25)",
-  "isTransparent": false,
-  "autosize": true
+function changeTextColor(pct) {
+  if (pct > 0.1)  return "#4ade80";
+  if (pct < -0.1) return "#f87171";
+  return "#94a3b8";
 }
-                </script>
-              </div>
-            </div>
-          </a>
-        </div>
-      </section>
 
-      <section id="bonds" class="dashboard-section">
-        <div class="section-header">
-          <h2>U.S. Treasury Yield</h2>
-          <p>FRED 10-year constant maturity treasury rate.</p>
-        </div>
-        <div class="cards-grid single">
-          <a
-            class="card"
-            href="https://fred.stlouisfed.org/series/DGS10"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="card-header">
-              <h3>US Treasury 10Y</h3>
-              <p>Macro benchmark for global discount rates.</p>
-            </div>
-            <div class="card-body">
-              <div class="iframe-wrapper">
-                <iframe
-                  title="10-Year Treasury Constant Maturity Rate"
-                  src="https://fred.stlouisfed.org/graph/fredgraph.html?id=DGS10&cosd=2010-01-01&height=300"
-                  scrolling="no"
-                  frameborder="0"
-                  loading="lazy"
-                ></iframe>
-              </div>
-            </div>
-          </a>
-        </div>
-      </section>
-
-      <section id="currencies" class="dashboard-section">
-        <div class="section-header">
-          <h2>Currencies</h2>
-          <p>Dollar strength vs. broad basket and the Japanese yen.</p>
-        </div>
-        <div class="cards-grid">
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/TVC-DXY/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="card-header">
-              <h3>US Dollar Index (DXY)</h3>
-              <p>Measures USD against a major currency basket.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "TVC:DXY",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#003366",
-  "underLineColor": "rgba(0, 51, 102, 0.25)",
-  "isTransparent": false,
-  "autosize": true
+function fmtPct(v, alwaysSign = true) {
+  const sign = v >= 0 ? "+" : "";
+  return (alwaysSign ? sign : "") + v.toFixed(2) + "%";
 }
-                </script>
-              </div>
-            </div>
-          </a>
 
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/FX-USDJPY/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="card-header">
-              <h3>USD / JPY</h3>
-              <p>Key rate for global carry and risk sentiment.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "FX:USDJPY",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#003366",
-  "underLineColor": "rgba(0, 51, 102, 0.25)",
-  "isTransparent": false,
-  "autosize": true
+// ═══════════════════════════════════════════════════════════════
+//  Period helpers
+// ═══════════════════════════════════════════════════════════════
+
+function periodKey(period) {
+  return `change_${period}`;
 }
-                </script>
-              </div>
-            </div>
-          </a>
-        </div>
-      </section>
 
-      <section id="commodities" class="dashboard-section">
-        <div class="section-header">
-          <h2>Commodities</h2>
-          <p>Energy and precious metals benchmarks.</p>
-        </div>
-        <div class="cards-grid">
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/TVC-USOIL/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="card-header">
-              <h3>WTI Crude Oil</h3>
-              <p>Gauge for global growth and inflation pressures.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "TVC:USOIL",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#009688",
-  "underLineColor": "rgba(0, 150, 136, 0.25)",
-  "isTransparent": false,
-  "autosize": true
+// ═══════════════════════════════════════════════════════════════
+//  1.  STAT CARDS
+// ═══════════════════════════════════════════════════════════════
+
+function renderStatCards() {
+  const key = periodKey(state.period);
+  const sorted = [...state.quotes].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
+  const best   = sorted[0];
+  const worst  = sorted[sorted.length - 1];
+  const spy    = state.quotes.find(q => q.symbol === "SPY");
+
+  // Sector aggregation
+  const secMap = {};
+  state.quotes.forEach(q => {
+    if (!secMap[q.sector]) secMap[q.sector] = {sum: 0, count: 0};
+    secMap[q.sector].sum += (q[key] ?? 0);
+    secMap[q.sector].count++;
+  });
+  const hotSector = Object.entries(secMap)
+    .map(([s, d]) => ({sector: s, avg: d.sum / d.count}))
+    .sort((a, b) => b.avg - a.avg)[0];
+
+  function fill(id, sym, chg, sub) {
+    const el = document.getElementById(id);
+    el.querySelector(".stat-symbol").textContent = sym;
+    const chgEl = el.querySelector(".stat-change");
+    chgEl.textContent = fmtPct(chg);
+    chgEl.style.color = changeTextColor(chg);
+    if (sub) el.querySelector(".stat-sector").textContent = sub;
+  }
+
+  fill("cardBest",      best?.symbol  ?? "—",  best?.[key]  ?? 0, best?.sector);
+  fill("cardWorst",     worst?.symbol ?? "—",  worst?.[key] ?? 0, worst?.sector);
+  fill("cardHotSector", hotSector?.sector ?? "—", hotSector?.avg ?? 0, "加權平均漲幅");
+
+  if (spy) {
+    document.getElementById("spyPrice").textContent = "$" + spy.price.toFixed(2);
+    const c = document.getElementById("spyChange");
+    c.textContent = fmtPct(spy[key] ?? 0);
+    c.style.color = changeTextColor(spy[key] ?? 0);
+  }
 }
-                </script>
-              </div>
-            </div>
-          </a>
 
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/TVC-GOLD/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="card-header">
-              <h3>Gold</h3>
-              <p>Store of value and macro hedge signal.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "TVC:GOLD",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#003366",
-  "underLineColor": "rgba(0, 51, 102, 0.25)",
-  "isTransparent": false,
-  "autosize": true
-}
-                </script>
-              </div>
-            </div>
-          </a>
-        </div>
-        <ol class="timeline" aria-label="Upcoming macroeconomic events"></ol>
-      </section>
-    </main>
+// ═══════════════════════════════════════════════════════════════
+//  2.  TREEMAP HEATMAP
+// ═══════════════════════════════════════════════════════════════
 
-    <footer class="site-footer">
-      <p>
-        Data and charts are provided by their respective platforms. This
-        dashboard is for informational purposes only.
-      </p>
-    </footer>
+function squarify(items, x, y, w, h) {
+  // Simple squarify treemap algorithm
+  if (!items.length) return [];
+  const total = items.reduce((s, i) => s + i.value, 0);
+  const area   = w * h;
+  const rects  = [];
 
-    <script>
-      const menuToggle = document.querySelector(".menu-toggle");
-      const nav = document.querySelector(".nav-links");
-      const navLinks = nav.querySelectorAll("a");
+  function row(rowItems, x0, y0, rw, rh) {
+    const rowTotal = rowItems.reduce((s, i) => s + i.value, 0);
+    let cx = x0;
+    rowItems.forEach(item => {
+      const fw = (item.value / rowTotal) * rw;
+      rects.push({...item, x: cx, y: y0, w: fw, h: rh});
+      cx += fw;
+    });
+  }
 
-      const closeMenu = () => {
-        nav.classList.remove("open");
-        menuToggle.setAttribute("aria-expanded", "false");
-      };
-
-      menuToggle.addEventListener("click", () => {
-        const isOpen = nav.classList.toggle("open");
-        menuToggle.setAttribute("aria-expanded", String(isOpen));
+  function layout(items, x0, y0, w0, h0) {
+    if (!items.length) return;
+    if (items.length === 1) {
+      rects.push({...items[0], x: x0, y: y0, w: w0, h: h0});
+      return;
+    }
+    const total0 = items.reduce((s, i) => s + i.value, 0);
+    const target = (w0 * h0) / 2;
+    let acc = 0, split = 0;
+    for (let k = 0; k < items.length; k++) {
+      acc += items[k].value;
+      if (acc >= target * 0.5) { split = k + 1; break; }
+    }
+    split = Math.max(1, Math.min(split, items.length - 1));
+    const first = items.slice(0, split);
+    const rest  = items.slice(split);
+    const frac  = first.reduce((s, i) => s + i.value, 0) / total0;
+    if (w0 >= h0) {
+      const fw = w0 * frac;
+      row(first, x0,      y0, fw,      h0);
+      layout(rest, x0 + fw, y0, w0 - fw, h0);
+    } else {
+      const fh = h0 * frac;
+      const xtmp = x0;
+      first.forEach(item => {
+        const iw = (item.value / first.reduce((s,i)=>s+i.value,0)) * w0;
+        rects.push({...item, x: xtmp, y: y0, w: iw, h: fh});
       });
+      let cx2 = x0;
+      first.forEach(item => { cx2 += item.w ?? 0; }); // just recompute
+      layout(rest, x0, y0 + fh, w0, h0 - fh);
+    }
+  }
 
-      navLinks.forEach((link) => {
-        link.addEventListener("click", () => {
-          if (window.matchMedia("(max-width: 720px)").matches) {
-            closeMenu();
+  // Group by sector first
+  const sectors = {};
+  items.forEach(it => {
+    if (!sectors[it.sector]) sectors[it.sector] = [];
+    sectors[it.sector].push(it);
+  });
+
+  const secItems = Object.entries(sectors).map(([sec, its]) => ({
+    sector: sec,
+    value:  its.reduce((s, i) => s + i.value, 0),
+    etfs:   its,
+  })).sort((a, b) => b.value - a.value);
+
+  layout(secItems.map(s => ({...s, value: s.value})), x, y, w, h);
+
+  // Now recursively layout ETFs within each sector rect
+  const secRects = [...rects];
+  rects.length = 0;
+  secRects.forEach(sr => {
+    if (!sr.etfs) { rects.push(sr); return; }
+    const PAD = 2;
+    const inner = {x: sr.x + PAD, y: sr.y + PAD, w: sr.w - PAD*2, h: sr.h - PAD*2};
+    if (inner.w < 1 || inner.h < 1) return;
+    const etfs = sr.etfs.sort((a, b) => b.value - a.value);
+    etfs.forEach((etf, idx) => {
+      const frac = etf.value / sr.value;
+      // Simple horizontal split for ETFs within sector
+      const ew = inner.w * frac * (etfs.length > 1 ? 1 : 1);
+      rects.push({...etf, x: inner.x, y: inner.y, w: inner.w, h: inner.h / etfs.length, _row: idx});
+    });
+    // Actually do a proper sub-layout
+    rects.splice(rects.length - etfs.length, etfs.length);
+    layoutETFs(etfs, inner.x, inner.y, inner.w, inner.h);
+  });
+
+  function layoutETFs(etfs, x0, y0, w0, h0) {
+    if (!etfs.length) return;
+    if (etfs.length === 1) {
+      rects.push({...etfs[0], x: x0, y: y0, w: w0, h: h0});
+      return;
+    }
+    const total0 = etfs.reduce((s, e) => s + e.value, 0);
+    const half   = total0 / 2;
+    let acc = 0, split = 1;
+    for (let k = 0; k < etfs.length - 1; k++) {
+      acc += etfs[k].value;
+      if (acc >= half) { split = k + 1; break; }
+    }
+    const first = etfs.slice(0, split);
+    const rest  = etfs.slice(split);
+    const frac  = first.reduce((s,e)=>s+e.value,0) / total0;
+    if (w0 >= h0) {
+      const fw = w0 * frac;
+      row(first, x0, y0, fw, h0);
+      layoutETFs(rest, x0 + fw, y0, w0 - fw, h0);
+    } else {
+      const fh = h0 * frac;
+      row(first.map((e,i) => ({...e})), x0, y0, w0, fh);
+      layoutETFs(rest, x0, y0 + fh, w0, h0 - fh);
+    }
+
+    function row(its, rx, ry, rw, rh) {
+      const rt = its.reduce((s, i) => s + i.value, 0);
+      let cx = rx;
+      its.forEach(it => {
+        const fw2 = (it.value / rt) * rw;
+        rects.push({...it, x: cx, y: ry, w: fw2, h: rh});
+        cx += fw2;
+      });
+    }
+  }
+
+  return rects;
+}
+
+function renderHeatmap() {
+  const key = periodKey(state.period);
+  const canvas = document.getElementById("heatmapCanvas");
+  const wrap   = canvas.parentElement;
+  const W = wrap.clientWidth  || 900;
+  const H = Math.max(360, Math.min(500, W * 0.45));
+  canvas.width  = W * devicePixelRatio;
+  canvas.height = H * devicePixelRatio;
+  canvas.style.width  = W + "px";
+  canvas.style.height = H + "px";
+
+  const ctx = canvas.getContext("2d");
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  ctx.clearRect(0, 0, W, H);
+
+  const items = state.quotes
+    .filter(q => q.symbol !== "SPY")
+    .map(q => ({
+      symbol: q.symbol,
+      name:   q.name,
+      sector: q.sector,
+      value:  q.mcap,
+      change: q[key] ?? 0,
+    }));
+
+  const rects = squarify(items, 0, 0, W, H);
+
+  rects.forEach(r => {
+    if (!r.symbol || r.w < 2 || r.h < 2) return;
+    const PAD = 1;
+    const x = r.x + PAD, y = r.y + PAD, w = r.w - PAD*2, h = r.h - PAD*2;
+    if (w < 1 || h < 1) return;
+
+    // Background
+    ctx.fillStyle = changeColor(r.change, 0.85);
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, 3);
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = "rgba(255,255,255,0.06)";
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    if (w < 28 || h < 18) return;
+
+    // Symbol text
+    ctx.fillStyle = "#e2e8f0";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const fontSize = Math.max(8, Math.min(14, w / 5, h / 3));
+    ctx.font = `600 ${fontSize}px Inter, sans-serif`;
+    const cx = x + w / 2, cy = y + h / 2;
+
+    if (h > 36) {
+      ctx.fillText(r.symbol, cx, cy - fontSize * 0.6);
+      const changeFontSize = Math.max(7, fontSize * 0.85);
+      ctx.font = `500 ${changeFontSize}px JetBrains Mono, monospace`;
+      ctx.fillStyle = r.change >= 0 ? "#86efac" : "#fca5a5";
+      ctx.fillText(fmtPct(r.change), cx, cy + changeFontSize * 0.8);
+    } else {
+      ctx.fillText(r.symbol, cx, cy);
+    }
+  });
+
+  // Sector labels overlay (sector name on largest rect per sector)
+  const secBest = {};
+  rects.forEach(r => {
+    if (!r.symbol) return;
+    if (!secBest[r.sector] || r.value > secBest[r.sector].value)
+      secBest[r.sector] = r;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  3.  SECTOR BAR CHART
+// ═══════════════════════════════════════════════════════════════
+
+function renderSectorBar() {
+  const key = periodKey(state.period);
+  const secMap = {};
+  state.quotes.forEach(q => {
+    if (q.symbol === "SPY") return;
+    if (!secMap[q.sector]) secMap[q.sector] = {sum: 0, tw: 0};
+    secMap[q.sector].sum += (q[key] ?? 0) * q.mcap;
+    secMap[q.sector].tw  += q.mcap;
+  });
+  const data = Object.entries(secMap)
+    .map(([sec, d]) => ({sector: sec, change: d.tw ? d.sum / d.tw : 0}))
+    .sort((a, b) => b.change - a.change);
+
+  const labels  = data.map(d => d.sector);
+  const values  = data.map(d => +d.change.toFixed(2));
+  const colors  = data.map(d => changeColor(d.change, 0.85));
+  const borders = data.map(d => changeColor(d.change, 1));
+
+  if (state.sectorChart) state.sectorChart.destroy();
+  state.sectorChart = new Chart(
+    document.getElementById("sectorBarChart"),
+    {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [{
+          label: "漲跌 %",
+          data: values,
+          backgroundColor: colors,
+          borderColor: borders,
+          borderWidth: 1,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {display: false},
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${fmtPct(ctx.raw)}`,
+            }
           }
-        });
-      });
-
-      window.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-          closeMenu();
+        },
+        scales: {
+          x: {
+            grid:  {color: "rgba(255,255,255,0.05)"},
+            ticks: {color: "#94a3b8", callback: v => fmtPct(v)},
+          },
+          y: {
+            grid:  {display: false},
+            ticks: {color: "#e2e8f0", font: {size: 11}},
+          }
         }
+      }
+    }
+  );
+}
 
-        const timelineList = document.querySelector(".timeline");
-        const timelineSection = document.querySelector(".timeline-section");
+// ═══════════════════════════════════════════════════════════════
+//  4.  ETF TABLE
+// ═══════════════════════════════════════════════════════════════
 
-        const renderTimelineStatus = (message, type = "status") => {
-          if (!timelineList) {
-            return;
-          }
+function renderTable() {
+  const key  = periodKey(state.period);
+  const data = [...state.quotes].sort((a, b) =>
+    state.sortAsc
+      ? (a[key] ?? 0) - (b[key] ?? 0)
+      : (b[key] ?? 0) - (a[key] ?? 0)
+  );
+  const tbody = document.getElementById("etfTableBody");
+  tbody.innerHTML = data.map(q => {
+    const chg = q[key] ?? 0;
+    const cc  = changeTextColor(chg);
+    const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${SECTOR_COLORS[q.sector]??'#888'};margin-right:5px"></span>`;
+    return `<tr>
+      <td><strong>${q.symbol}</strong></td>
+      <td class="name-cell">${q.name}</td>
+      <td>${dot}${q.sector}</td>
+      <td class="mono">$${q.price.toFixed(2)}</td>
+      <td class="mono" style="color:${cc}">${fmtPct(chg)}</td>
+    </tr>`;
+  }).join("");
+}
 
-          timelineList.innerHTML = "";
-          const statusItem = document.createElement("li");
-          statusItem.className = `timeline-${type}`;
-          statusItem.textContent = message;
-          timelineList.appendChild(statusItem);
-        };
+// ═══════════════════════════════════════════════════════════════
+//  5.  TREND CHART + CORRELATION
+// ═══════════════════════════════════════════════════════════════
 
-        const formatDisplayDate = (date) =>
-          date.toLocaleString(undefined, {
-            month: "short",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-          });
+function buildSymbolPicker() {
+  const container = document.getElementById("symbolPicker");
+  container.innerHTML = "";
+  state.quotes.filter(q => q.symbol !== "SPY").forEach(q => {
+    const btn = document.createElement("button");
+    btn.className = "sym-btn" + (state.selected.includes(q.symbol) ? " active" : "");
+    btn.textContent = q.symbol;
+    btn.title = q.name;
+    btn.style.setProperty("--sc", SECTOR_COLORS[q.sector] ?? "#888");
+    btn.addEventListener("click", () => {
+      if (state.selected.includes(q.symbol)) {
+        if (state.selected.length <= 1) return;
+        state.selected = state.selected.filter(s => s !== q.symbol);
+        btn.classList.remove("active");
+      } else {
+        if (state.selected.length >= 6) {
+          const removed = state.selected.shift();
+          container.querySelector(`[data-sym="${removed}"]`)?.classList.remove("active");
+        }
+        state.selected.push(q.symbol);
+        btn.classList.add("active");
+      }
+      renderTrendChart();
+    });
+    btn.dataset.sym = q.symbol;
+    container.appendChild(btn);
+  });
+}
 
-        const normaliseTime = (value) => {
-          if (!value) {
-            return "00:00:00";
-          }
+const TREND_PALETTE = [
+  "#4a90e2","#f7931a","#27ae60","#e91e8c","#ffc107","#00bcd4","#e74c3c","#8e44ad"
+];
 
-          if (/^\d{2}:\d{2}$/.test(value)) {
-            return `${value}:00`;
-          }
+async function renderTrendChart() {
+  const period = state.period === "1d" ? "5d" : state.period;
+  const allSeries = {};
 
-          return value;
-        };
+  await Promise.all(state.selected.map(async sym => {
+    if (state.trendSeriesCache[sym + period]) {
+      allSeries[sym] = state.trendSeriesCache[sym + period];
+      return;
+    }
+    try {
+      const data = await apiFetch(`/api/history?symbol=${sym}&period=${period}`);
+      state.trendSeriesCache[sym + period] = data.series;
+      allSeries[sym] = data.series;
+    } catch {/* ignore */}
+  }));
 
-        const parseEventDate = (event) => {
-          if (!event || !event.date) {
-            return null;
-          }
+  // Common dates
+  const allDates = Object.values(allSeries).reduce((acc, s) => {
+    const dates = new Set(s.map(b => b.date));
+    return acc === null ? dates : new Set([...acc].filter(d => dates.has(d)));
+  }, null) ?? new Set();
+  const dates = [...allDates].sort();
 
-          const [datePart, timePart] = event.date.split(" ");
-          const baseDate = datePart || event.date;
-          const time = event.time ? normaliseTime(event.time) : normaliseTime(timePart);
+  // Normalise to 100 at start
+  const datasets = state.selected.map((sym, i) => {
+    const s = allSeries[sym] ?? [];
+    const byDate = Object.fromEntries(s.map(b => [b.date, b.close]));
+    const values = dates.map(d => byDate[d] ?? null);
+    const base   = values.find(v => v !== null) ?? 1;
+    return {
+      label:           sym,
+      data:            values.map(v => v === null ? null : +((v / base * 100).toFixed(3))),
+      borderColor:     TREND_PALETTE[i % TREND_PALETTE.length],
+      backgroundColor: TREND_PALETTE[i % TREND_PALETTE.length] + "22",
+      borderWidth:     2,
+      pointRadius:     0,
+      tension:         0.3,
+      fill:            false,
+      spanGaps:        true,
+    };
+  });
 
-          const isoCandidate = `${baseDate}T${time || "00:00:00"}`;
-
-          const utcCandidate = Date.parse(`${isoCandidate}Z`);
-          if (!Number.isNaN(utcCandidate)) {
-            return new Date(utcCandidate);
-          }
-
-          const localCandidate = Date.parse(isoCandidate);
-          if (!Number.isNaN(localCandidate)) {
-            return new Date(localCandidate);
-          }
-
-          return null;
-        };
-
-        const buildTimelineItem = (event) => {
-          const item = document.createElement("li");
-
-          const eventDate = parseEventDate(event);
-          const dateElement = document.createElement("div");
-          dateElement.className = "timeline-date";
-          if (eventDate) {
-            dateElement.textContent = formatDisplayDate(eventDate);
-          } else {
-            dateElement.textContent = event.date || "Upcoming";
-          }
-
-          const content = document.createElement("div");
-          content.className = "timeline-content";
-
-          const title = document.createElement("h3");
-          title.textContent = event.event || event.title || "Economic release";
-
-          const details = document.createElement("p");
-          const info = [];
-          if (event.country) {
-            info.push(event.country);
-          }
-          if (event.importance) {
-            info.push(event.importance);
-          }
-          if (event.category && !event.importance) {
-            info.push(event.category);
-          }
-          if (event.consensus != null) {
-            info.push(`Forecast: ${event.consensus}`);
-          }
-          if (event.actual != null) {
-            info.push(`Actual: ${event.actual}`);
-          }
-          if (event.previous != null) {
-            info.push(`Previous: ${event.previous}`);
-          }
-
-          if (info.length) {
-            details.textContent = info.join(" • ");
-          } else if (event.description) {
-            details.textContent = event.description;
-          } else {
-            details.textContent = "Upcoming economic data";
-          }
-
-          content.append(title, details);
-
-          const tagValue = event.importance || event.category || "";
-          if (tagValue) {
-            const tag = document.createElement("span");
-            tag.className = "event-tag";
-            tag.textContent = tagValue;
-            content.appendChild(tag);
-          }
-
-          item.append(dateElement, content);
-          return { item, eventDate };
-        };
-
-        const fallbackEvents = [
-          {
-            date: new Date().toISOString(),
-            title: "FOMC press conference",
-            description: "Federal Reserve chair provides color on the latest policy decision.",
-            category: "Monetary Policy",
+  if (state.trendChart) state.trendChart.destroy();
+  state.trendChart = new Chart(
+    document.getElementById("trendChart"),
+    {
+      type: "line",
+      data: {labels: dates, datasets},
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {mode: "index", intersect: false},
+        plugins: {
+          legend: {
+            labels: {color: "#e2e8f0", font: {size: 12}},
           },
-          {
-            date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-            title: "US Nonfarm Payrolls",
-            description: "Employment data that often swings risk sentiment and USD crosses.",
-            category: "Labor Market",
-          },
-          {
-            date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
-            title: "Eurozone CPI Flash",
-            description: "Inflation snapshot guiding ECB expectations.",
-            category: "Inflation",
-          },
-        ];
-
-        const loadEconomicCalendar = async () => {
-          if (!timelineList) {
-            return;
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ${ctx.raw?.toFixed(2) ?? "—"}`,
+            }
           }
-
-          renderTimelineStatus("Loading upcoming releases…");
-
-          const now = new Date();
-          const formatDateParam = (date) => date.toISOString().split("T")[0];
-          const start = formatDateParam(now);
-          const end = formatDateParam(new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000));
-          const calendarEndpoint =
-            "https://financialmodelingprep.com/api/v3/economic_calendar" +
-            `?from=${start}&to=${end}&apikey=demo`;
-
-          try {
-            const response = await fetch(calendarEndpoint);
-            if (!response.ok) {
-              throw new Error(`Request failed with status ${response.status}`);
-            }
-
-            const payload = await response.json();
-            if (!Array.isArray(payload) || payload.length === 0) {
-              throw new Error("No upcoming events");
-            }
-
-            const upcoming = payload
-              .map((event) => {
-                const { item, eventDate } = buildTimelineItem(event);
-                return { item, eventDate };
-              })
-              .filter(({ eventDate }) => eventDate && eventDate.getTime() >= now.getTime())
-              .sort((a, b) => a.eventDate - b.eventDate)
-              .slice(0, 10);
-
-            timelineList.innerHTML = "";
-
-            if (!upcoming.length) {
-              renderTimelineStatus("No upcoming releases in the next few days.");
-              return;
-            }
-
-            const fragment = document.createDocumentFragment();
-            upcoming.forEach(({ item }) => fragment.appendChild(item));
-            timelineList.appendChild(fragment);
-
-            if (timelineSection) {
-              timelineSection.setAttribute(
-                "data-calendar-source",
-                "financialmodelingprep.com/api/v3/economic_calendar"
-              );
-            }
-          } catch (error) {
-            renderTimelineStatus(
-              "Unable to load live economic releases right now. Please try again later.",
-              "error"
-            );
-            if (timelineSection) {
-              timelineSection.setAttribute("data-calendar-error", String(error));
-            }
-
-            const fragment = document.createDocumentFragment();
-            fallbackEvents.forEach((event) => {
-              const { item } = buildTimelineItem(event);
-              fragment.appendChild(item);
-            });
-            timelineList.appendChild(fragment);
+        },
+        scales: {
+          x: {
+            ticks: {color: "#64748b", maxTicksLimit: 10, maxRotation: 0},
+            grid:  {color: "rgba(255,255,255,0.04)"},
+          },
+          y: {
+            ticks: {color: "#94a3b8", callback: v => v.toFixed(0)},
+            grid:  {color: "rgba(255,255,255,0.06)"},
           }
-        };
+        }
+      }
+    }
+  );
 
-        loadEconomicCalendar();
-      });
-    </script>
-  </body>
+  renderCorrelation(allSeries, dates);
+}
+
+function renderCorrelation(allSeries, dates) {
+  const syms = state.selected.filter(s => allSeries[s]);
+  const matrix = document.getElementById("corrMatrix");
+  if (syms.length < 2) { matrix.innerHTML = "<p style='color:#64748b'>選 2+ 個標的</p>"; return; }
+
+  // Daily returns per symbol
+  const returns = {};
+  syms.forEach(sym => {
+    const s = allSeries[sym];
+    const byDate = Object.fromEntries(s.map(b => [b.date, b.close]));
+    const vals = dates.map(d => byDate[d] ?? null);
+    const rets = [];
+    for (let i = 1; i < vals.length; i++) {
+      if (vals[i] !== null && vals[i-1] !== null)
+        rets.push(vals[i] / vals[i-1] - 1);
+      else rets.push(null);
+    }
+    returns[sym] = rets;
+  });
+
+  function corr(a, b) {
+    const pairs = a.map((v, i) => [v, b[i]]).filter(([x,y]) => x!==null && y!==null);
+    if (pairs.length < 5) return 0;
+    const n  = pairs.length;
+    const ma = pairs.reduce((s,[x])=>s+x,0)/n;
+    const mb = pairs.reduce((s,[,y])=>s+y,0)/n;
+    const num = pairs.reduce((s,[x,y])=>s+(x-ma)*(y-mb),0);
+    const da  = Math.sqrt(pairs.reduce((s,[x])=>s+(x-ma)**2,0));
+    const db  = Math.sqrt(pairs.reduce((s,[,y])=>s+(y-mb)**2,0));
+    return da*db === 0 ? 0 : +(num/(da*db)).toFixed(2);
+  }
+
+  let html = `<table class="corr-table"><thead><tr><th></th>${syms.map(s=>`<th>${s}</th>`).join("")}</tr></thead><tbody>`;
+  syms.forEach(sa => {
+    html += `<tr><th>${sa}</th>`;
+    syms.forEach(sb => {
+      const c = corr(returns[sa], returns[sb]);
+      const bg = c >= 0
+        ? `rgba(74,144,226,${Math.abs(c)*0.7})`
+        : `rgba(248,113,113,${Math.abs(c)*0.7})`;
+      html += `<td style="background:${bg};color:#e2e8f0">${c.toFixed(2)}</td>`;
+    });
+    html += "</tr>";
+  });
+  html += "</tbody></table>";
+  matrix.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  6.  BACKTEST
+// ═══════════════════════════════════════════════════════════════
+
+function buildWeightGrid() {
+  const grid = document.getElementById("weightGrid");
+  const SYMBOLS = Object.keys(state.weights.length ? state.weights : TEMPLATES.balanced);
+  const ALL_SYMS = state.quotes.filter(q => q.symbol !== "SPY").map(q => q.symbol);
+
+  grid.innerHTML = ALL_SYMS.map(sym => {
+    const w = state.weights[sym] ?? 0;
+    const color = SECTOR_COLORS[state.quotes.find(q=>q.symbol===sym)?.sector ?? ""] ?? "#888";
+    return `
+    <div class="weight-row" data-sym="${sym}">
+      <span class="w-symbol" style="border-left:3px solid ${color}">${sym}</span>
+      <input type="range" class="w-slider" min="0" max="100" step="5" value="${w}"
+             data-sym="${sym}" />
+      <input type="number" class="w-input" min="0" max="100" step="5" value="${w}"
+             data-sym="${sym}" />
+      <span class="w-pct">%</span>
+    </div>`;
+  }).join("");
+
+  grid.querySelectorAll(".w-slider").forEach(sl => {
+    sl.addEventListener("input", e => syncWeight(e.target.dataset.sym, +e.target.value, "slider"));
+  });
+  grid.querySelectorAll(".w-input").forEach(inp => {
+    inp.addEventListener("input", e => syncWeight(e.target.dataset.sym, +e.target.value, "input"));
+  });
+
+  updateAllocTotal();
+}
+
+function syncWeight(sym, val, src) {
+  val = Math.max(0, Math.min(100, val));
+  state.weights[sym] = val;
+  const row = document.querySelector(`.weight-row[data-sym="${sym}"]`);
+  if (src !== "slider") row.querySelector(".w-slider").value = val;
+  if (src !== "input")  row.querySelector(".w-input").value  = val;
+  updateAllocTotal();
+}
+
+function updateAllocTotal() {
+  const total = Object.values(state.weights).reduce((s, v) => s + v, 0);
+  document.getElementById("allocTotal").textContent = total;
+  const warn = document.getElementById("allocWarn");
+  warn.classList.toggle("hidden", Math.round(total) === 100);
+  document.getElementById("runBacktest").disabled = Math.round(total) !== 100;
+}
+
+function applyTemplate(tpl) {
+  const weights = TEMPLATES[tpl];
+  state.weights = {};
+  state.quotes.filter(q => q.symbol !== "SPY").forEach(q => {
+    state.weights[q.symbol] = weights[q.symbol] ?? 0;
+  });
+  buildWeightGrid();
+}
+
+async function runBacktest() {
+  const active = Object.entries(state.weights)
+    .filter(([, w]) => w > 0)
+    .map(([s, w]) => `${s}:${w}`)
+    .join(",");
+
+  document.getElementById("backtestResults").classList.add("hidden");
+  document.getElementById("loader").classList.add("active");
+
+  try {
+    const data = await apiFetch(`/api/backtest?weights=${active}&period=${state.btPeriod}`);
+    document.getElementById("loader").classList.remove("active");
+    renderBacktestResults(data);
+  } catch(e) {
+    document.getElementById("loader").classList.remove("active");
+    alert("回測失敗: " + e.message);
+  }
+}
+
+function renderBacktestResults(data) {
+  const {portfolio, benchmark, stats} = data;
+  const el = document.getElementById("backtestResults");
+  el.classList.remove("hidden");
+
+  // Stats cards
+  const sc = [
+    {label: "總報酬率",    value: fmtPct(stats.total_return), pos: stats.total_return >= 0},
+    {label: "年化報酬 CAGR", value: fmtPct(stats.cagr),       pos: stats.cagr >= 0},
+    {label: "Sharpe Ratio", value: stats.sharpe.toFixed(2),   pos: stats.sharpe >= 1},
+    {label: "最大回撤",    value: "-" + stats.max_drawdown.toFixed(2) + "%", pos: false},
+    {label: "SPY 報酬",    value: fmtPct(stats.spy_return),   pos: stats.spy_return >= 0},
+    {label: "超額報酬",    value: fmtPct(stats.total_return - stats.spy_return),
+                              pos: stats.total_return > stats.spy_return},
+  ];
+  document.getElementById("btStatCards").innerHTML = sc.map(s => `
+    <div class="bt-stat">
+      <div class="bt-stat-label">${s.label}</div>
+      <div class="bt-stat-value" style="color:${s.pos ? '#4ade80' : '#f87171'}">${s.value}</div>
+    </div>`).join("");
+
+  // Chart
+  const labels = portfolio.map(p => p.date);
+  if (state.btChart) state.btChart.destroy();
+  state.btChart = new Chart(document.getElementById("btChart"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "我的組合",
+          data:  portfolio.map(p => p.value),
+          borderColor: "#4a90e2",
+          backgroundColor: "#4a90e222",
+          borderWidth: 2.5,
+          fill: true,
+          pointRadius: 0,
+          tension: 0.3,
+        },
+        {
+          label: "SPY (標普500)",
+          data:  benchmark.map(b => b.value),
+          borderColor: "#94a3b8",
+          backgroundColor: "transparent",
+          borderWidth: 1.5,
+          borderDash: [5, 5],
+          pointRadius: 0,
+          tension: 0.3,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {mode: "index", intersect: false},
+      plugins: {
+        legend: {labels: {color: "#e2e8f0", font: {size: 12}}},
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.raw?.toFixed(2) ?? "—"}`,
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {color: "#64748b", maxTicksLimit: 12, maxRotation: 0},
+          grid:  {color: "rgba(255,255,255,0.04)"},
+        },
+        y: {
+          ticks: {color: "#94a3b8", callback: v => v.toFixed(0)},
+          grid:  {color: "rgba(255,255,255,0.06)"},
+          title: {display: true, text: "指數化報酬（起點=100）", color: "#64748b"},
+        }
+      }
+    }
+  });
+
+  // Composition donut-like list
+  const activeW = Object.entries(state.weights).filter(([,w])=>w>0)
+    .sort((a,b)=>b[1]-a[1]);
+  document.getElementById("btComposition").innerHTML = `
+    <h3 style="color:#94a3b8;font-size:0.85rem;margin-bottom:0.75rem">組合配置</h3>
+    <div class="comp-grid">
+      ${activeW.map(([sym, w]) => {
+        const q = state.quotes.find(q=>q.symbol===sym);
+        const col = SECTOR_COLORS[q?.sector ?? ""] ?? "#888";
+        return `<div class="comp-item">
+          <div class="comp-bar-wrap">
+            <div class="comp-bar" style="width:${w}%;background:${col}"></div>
+          </div>
+          <span class="comp-sym">${sym}</span>
+          <span class="comp-pct">${w}%</span>
+        </div>`;
+      }).join("")}
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  7.  EVENT WIRING
+// ═══════════════════════════════════════════════════════════════
+
+// Period buttons
+document.getElementById("periodBar").addEventListener("click", e => {
+  const btn = e.target.closest(".period-btn");
+  if (!btn) return;
+  document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  state.period = btn.dataset.period;
+  renderOverview();
+  if (document.getElementById("tab-trends").classList.contains("active"))
+    renderTrendChart();
+});
+
+// Tabs
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+    if (btn.dataset.tab === "trends") renderTrendChart();
+    if (btn.dataset.tab === "backtest") buildWeightGrid();
+  });
+});
+
+// Sort toggle
+document.getElementById("sortToggle").addEventListener("click", () => {
+  state.sortAsc = !state.sortAsc;
+  renderTable();
+});
+
+// Backtest period buttons
+document.querySelectorAll(".bt-period-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".bt-period-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.btPeriod = btn.dataset.btperiod;
+  });
+});
+
+// Templates
+document.querySelectorAll(".template-btn").forEach(btn => {
+  btn.addEventListener("click", () => applyTemplate(btn.dataset.tpl));
+});
+
+// Run backtest
+document.getElementById("runBacktest").addEventListener("click", runBacktest);
+
+// Resize → re-render heatmap
+window.addEventListener("resize", () => {
+  if (document.getElementById("tab-overview").classList.contains("active"))
+    renderHeatmap();
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  8.  INIT
+// ═══════════════════════════════════════════════════════════════
+
+function renderOverview() {
+  renderStatCards();
+  renderHeatmap();
+  renderSectorBar();
+  renderTable();
+}
+
+async function init() {
+  document.getElementById("loader").classList.add("active");
+  try {
+    state.quotes = await apiFetch("/api/quotes");
+    document.getElementById("updateTime").textContent =
+      "更新於 " + new Date().toLocaleTimeString("zh-TW");
+    renderOverview();
+    buildSymbolPicker();
+    // Pre-initialize backtest weights with balanced template
+    state.weights = {};
+    state.quotes.filter(q => q.symbol !== "SPY").forEach(q => {
+      state.weights[q.symbol] = TEMPLATES.balanced[q.symbol] ?? 0;
+    });
+  } finally {
+    document.getElementById("loader").classList.remove("active");
+  }
+
+  // Auto-refresh every 60s
+  setInterval(async () => {
+    state.trendSeriesCache = {};
+    state.quotes = await apiFetch("/api/quotes");
+    document.getElementById("updateTime").textContent =
+      "更新於 " + new Date().toLocaleTimeString("zh-TW");
+    if (document.getElementById("tab-overview").classList.contains("active"))
+      renderOverview();
+  }, 60_000);
+}
+
+init();
+</script>
+</body>
 </html>
