@@ -10,6 +10,9 @@ jobs:
   deploy:
     name: Deploy to Vercel
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - name: Checkout
@@ -41,8 +44,6 @@ jobs:
         run: npm install --global vercel@latest
 
       # ── Resolve Vercel org + project IDs via REST API ─────────
-      # This avoids interactive 'vercel link' prompts entirely.
-      # The API creates the project on first run; subsequent runs reuse it.
       - name: Resolve Vercel org and project
         id: vercel_ids
         env:
@@ -50,31 +51,31 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Get personal user ID (used as VERCEL_ORG_ID for personal accounts)
+          echo "=== GET /v2/user ==="
           USER_JSON=$(curl -sf "https://api.vercel.com/v2/user" \
             -H "Authorization: Bearer $VERCEL_TOKEN")
+          echo "$USER_JSON" | python3 -c "import json,sys; u=json.load(sys.stdin)['user']; print(f'Account: {u[\"username\"]}  id={u[\"id\"]}')"
           ORG_ID=$(echo "$USER_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['user']['id'])")
-          USERNAME=$(echo "$USER_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['user']['username'])")
-          echo "Account: $USERNAME  (org_id: $ORG_ID)"
 
-          # Try to fetch existing project; create it if it doesn't exist yet
+          echo "=== GET /v9/projects/fund-flow-dashboard ==="
           PROJECT_JSON=$(curl -s "https://api.vercel.com/v9/projects/fund-flow-dashboard" \
             -H "Authorization: Bearer $VERCEL_TOKEN")
+          echo "$PROJECT_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print('status:', d.get('error',{}).get('code','ok'), 'id:', d.get('id','—'))"
 
           if echo "$PROJECT_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); exit(0 if 'id' in d else 1)" 2>/dev/null; then
             PROJECT_ID=$(echo "$PROJECT_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
-            echo "Found existing project: $PROJECT_ID"
+            echo "✅ Found project: $PROJECT_ID"
           else
             echo "Project not found — creating..."
             CREATE_JSON=$(curl -sf -X POST "https://api.vercel.com/v9/projects" \
               -H "Authorization: Bearer $VERCEL_TOKEN" \
               -H "Content-Type: application/json" \
               -d '{"name":"fund-flow-dashboard","framework":"nextjs"}')
+            echo "$CREATE_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print('Created:', d.get('id','ERROR'), d.get('error',''))"
             PROJECT_ID=$(echo "$CREATE_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
-            echo "Created project: $PROJECT_ID"
           fi
 
-          echo "org_id=$ORG_ID"       >> $GITHUB_OUTPUT
+          echo "org_id=$ORG_ID"         >> $GITHUB_OUTPUT
           echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
 
       # ── Production deploy (merge to main) ─────────────────────
@@ -86,9 +87,7 @@ jobs:
           VERCEL_PROJECT_ID: ${{ steps.vercel_ids.outputs.project_id }}
         run: |
           set -euo pipefail
-          vercel deploy --prod --token="$VERCEL_TOKEN" > /tmp/deploy.log 2>&1 \
-            || { echo "=== Vercel output ==="; cat /tmp/deploy.log; exit 1; }
-          cat /tmp/deploy.log
+          vercel deploy --prod --token="$VERCEL_TOKEN" 2>&1 | tee /tmp/deploy.log
           DEPLOY_URL=$(grep -E '^https://' /tmp/deploy.log | tail -1)
           echo "✅ Production: $DEPLOY_URL"
 
@@ -102,22 +101,32 @@ jobs:
           VERCEL_PROJECT_ID: ${{ steps.vercel_ids.outputs.project_id }}
         run: |
           set -euo pipefail
-          vercel deploy --token="$VERCEL_TOKEN" > /tmp/deploy.log 2>&1 \
-            || { echo "=== Vercel output ==="; cat /tmp/deploy.log; exit 1; }
-          cat /tmp/deploy.log
+          vercel deploy --token="$VERCEL_TOKEN" 2>&1 | tee /tmp/deploy.log
           PREVIEW_URL=$(grep -E '^https://' /tmp/deploy.log | tail -1)
           echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
           echo "🔍 Preview: $PREVIEW_URL"
 
-      - name: Post deploy failure to PR
+      - name: Write failure summary
+        if: failure()
+        run: |
+          {
+            echo "## ❌ Vercel Deploy Failed"
+            echo ""
+            echo "**Step summary** (last 100 lines of deploy log):"
+            echo '```'
+            tail -100 /tmp/deploy.log 2>/dev/null || echo "(deploy log not found — failure was in an earlier step)"
+            echo '```'
+          } >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment failure on PR
         if: failure() && github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            let log = '(no log captured)';
+            let log = '(deploy log not found — failure was in an earlier step)';
             try { log = fs.readFileSync('/tmp/deploy.log', 'utf8').slice(-3000); } catch(e) {}
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
