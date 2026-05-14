@@ -3,10 +3,12 @@
 
 Routes
 ------
-GET /api/quotes          – current quotes for all ETFs
-GET /api/history         – ?symbol=XLK&period=1y  (1d/5d/1m/3m/6m/1y/ytd)
-GET /api/sectors         – sector-level aggregated performance
-GET /api/backtest        – ?weights=XLK:30,SMH:20,GLD:10&period=3y
+GET /api/quotes             – current quotes for all ETFs
+GET /api/history            – ?symbol=XLK&period=1y
+GET /api/sectors            – sector-level aggregated performance
+GET /api/backtest           – ?weights=XLK:30,SMH:20&period=3y
+GET /api/macro              – ?period=1d  global capital hierarchy with AUM + changes
+GET /api/strategy-backtest  – ?period=1y  momentum vs equal-weight vs SPY
 Everything else is served as a static file.
 """
 
@@ -266,6 +268,227 @@ def _run_backtest(weights: dict[str, float], period: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Global capital macro tree
+# AUM in trillion USD (approximate 2024-2025 real-world estimates)
+# ---------------------------------------------------------------------------
+
+MACRO_TREE = [
+    # ── Level 1: major asset classes ─────────────────────────────────────
+    {"id": "equities",       "name": "全球股市",       "parent": "global", "aum": 109.0, "vol": 0.013, "color": "#4a90e2", "etfs": []},
+    {"id": "bonds",          "name": "全球債券",       "parent": "global", "aum": 130.0, "vol": 0.005, "color": "#3f51b5", "etfs": []},
+    {"id": "real_estate",    "name": "房地產",         "parent": "global", "aum":  11.0, "vol": 0.012, "color": "#8b6d4f", "etfs": []},
+    {"id": "crypto",         "name": "加密貨幣",       "parent": "global", "aum":   2.5, "vol": 0.045, "color": "#f7931a", "etfs": []},
+    {"id": "commodities",    "name": "大宗商品",       "parent": "global", "aum":   0.8, "vol": 0.018, "color": "#ffc107", "etfs": []},
+    {"id": "cash_mm",        "name": "現金/貨幣市場",  "parent": "global", "aum":   6.5, "vol": 0.001, "color": "#607d8b", "etfs": []},
+    # ── Level 2: equities ────────────────────────────────────────────────
+    {"id": "us_equities",    "name": "美國股市",       "parent": "equities",    "aum": 46.0, "vol": 0.013, "color": "#5ba3f5",
+     "etfs": ["QQQ","XLK","SMH","XLF","XLV","XLE","XLI","XLY","XLP","XLB","XLU"]},
+    {"id": "dev_equities",   "name": "已開發市場",     "parent": "equities",    "aum": 40.0, "vol": 0.011, "color": "#7cbcf7",
+     "etfs": ["VEA","EWJ"]},
+    {"id": "em_equities",    "name": "新興市場",       "parent": "equities",    "aum": 23.0, "vol": 0.014, "color": "#a0d0fa",
+     "etfs": ["EEM","FXI"]},
+    # ── Level 2: bonds ───────────────────────────────────────────────────
+    {"id": "us_treasury",    "name": "美國國債",       "parent": "bonds",       "aum": 30.0, "vol": 0.009, "color": "#5c6bc0", "etfs": ["TLT"]},
+    {"id": "agg_bonds",      "name": "投資級債券",     "parent": "bonds",       "aum": 55.0, "vol": 0.005, "color": "#7986cb", "etfs": ["AGG"]},
+    {"id": "hy_bonds",       "name": "高收益債券",     "parent": "bonds",       "aum": 20.0, "vol": 0.007, "color": "#9fa8da", "etfs": ["HYG"]},
+    {"id": "intl_bonds",     "name": "國際債券",       "parent": "bonds",       "aum": 25.0, "vol": 0.006, "color": "#b3bcec", "etfs": []},
+    # ── Level 2: real estate ─────────────────────────────────────────────
+    {"id": "us_reits",       "name": "美國 REITs",     "parent": "real_estate", "aum": 4.5, "vol": 0.012, "color": "#a08060", "etfs": ["VNQ","IYR"]},
+    {"id": "asia_reits",     "name": "亞太房地產",     "parent": "real_estate", "aum": 4.0, "vol": 0.013, "color": "#b8966e", "etfs": ["EWJ"]},
+    {"id": "eu_reits",       "name": "歐洲房地產",     "parent": "real_estate", "aum": 2.5, "vol": 0.012, "color": "#c9a87c", "etfs": []},
+    # ── Level 2: crypto ──────────────────────────────────────────────────
+    {"id": "btc_seg",        "name": "Bitcoin",        "parent": "crypto",      "aum": 1.3, "vol": 0.045, "color": "#f7931a", "etfs": ["IBIT","BITO"]},
+    {"id": "eth_seg",        "name": "Ethereum",       "parent": "crypto",      "aum": 0.5, "vol": 0.050, "color": "#627eea", "etfs": []},
+    {"id": "alt_crypto",     "name": "其他加密資產",   "parent": "crypto",      "aum": 0.7, "vol": 0.060, "color": "#e91e8c", "etfs": ["ARKK"]},
+    # ── Level 2: commodities ─────────────────────────────────────────────
+    {"id": "precious_metals","name": "貴金屬",         "parent": "commodities", "aum": 0.40, "vol": 0.013, "color": "#ffd700", "etfs": ["GLD","SLV"]},
+    {"id": "energy_comm",    "name": "能源原物料",     "parent": "commodities", "aum": 0.25, "vol": 0.022, "color": "#ff8c00", "etfs": ["USO","XOP"]},
+    {"id": "agri_comm",      "name": "農業",           "parent": "commodities", "aum": 0.15, "vol": 0.010, "color": "#8bc34a", "etfs": ["DBA"]},
+    # ── Level 3: US equity sectors ───────────────────────────────────────
+    {"id": "tech_sector",    "name": "科技/半導體",    "parent": "us_equities", "aum": 16.0, "vol": 0.016, "color": "#4a90e2", "etfs": ["QQQ","XLK","SMH","ARKK"]},
+    {"id": "health_sector",  "name": "醫療生技",       "parent": "us_equities", "aum":  7.0, "vol": 0.010, "color": "#27ae60", "etfs": ["XLV","IBB"]},
+    {"id": "fin_sector",     "name": "金融",           "parent": "us_equities", "aum":  8.0, "vol": 0.013, "color": "#8e44ad", "etfs": ["XLF","KBE"]},
+    {"id": "energy_sector",  "name": "能源",           "parent": "us_equities", "aum":  3.0, "vol": 0.018, "color": "#e67e22", "etfs": ["XLE","XOP"]},
+    {"id": "cons_disc",      "name": "非必需消費",     "parent": "us_equities", "aum":  4.0, "vol": 0.014, "color": "#e91e8c", "etfs": ["XLY"]},
+    {"id": "cons_staples",   "name": "必需消費",       "parent": "us_equities", "aum":  3.0, "vol": 0.008, "color": "#9c27b0", "etfs": ["XLP"]},
+    {"id": "industrial",     "name": "工業",           "parent": "us_equities", "aum":  3.0, "vol": 0.011, "color": "#607d8b", "etfs": ["XLI"]},
+    {"id": "materials",      "name": "材料",           "parent": "us_equities", "aum":  1.5, "vol": 0.013, "color": "#795548", "etfs": ["XLB"]},
+    {"id": "utilities",      "name": "公用事業",       "parent": "us_equities", "aum":  1.5, "vol": 0.009, "color": "#00bcd4", "etfs": ["XLU"]},
+]
+
+# One representative ETF per "theme" for strategy rotation
+THEME_ETF = {
+    "科技":     "XLK",  "加密":     "IBIT", "房地產":   "VNQ",
+    "能源":     "XLE",  "醫療":     "XLV",  "金融":     "XLF",
+    "消費":     "XLY",  "工業":     "XLI",  "材料":     "XLB",
+    "公用":     "XLU",  "債券":     "AGG",  "黃金":     "GLD",
+    "國際":     "VEA",
+}
+
+
+def _node_change(node: dict, period: str, quotes_by_sym: dict) -> float:
+    """Return weighted-average % change for a macro node for the given period."""
+    key = f"change_{period}"
+    etfs = [e for e in node.get("etfs", []) if e in quotes_by_sym]
+    if etfs:
+        return round(sum(quotes_by_sym[e][key] for e in etfs) / len(etfs), 2)
+    # No ETFs → simulate with seeded random based on node id + day
+    rng = random.Random(int(node["id"].encode().hex(), 16) % 999983
+                        + int(time.time() // 86400))
+    return round(rng.gauss(0, node["vol"] * 100 * _period_vol_scale(period)), 2)
+
+
+def _period_vol_scale(period: str) -> float:
+    return {"1d": 1, "5d": 2.2, "1m": 4.5, "3m": 7.5, "6m": 10, "1y": 14, "ytd": 10}.get(period, 1)
+
+
+def _get_macro_data(period: str) -> dict:
+    """Return the full macro hierarchy with AUM and period % changes."""
+    quotes = _get_all_quotes()
+    qmap   = {q["symbol"]: q for q in quotes}
+
+    # Build children map
+    children: dict[str, list] = {"global": []}
+    for node in MACRO_TREE:
+        parent = node["parent"]
+        children.setdefault(parent, [])
+        children[parent].append(node["id"])
+
+    node_by_id: dict[str, dict] = {n["id"]: n for n in MACRO_TREE}
+
+    def enrich(node_id: str) -> dict:
+        if node_id == "global":
+            kids = [enrich(c) for c in children.get("global", [])]
+            total_aum = sum(k["aum"] for k in kids)
+            w_change  = sum(k["aum"] * k["change"] for k in kids) / total_aum if total_aum else 0
+            return {"id": "global", "name": "全球資金", "aum": round(total_aum, 1),
+                    "change": round(w_change, 2), "color": "#58a6ff",
+                    "children": kids, "etfs": []}
+        node = dict(node_by_id[node_id])
+        node["change"] = _node_change(node, period, qmap)
+        kids = [enrich(c) for c in children.get(node_id, [])]
+        if kids:
+            total = sum(k["aum"] for k in kids)
+            node["change"] = round(sum(k["aum"] * k["change"] for k in kids) / total, 2) if total else node["change"]
+        node["children"] = kids
+        # Attach ETF quotes
+        node["etf_quotes"] = [
+            {"symbol": e, "name": qmap[e]["name"], "price": qmap[e]["price"],
+             "change": qmap[e].get(f"change_{period}", 0)}
+            for e in node.get("etfs", []) if e in qmap
+        ]
+        return node
+
+    return enrich("global")
+
+
+# ---------------------------------------------------------------------------
+# Strategy comparison backtest
+# ---------------------------------------------------------------------------
+
+def _run_strategy_backtest(period: str, top_n: int = 3) -> dict:
+    """Compare momentum rotation vs equal-weight vs SPY over the given period."""
+    period_days = {"1y": 365, "3y": 1095, "5y": 1825}.get(period, 365)
+
+    # Generate series for all theme ETFs + SPY
+    theme_syms = list(THEME_ETF.values())
+    series_map: dict[str, list] = {
+        sym: _generate_series(sym, period_days + 30)
+        for sym in theme_syms
+    }
+    spy_series = _generate_series("SPY", period_days + 30)
+
+    # Collect common sorted dates (last period_days trading days)
+    all_dates = sorted({b["date"] for sym in theme_syms for b in series_map[sym]})[-period_days:]
+
+    def price_on(sym: str, date: str) -> float | None:
+        return next((b["close"] for b in series_map[sym] if b["date"] == date), None)
+
+    # ── Momentum strategy ────────────────────────────────────────────────────
+    mom_holdings: dict[str, float] = {s: 1 / len(theme_syms) for s in theme_syms}
+    mom_vals: list[dict] = []
+    prev_val_mom = 100.0
+    REBAL_FREQ = 21  # trading days
+
+    for i, date in enumerate(all_dates):
+        if i % REBAL_FREQ == 0 and i >= REBAL_FREQ:
+            lookback_date = all_dates[max(0, i - REBAL_FREQ)]
+            rets = {}
+            for sym in theme_syms:
+                p0 = price_on(sym, lookback_date)
+                p1 = price_on(sym, date)
+                if p0 and p1:
+                    rets[sym] = p1 / p0 - 1
+            if len(rets) >= top_n:
+                winners = sorted(rets, key=rets.__getitem__, reverse=True)[:top_n]
+                mom_holdings = {s: (1 / top_n if s in winners else 0) for s in theme_syms}
+
+        if i == 0:
+            mom_vals.append({"date": date, "value": 100.0})
+        else:
+            prev_date = all_dates[i - 1]
+            daily = sum(
+                mom_holdings[s] * ((price_on(s, date) or 1) / (price_on(s, prev_date) or 1) - 1)
+                for s in theme_syms
+                if price_on(s, date) and price_on(s, prev_date)
+            )
+            prev_val_mom = mom_vals[-1]["value"] * (1 + daily)
+            mom_vals.append({"date": date, "value": round(prev_val_mom, 4)})
+
+    # ── Equal-weight strategy ────────────────────────────────────────────────
+    eq_weight = 1 / len(theme_syms)
+    eq_vals: list[dict] = [{"date": all_dates[0], "value": 100.0}]
+    for i in range(1, len(all_dates)):
+        date, prev_date = all_dates[i], all_dates[i - 1]
+        daily = sum(
+            eq_weight * ((price_on(s, date) or 1) / (price_on(s, prev_date) or 1) - 1)
+            for s in theme_syms
+            if price_on(s, date) and price_on(s, prev_date)
+        )
+        eq_vals.append({"date": date, "value": round(eq_vals[-1]["value"] * (1 + daily), 4)})
+
+    # ── SPY buy-and-hold ────────────────────────────────────────────────────
+    spy_by_date = {b["date"]: b["close"] for b in spy_series}
+    spy_base    = spy_by_date.get(all_dates[0], 1)
+    spy_vals    = [{"date": d, "value": round(spy_by_date.get(d, spy_base) / spy_base * 100, 4)}
+                   for d in all_dates if d in spy_by_date]
+
+    def _stats(vals: list[dict]) -> dict:
+        if len(vals) < 5:
+            return {}
+        ret    = vals[-1]["value"] / 100 - 1
+        ny     = len(vals) / 252
+        cagr   = (1 + ret) ** (1 / ny) - 1 if ny > 0 else 0
+        dr     = [vals[i]["value"] / vals[i - 1]["value"] - 1 for i in range(1, len(vals))]
+        mean_r = sum(dr) / len(dr)
+        std_r  = math.sqrt(sum((r - mean_r) ** 2 for r in dr) / len(dr))
+        sharpe = (mean_r / std_r * math.sqrt(252)) if std_r > 0 else 0
+        peak   = vals[0]["value"]
+        max_dd = 0.0
+        for v in vals:
+            peak   = max(peak, v["value"])
+            max_dd = max(max_dd, (peak - v["value"]) / peak)
+        return {
+            "total_return":  round(ret * 100, 2),
+            "cagr":          round(cagr * 100, 2),
+            "sharpe":        round(sharpe, 2),
+            "max_drawdown":  round(max_dd * 100, 2),
+        }
+
+    return {
+        "momentum":     mom_vals,
+        "equal_weight": eq_vals,
+        "spy":          spy_vals,
+        "theme_names":  {v: k for k, v in THEME_ETF.items()},
+        "stats": {
+            "momentum":     _stats(mom_vals),
+            "equal_weight": _stats(eq_vals),
+            "spy":          _stats(spy_vals),
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
 # HTTP handler
 # ---------------------------------------------------------------------------
 
@@ -352,6 +575,15 @@ class _Handler(http.server.SimpleHTTPRequestHandler):
                 total = sum(weights.values())
                 weights = {s: w / total for s, w in weights.items()}
                 self._json(_run_backtest(weights, period))
+
+            elif path == "/api/macro":
+                period = qs.get("period", ["1d"])[0]
+                self._json(_get_macro_data(period))
+
+            elif path == "/api/strategy-backtest":
+                period = qs.get("period", ["1y"])[0]
+                top_n  = int(qs.get("top_n", ["3"])[0])
+                self._json(_run_strategy_backtest(period, top_n))
 
             else:
                 self._json({"error": "not found"}, 404)

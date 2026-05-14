@@ -39,15 +39,69 @@
 
 <!-- ── Tab Navigation ───────────────────────────────────────────── -->
 <nav class="tab-nav">
-  <button class="tab-btn active" data-tab="overview">📊 Overview</button>
+  <button class="tab-btn active" data-tab="macro">🌐 Macro Flow</button>
+  <button class="tab-btn" data-tab="overview">📊 Overview</button>
   <button class="tab-btn" data-tab="trends">📈 Trend Analysis</button>
   <button class="tab-btn" data-tab="backtest">🔬 Backtest</button>
 </nav>
 
 <!-- ══════════════════════════════════════════════════════════════════
+     TAB: MACRO FLOW
+══════════════════════════════════════════════════════════════════ -->
+<main id="tab-macro" class="tab-panel active">
+
+  <section class="panel">
+    <!-- Breadcrumb -->
+    <div class="macro-breadcrumb" id="macroBreadcrumb">
+      <span class="bc-item bc-home" data-node="global">🌐 全球資金</span>
+    </div>
+
+    <!-- Top summary bar -->
+    <div class="macro-summary" id="macroSummary"></div>
+
+    <!-- Two-column layout: donut + bar chart -->
+    <div class="macro-charts">
+      <div class="macro-donut-wrap">
+        <canvas id="macroDonut"></canvas>
+        <div class="donut-center" id="donutCenter">
+          <div class="donut-label">全球 AUM</div>
+          <div class="donut-value" id="donutValue">—</div>
+        </div>
+      </div>
+      <div class="macro-bar-wrap">
+        <div class="panel-header" style="margin-bottom:0.5rem">
+          <h2 id="macroBarTitle">各類別資金流向</h2>
+          <span class="panel-hint" id="macroBarHint">依漲跌幅排序</span>
+        </div>
+        <div class="chart-wrap" style="height:300px">
+          <canvas id="macroBarChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drill-down cards -->
+    <div class="macro-cards" id="macroCards"></div>
+
+    <!-- ETF leaf detail (shown when drilling to a leaf) -->
+    <div id="macroEtfDetail" class="hidden">
+      <div class="panel-header" style="margin-top:1.5rem">
+        <h2 id="macroEtfTitle">代表 ETF</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="etf-table">
+          <thead><tr><th>代碼</th><th>名稱</th><th>現價</th><th>漲跌 %</th></tr></thead>
+          <tbody id="macroEtfBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══════════════════════════════════════════════════════════════════
      TAB: OVERVIEW
 ══════════════════════════════════════════════════════════════════ -->
-<main id="tab-overview" class="tab-panel active">
+<main id="tab-overview" class="tab-panel">
 
   <!-- Summary stat cards -->
   <section class="stat-row" id="statCards">
@@ -157,9 +211,44 @@
 ══════════════════════════════════════════════════════════════════ -->
 <main id="tab-backtest" class="tab-panel">
 
+  <!-- Strategy Comparison -->
   <section class="panel">
     <div class="panel-header">
-      <h2>投資組合回測</h2>
+      <h2>策略比較</h2>
+      <span class="panel-hint">動量輪動 vs 等權重 vs SPY 大盤，看哪個策略更值得</span>
+    </div>
+    <div class="strat-controls">
+      <div class="bt-period-row">
+        <button class="sc-period-btn active" data-scperiod="1y">1 年</button>
+        <button class="sc-period-btn" data-scperiod="3y">3 年</button>
+        <button class="sc-period-btn" data-scperiod="5y">5 年</button>
+      </div>
+      <div class="strat-topn">
+        每次輪動持有前
+        <select id="stratTopN" class="topn-select">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="5">5</option>
+        </select>
+        強勢主題
+      </div>
+      <button class="run-btn" id="runStrategyCompare" style="margin-left:auto">▶ 執行比較</button>
+    </div>
+    <div id="stratResults" class="hidden">
+      <div class="strat-stat-grid" id="stratStatGrid"></div>
+      <div class="chart-wrap tall" style="margin-top:1.25rem">
+        <canvas id="stratChart"></canvas>
+      </div>
+      <div class="strat-note">
+        <strong>動量輪動：</strong>每 21 個交易日，依過去一個月報酬選出前 N 強板塊（科技/加密/能源/金融/房地產/債券/黃金等13個主題），等權重持有至下次調倉。
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>自訂組合回測</h2>
       <span class="panel-hint">配置各 ETF 權重，系統計算歷史績效並與 S&amp;P 500 比較</span>
     </div>
 
@@ -243,12 +332,18 @@ let state = {
   quotes:    [],
   period:    "1d",
   btPeriod:  "1y",
+  scPeriod:  "1y",
   sortAsc:   false,
   selected:  ["QQQ","XLK","GLD","TLT","VNQ","IBIT"],
   weights:   {...TEMPLATES.balanced},
-  trendChart:  null,
-  sectorChart: null,
-  btChart:     null,
+  trendChart:   null,
+  sectorChart:  null,
+  btChart:      null,
+  stratChart:   null,
+  macroDonut:   null,
+  macroBar:     null,
+  macroData:    null,         // full macro tree from API
+  macroPath:    ["global"],   // drill-down breadcrumb stack
   trendSeriesCache: {},
 };
 
@@ -986,7 +1081,10 @@ document.getElementById("periodBar").addEventListener("click", e => {
   document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("active"));
   btn.classList.add("active");
   state.period = btn.dataset.period;
-  renderOverview();
+  if (document.getElementById("tab-macro").classList.contains("active"))
+    renderMacroTab();
+  if (document.getElementById("tab-overview").classList.contains("active"))
+    renderOverview();
   if (document.getElementById("tab-trends").classList.contains("active"))
     renderTrendChart();
 });
@@ -998,7 +1096,8 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
-    if (btn.dataset.tab === "trends") renderTrendChart();
+    if (btn.dataset.tab === "macro")    renderMacroTab();
+    if (btn.dataset.tab === "trends")   renderTrendChart();
     if (btn.dataset.tab === "backtest") buildWeightGrid();
   });
 });
@@ -1018,6 +1117,15 @@ document.querySelectorAll(".bt-period-btn").forEach(btn => {
   });
 });
 
+// Strategy comparison period buttons
+document.querySelectorAll(".sc-period-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".sc-period-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.scPeriod = btn.dataset.scperiod;
+  });
+});
+
 // Templates
 document.querySelectorAll(".template-btn").forEach(btn => {
   btn.addEventListener("click", () => applyTemplate(btn.dataset.tpl));
@@ -1026,10 +1134,27 @@ document.querySelectorAll(".template-btn").forEach(btn => {
 // Run backtest
 document.getElementById("runBacktest").addEventListener("click", runBacktest);
 
+// Run strategy comparison
+document.getElementById("runStrategyCompare").addEventListener("click", runStrategyCompare);
+
+// Macro breadcrumb delegation
+document.getElementById("macroBreadcrumb").addEventListener("click", e => {
+  const item = e.target.closest(".bc-item");
+  if (!item) return;
+  const node = item.dataset.node;
+  const idx  = state.macroPath.indexOf(node);
+  if (idx >= 0) {
+    state.macroPath = state.macroPath.slice(0, idx + 1);
+    renderMacroView();
+  }
+});
+
 // Resize → re-render heatmap
 window.addEventListener("resize", () => {
   if (document.getElementById("tab-overview").classList.contains("active"))
     renderHeatmap();
+  if (document.getElementById("tab-macro").classList.contains("active"))
+    renderMacroDonut();
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -1043,15 +1168,290 @@ function renderOverview() {
   renderTable();
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  9.  MACRO FLOW TAB
+// ═══════════════════════════════════════════════════════════════
+
+function _findNode(tree, id) {
+  if (tree.id === id) return tree;
+  for (const c of (tree.children || [])) {
+    const found = _findNode(c, id);
+    if (found) return found;
+  }
+  return null;
+}
+
+async function renderMacroTab() {
+  if (!state.macroData || state._macroDataPeriod !== state.period) {
+    try {
+      state.macroData = await apiFetch(`/api/macro?period=${state.period}`);
+      state._macroDataPeriod = state.period;
+    } catch { return; }
+  }
+  // Reset to global if period changed
+  state.macroPath = ["global"];
+  renderMacroView();
+}
+
+function renderMacroView() {
+  const tree = state.macroData;
+  if (!tree) return;
+
+  const currentId = state.macroPath[state.macroPath.length - 1];
+  const current   = _findNode(tree, currentId) || tree;
+
+  // ── Breadcrumb ───────────────────────────────────────────────
+  const bc = document.getElementById("macroBreadcrumb");
+  bc.innerHTML = state.macroPath.map((id, i) => {
+    const node  = _findNode(tree, id) || {name: id};
+    const active = i === state.macroPath.length - 1;
+    return `<span class="bc-item${active ? " bc-active" : ""}" data-node="${id}">${node.name}</span>`;
+  }).join('<span class="bc-sep">›</span>');
+
+  // ── Summary bar ──────────────────────────────────────────────
+  const summary = document.getElementById("macroSummary");
+  const totalAum = current.children?.length
+    ? current.children.reduce((s, c) => s + c.aum, 0)
+    : current.aum;
+  const children = (current.children?.length ? current.children : [current])
+    .sort((a, b) => b.aum - a.aum);
+
+  summary.innerHTML = `
+    <div class="macro-sum-item">
+      <span class="macro-sum-label">管理資產規模</span>
+      <span class="macro-sum-val">${totalAum.toFixed(1)} 兆美元</span>
+    </div>
+    <div class="macro-sum-item">
+      <span class="macro-sum-label">期間漲跌</span>
+      <span class="macro-sum-val" style="color:${changeTextColor(current.change)}">${fmtPct(current.change)}</span>
+    </div>
+    <div class="macro-sum-item">
+      <span class="macro-sum-label">子類別數</span>
+      <span class="macro-sum-val">${current.children?.length || 0}</span>
+    </div>`;
+
+  // ── Donut chart ──────────────────────────────────────────────
+  document.getElementById("donutValue").textContent = totalAum.toFixed(1) + " T";
+  renderMacroDonut(children);
+
+  // ── Bar chart ────────────────────────────────────────────────
+  document.getElementById("macroBarTitle").textContent = `${current.name} — 子類別漲跌`;
+  renderMacroBar(children);
+
+  // ── Category cards ───────────────────────────────────────────
+  const cardsEl = document.getElementById("macroCards");
+  cardsEl.innerHTML = children.map(c => {
+    const hasChildren = c.children?.length > 0;
+    const pct  = c.aum / totalAum * 100;
+    const chgColor = changeTextColor(c.change);
+    return `
+      <div class="macro-card${hasChildren ? " macro-card-drillable" : ""}"
+           data-node="${c.id}" title="${hasChildren ? "點擊深入查看" : ""}">
+        <div class="macro-card-color" style="background:${c.color}"></div>
+        <div class="macro-card-body">
+          <div class="macro-card-name">${c.name}</div>
+          <div class="macro-card-aum">${c.aum >= 1 ? c.aum.toFixed(1)+"T" : (c.aum*1000).toFixed(0)+"B"}</div>
+          <div class="macro-card-pct">${pct.toFixed(1)}% of total</div>
+          <div class="macro-card-change" style="color:${chgColor}">${fmtPct(c.change)}</div>
+          ${hasChildren ? '<div class="macro-card-arrow">›</div>' : ''}
+        </div>
+        <div class="macro-card-bar">
+          <div style="width:${Math.min(100, pct * 3)}%;background:${changeColor(c.change, 0.8)};height:100%;border-radius:2px"></div>
+        </div>
+      </div>`;
+  }).join("");
+
+  // Card click → drill down
+  cardsEl.querySelectorAll(".macro-card-drillable").forEach(card => {
+    card.addEventListener("click", () => {
+      state.macroPath.push(card.dataset.node);
+      renderMacroView();
+    });
+  });
+
+  // ── ETF detail for leaf nodes ────────────────────────────────
+  const etfDetail = document.getElementById("macroEtfDetail");
+  const etfs = current.etf_quotes || [];
+  if (etfs.length) {
+    etfDetail.classList.remove("hidden");
+    document.getElementById("macroEtfTitle").textContent = `${current.name} — 代表 ETF`;
+    document.getElementById("macroEtfBody").innerHTML = etfs.map(e => `
+      <tr>
+        <td><strong>${e.symbol}</strong></td>
+        <td class="name-cell">${e.name}</td>
+        <td class="mono">$${e.price.toFixed(2)}</td>
+        <td class="mono" style="color:${changeTextColor(e.change)}">${fmtPct(e.change)}</td>
+      </tr>`).join("");
+  } else {
+    etfDetail.classList.add("hidden");
+  }
+}
+
+function renderMacroDonut(children) {
+  if (!children) return;
+  const labels = children.map(c => c.name);
+  const data   = children.map(c => c.aum);
+  const colors = children.map(c => c.color + "cc");
+  const borders= children.map(c => c.color);
+
+  if (state.macroDonut) state.macroDonut.destroy();
+  state.macroDonut = new Chart(document.getElementById("macroDonut"), {
+    type: "doughnut",
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderColor: borders, borderWidth: 2 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      cutout: "65%",
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ${ctx.raw >= 1 ? ctx.raw.toFixed(1)+"T" : (ctx.raw*1000).toFixed(0)+"B"} USD`,
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderMacroBar(children) {
+  if (!children) return;
+  const sorted = [...children].sort((a, b) => b.change - a.change);
+  if (state.macroBar) state.macroBar.destroy();
+  state.macroBar = new Chart(document.getElementById("macroBarChart"), {
+    type: "bar",
+    data: {
+      labels:   sorted.map(c => c.name),
+      datasets: [{
+        label: "漲跌 %",
+        data:  sorted.map(c => c.change),
+        backgroundColor: sorted.map(c => changeColor(c.change, 0.85)),
+        borderColor:     sorted.map(c => changeColor(c.change, 1)),
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${fmtPct(ctx.raw)}` } }
+      },
+      scales: {
+        x: { grid: { color: "rgba(255,255,255,0.05)" }, ticks: { color: "#94a3b8", callback: v => fmtPct(v) } },
+        y: { grid: { display: false }, ticks: { color: "#e2e8f0", font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  10. STRATEGY COMPARISON
+// ═══════════════════════════════════════════════════════════════
+
+async function runStrategyCompare() {
+  const period = state.scPeriod;
+  const topN   = +document.getElementById("stratTopN").value;
+  document.getElementById("loader").classList.add("active");
+  try {
+    const data = await apiFetch(`/api/strategy-backtest?period=${period}&top_n=${topN}`);
+    document.getElementById("loader").classList.remove("active");
+    renderStrategyResults(data, topN);
+  } catch (e) {
+    document.getElementById("loader").classList.remove("active");
+    alert("策略比較失敗: " + e.message);
+  }
+}
+
+function renderStrategyResults(data, topN) {
+  document.getElementById("stratResults").classList.remove("hidden");
+
+  const STRATS = [
+    { key: "momentum",     label: `動量輪動 (Top${topN})`, color: "#4ade80" },
+    { key: "equal_weight", label: "等權重",               color: "#60a5fa" },
+    { key: "spy",          label: "SPY 大盤",              color: "#94a3b8" },
+  ];
+
+  // Stat cards (3 strategies × 4 metrics)
+  const grid = document.getElementById("stratStatGrid");
+  grid.innerHTML = `
+    <div class="strat-stat-row strat-header">
+      <div></div>
+      ${STRATS.map(s => `<div class="strat-col-head" style="color:${s.color}">${s.label}</div>`).join("")}
+    </div>
+    ${[
+      {key:"total_return",  label:"總報酬"},
+      {key:"cagr",          label:"年化 CAGR"},
+      {key:"sharpe",        label:"Sharpe Ratio"},
+      {key:"max_drawdown",  label:"最大回撤"},
+    ].map(m => `
+      <div class="strat-stat-row">
+        <div class="strat-row-label">${m.label}</div>
+        ${STRATS.map(s => {
+          const raw = data.stats[s.key]?.[m.key] ?? 0;
+          const isDD = m.key === "max_drawdown";
+          const pos  = isDD ? raw < 10 : (m.key === "sharpe" ? raw >= 1 : raw >= 0);
+          const disp = isDD ? `-${raw.toFixed(2)}%` : (m.key==="sharpe" ? raw.toFixed(2) : fmtPct(raw));
+          return `<div class="strat-cell" style="color:${pos?"#4ade80":"#f87171"}">${disp}</div>`;
+        }).join("")}
+      </div>`).join("")}`;
+
+  // Chart
+  const labels = data.spy.map(p => p.date);
+  if (state.stratChart) state.stratChart.destroy();
+  state.stratChart = new Chart(document.getElementById("stratChart"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: STRATS.map(s => ({
+        label:           s.label,
+        data:            data[s.key].map(p => p.value),
+        borderColor:     s.color,
+        backgroundColor: s.color + "18",
+        borderWidth:     s.key === "spy" ? 1.5 : 2.5,
+        borderDash:      s.key === "spy" ? [5, 5] : [],
+        fill:            s.key === "momentum",
+        pointRadius:     0,
+        tension:         0.3,
+        spanGaps:        true,
+      }))
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { labels: { color: "#e2e8f0", font: { size: 12 } } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw?.toFixed(2)}` } }
+      },
+      scales: {
+        x: { ticks: { color: "#64748b", maxTicksLimit: 12, maxRotation: 0 }, grid: { color: "rgba(255,255,255,0.04)" } },
+        y: { ticks: { color: "#94a3b8", callback: v => v.toFixed(0) }, grid: { color: "rgba(255,255,255,0.06)" },
+             title: { display: true, text: "指數化報酬（起點=100）", color: "#64748b" } }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
+
 async function init() {
   document.getElementById("loader").classList.add("active");
   try {
-    state.quotes = await apiFetch("/api/quotes");
+    // Load quotes + macro data in parallel
+    [state.quotes, state.macroData] = await Promise.all([
+      apiFetch("/api/quotes"),
+      apiFetch(`/api/macro?period=${state.period}`),
+    ]);
+    state._macroDataPeriod = state.period;
     document.getElementById("updateTime").textContent =
       "更新於 " + new Date().toLocaleTimeString("zh-TW");
-    renderOverview();
+    renderMacroView();        // first tab is macro
     buildSymbolPicker();
-    // Pre-initialize backtest weights with balanced template
     state.weights = {};
     state.quotes.filter(q => q.symbol !== "SPY").forEach(q => {
       state.weights[q.symbol] = TEMPLATES.balanced[q.symbol] ?? 0;
@@ -1060,14 +1460,16 @@ async function init() {
     document.getElementById("loader").classList.remove("active");
   }
 
-  // Auto-refresh every 60s
   setInterval(async () => {
     state.trendSeriesCache = {};
+    state.macroData = null;   // force macro refresh
     state.quotes = await apiFetch("/api/quotes");
     document.getElementById("updateTime").textContent =
       "更新於 " + new Date().toLocaleTimeString("zh-TW");
     if (document.getElementById("tab-overview").classList.contains("active"))
       renderOverview();
+    if (document.getElementById("tab-macro").classList.contains("active"))
+      renderMacroTab();
   }, 60_000);
 }
 
