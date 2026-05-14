@@ -40,42 +40,56 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
-      - name: Verify Vercel token + show account
-        id: vercel_auth
+      # ── Resolve Vercel org + project IDs via REST API ─────────
+      # This avoids interactive 'vercel link' prompts entirely.
+      # The API creates the project on first run; subsequent runs reuse it.
+      - name: Resolve Vercel org and project
+        id: vercel_ids
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           set -euo pipefail
-          echo "=== vercel whoami ==="
-          WHOAMI=$(vercel whoami --token="$VERCEL_TOKEN" 2>&1) || {
-            echo "::error::VERCEL_TOKEN is invalid or expired — regenerate at vercel.com/account/tokens"
-            echo "$WHOAMI"
-            exit 1
-          }
-          echo "Logged in as: $WHOAMI"
-          echo "scope=$WHOAMI" >> $GITHUB_OUTPUT
 
-      - name: Link project
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: |
-          set -euo pipefail
-          echo "=== vercel link ==="
-          vercel link --yes --token="$VERCEL_TOKEN" 2>&1
-          echo "✅ Project linked"
-          cat .vercel/project.json 2>/dev/null || echo "(no project.json yet)"
+          # Get personal user ID (used as VERCEL_ORG_ID for personal accounts)
+          USER_JSON=$(curl -sf "https://api.vercel.com/v2/user" \
+            -H "Authorization: Bearer $VERCEL_TOKEN")
+          ORG_ID=$(echo "$USER_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['user']['id'])")
+          USERNAME=$(echo "$USER_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['user']['username'])")
+          echo "Account: $USERNAME  (org_id: $ORG_ID)"
+
+          # Try to fetch existing project; create it if it doesn't exist yet
+          PROJECT_JSON=$(curl -s "https://api.vercel.com/v9/projects/fund-flow-dashboard" \
+            -H "Authorization: Bearer $VERCEL_TOKEN")
+
+          if echo "$PROJECT_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); exit(0 if 'id' in d else 1)" 2>/dev/null; then
+            PROJECT_ID=$(echo "$PROJECT_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
+            echo "Found existing project: $PROJECT_ID"
+          else
+            echo "Project not found — creating..."
+            CREATE_JSON=$(curl -sf -X POST "https://api.vercel.com/v9/projects" \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d '{"name":"fund-flow-dashboard","framework":"nextjs"}')
+            PROJECT_ID=$(echo "$CREATE_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
+            echo "Created project: $PROJECT_ID"
+          fi
+
+          echo "org_id=$ORG_ID"       >> $GITHUB_OUTPUT
+          echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
 
       # ── Production deploy (merge to main) ─────────────────────
       - name: Deploy to Production
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ steps.vercel_ids.outputs.org_id }}
+          VERCEL_PROJECT_ID: ${{ steps.vercel_ids.outputs.project_id }}
         run: |
           set -euo pipefail
-          echo "=== vercel deploy --prod ==="
-          OUTPUT=$(vercel deploy --prod --token="$VERCEL_TOKEN" 2>&1)
-          echo "$OUTPUT"
-          DEPLOY_URL=$(echo "$OUTPUT" | grep -E '^https://' | tail -1)
+          vercel deploy --prod --token="$VERCEL_TOKEN" > /tmp/deploy.log 2>&1 \
+            || { echo "=== Vercel output ==="; cat /tmp/deploy.log; exit 1; }
+          cat /tmp/deploy.log
+          DEPLOY_URL=$(grep -E '^https://' /tmp/deploy.log | tail -1)
           echo "✅ Production: $DEPLOY_URL"
 
       # ── Preview deploy (every PR) ──────────────────────────────
@@ -84,12 +98,14 @@ jobs:
         id: preview
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ steps.vercel_ids.outputs.org_id }}
+          VERCEL_PROJECT_ID: ${{ steps.vercel_ids.outputs.project_id }}
         run: |
           set -euo pipefail
-          echo "=== vercel deploy (preview) ==="
-          OUTPUT=$(vercel deploy --token="$VERCEL_TOKEN" 2>&1)
-          echo "$OUTPUT"
-          PREVIEW_URL=$(echo "$OUTPUT" | grep -E '^https://' | tail -1)
+          vercel deploy --token="$VERCEL_TOKEN" > /tmp/deploy.log 2>&1 \
+            || { echo "=== Vercel output ==="; cat /tmp/deploy.log; exit 1; }
+          cat /tmp/deploy.log
+          PREVIEW_URL=$(grep -E '^https://' /tmp/deploy.log | tail -1)
           echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
           echo "🔍 Preview: $PREVIEW_URL"
 
