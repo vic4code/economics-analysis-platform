@@ -409,6 +409,17 @@
 
   <section class="panel">
     <div class="panel-header">
+      <h2>📍 景氣循環定位器</h2>
+      <span class="panel-hint">基於 Pring-Stovall 板塊輪動理論 ─ 各板塊典型強勢週期位置，白色箭頭為當前流向估算位置</span>
+    </div>
+    <div class="cycle-clock-wrap">
+      <canvas id="cycleClockCanvas"></canvas>
+      <div class="cycle-clock-info" id="cycleClockInfo"><div style="color:#8b949e">載入中…</div></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
       <h2>重大市場事件時間軸</h2>
       <span class="panel-hint">點選事件卡查看詳情與受影響板塊</span>
     </div>
@@ -1942,109 +1953,97 @@ function renderChipCharts() {
 
 function renderNetworkGraph(data) {
   const canvas = document.getElementById("networkCanvas");
-  canvas.width  = canvas.parentElement.clientWidth  || 700;
-  canvas.height = canvas.parentElement.clientHeight || 420;
-  const W = canvas.width, H = canvas.height;
+  const W = canvas.width  = canvas.parentElement.clientWidth  || 720;
+  const H = canvas.height = Math.min(W * 0.76, 520);
   const ctx = canvas.getContext("2d");
-  const n = data.sectors.length;
+  ctx.clearRect(0, 0, W, H);
 
-  if (state.networkRunning) { state.networkRunning = false; }
-  // Initialise nodes in a circle
-  const nodes = data.sectors.map((sec, i) => {
-    const angle = (2 * Math.PI * i) / n;
-    return {
-      id: sec, i,
-      x: W / 2 + (W * 0.35) * Math.cos(angle),
-      y: H / 2 + (H * 0.35) * Math.sin(angle),
-      vx: 0, vy: 0,
-      r: Math.max(18, Math.sqrt(data.mcaps[i] || 1) * 2.2),
-      color: SECTOR_COLORS[sec] || "#58a6ff",
-      label: sec,
-    };
+  if (!data || !data.sectors || !data.rotation_matrix) return;
+
+  const cx = W / 2, cy = H / 2;
+  const R  = Math.min(W, H) * 0.34;   // outer arc radius
+  const ri = R * 0.76;                 // inner arc (chord endpoints)
+  const rl = R + 30;                   // label radius
+  const n  = data.sectors.length;
+  const GAP  = 0.026;
+  const span = (2 * Math.PI - GAP * n) / n;
+
+  const arcs = data.sectors.map((sec, i) => {
+    const a0 = -Math.PI / 2 + i * (span + GAP);
+    const a1 = a0 + span;
+    return { sec, i, a0, a1, mid: (a0 + a1) / 2 };
   });
 
-  // Build edges from rotation matrix (|corr| > 0.25)
-  const edges = [];
+  // ── Chords (drawn under arcs) ────────────────────────────────
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
-      const c = data.rotation_matrix[i][j];
-      if (Math.abs(c) > 0.25) edges.push({ i, j, c });
-    }
-  }
-
-  const K_REPEL = 8000, K_ATTRACT = 0.04, DAMPING = 0.82, DT = 0.9;
-  let frame = 0;
-  state.networkRunning = true;
-
-  function tick() {
-    if (!state.networkRunning) return;
-    frame++;
-
-    // Forces
-    for (let a = 0; a < n; a++) {
-      let fx = 0, fy = 0;
-      // Centre gravity
-      fx += (W / 2 - nodes[a].x) * 0.004;
-      fy += (H / 2 - nodes[a].y) * 0.004;
-      // Repulsion
-      for (let b = 0; b < n; b++) {
-        if (a === b) continue;
-        const dx = nodes[a].x - nodes[b].x, dy = nodes[a].y - nodes[b].y;
-        const dist2 = dx * dx + dy * dy + 1;
-        const f = K_REPEL / dist2;
-        fx += f * dx / Math.sqrt(dist2);
-        fy += f * dy / Math.sqrt(dist2);
-      }
-      // Attraction along edges
-      edges.forEach(e => {
-        if (e.i !== a && e.j !== a) return;
-        const b = e.i === a ? e.j : e.i;
-        const dx = nodes[b].x - nodes[a].x, dy = nodes[b].y - nodes[a].y;
-        const str = Math.abs(e.c) * K_ATTRACT;
-        fx += dx * str; fy += dy * str;
-      });
-
-      nodes[a].vx = (nodes[a].vx + fx * DT) * DAMPING;
-      nodes[a].vy = (nodes[a].vy + fy * DT) * DAMPING;
-    }
-    nodes.forEach(nd => {
-      nd.x = Math.max(nd.r + 2, Math.min(W - nd.r - 2, nd.x + nd.vx));
-      nd.y = Math.max(nd.r + 2, Math.min(H - nd.r - 2, nd.y + nd.vy));
-    });
-
-    // Draw
-    ctx.clearRect(0, 0, W, H);
-    edges.forEach(e => {
+      const c   = ((data.rotation_matrix[i] || [])[j]) ?? 0;
+      const abs = Math.abs(c);
+      if (abs < 0.2) continue;
+      const x1 = cx + ri * Math.cos(arcs[i].mid);
+      const y1 = cy + ri * Math.sin(arcs[i].mid);
+      const x2 = cx + ri * Math.cos(arcs[j].mid);
+      const y2 = cy + ri * Math.sin(arcs[j].mid);
+      const pull = 0.22;
       ctx.save();
-      ctx.globalAlpha = Math.min(0.8, Math.abs(e.c));
-      ctx.strokeStyle = e.c > 0 ? "#4a90e2" : "#e67e22";
-      ctx.lineWidth = Math.abs(e.c) * 3;
+      ctx.globalAlpha = 0.07 + abs * 0.52;
+      ctx.strokeStyle = c > 0 ? "#4a9eff" : "#f97316";
+      ctx.lineWidth   = 1 + abs * 5.5;
+      ctx.lineCap     = "round";
       ctx.beginPath();
-      ctx.moveTo(nodes[e.i].x, nodes[e.i].y);
-      ctx.lineTo(nodes[e.j].x, nodes[e.j].y);
+      ctx.moveTo(x1, y1);
+      ctx.bezierCurveTo(
+        x1 + (cx - x1) * pull, y1 + (cy - y1) * pull,
+        x2 + (cx - x2) * pull, y2 + (cy - y2) * pull,
+        x2, y2
+      );
       ctx.stroke();
       ctx.restore();
-    });
-    nodes.forEach(nd => {
-      ctx.beginPath();
-      ctx.arc(nd.x, nd.y, nd.r, 0, Math.PI * 2);
-      ctx.fillStyle = nd.color + "cc";
-      ctx.fill();
-      ctx.strokeStyle = nd.color;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.fillStyle = "#fff";
-      ctx.font = `bold ${Math.max(9, Math.min(12, nd.r * 0.55))}px Inter,sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      const short = nd.label.length > 8 ? nd.label.slice(0, 7) + "…" : nd.label;
-      ctx.fillText(short, nd.x, nd.y);
-    });
-
-    if (frame < 180) requestAnimationFrame(tick);
-    else state.networkRunning = false;
+    }
   }
-  requestAnimationFrame(tick);
+
+  // ── Sector arcs ──────────────────────────────────────────────
+  arcs.forEach(arc => {
+    const color = SECTOR_COLORS[arc.sec] || "#58a6ff";
+    const eps   = 0.007;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R,  arc.a0 + eps, arc.a1 - eps);
+    ctx.arc(cx, cy, ri, arc.a1 - eps, arc.a0 + eps, true);
+    ctx.closePath();
+    ctx.fillStyle   = color + "d8";
+    ctx.fill();
+    ctx.strokeStyle = "#0d1117";
+    ctx.lineWidth   = 0.8;
+    ctx.stroke();
+
+    // Label
+    const cos = Math.cos(arc.mid), sin = Math.sin(arc.mid);
+    const lx = cx + rl * cos, ly = cy + rl * sin;
+    ctx.font         = "bold 10px Inter, sans-serif";
+    ctx.fillStyle    = "#c9d1d9";
+    ctx.textAlign    = Math.abs(cos) < 0.18 ? "center" : cos > 0 ? "left" : "right";
+    ctx.textBaseline = Math.abs(sin) < 0.18 ? "middle" : sin > 0 ? "top" : "bottom";
+    const lbl = arc.sec.length > 12 ? arc.sec.slice(0, 11) + "…" : arc.sec;
+    ctx.fillText(lbl, lx, ly);
+  });
+
+  // ── Center label ─────────────────────────────────────────────
+  ctx.fillStyle = "#8b949e"; ctx.font = "11px Inter, sans-serif";
+  ctx.textAlign = "center";  ctx.textBaseline = "middle";
+  ctx.fillText("板塊相關性", cx, cy - 8);
+  ctx.fillText("Chord Diagram", cx, cy + 8);
+
+  // ── Legend ───────────────────────────────────────────────────
+  [["#4a9eff", "正相關 (+)"], ["#f97316", "負相關 (−)"]].forEach(([col, txt], k) => {
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(14, H - 40 + k * 17, 14, 5, 2);
+    else ctx.rect(14, H - 40 + k * 17, 14, 5);
+    ctx.fill();
+    ctx.fillStyle = "#8b949e"; ctx.font = "10px Inter";
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillText(txt, 32, H - 37 + k * 17);
+  });
 }
 
 // Chip period buttons
@@ -2198,15 +2197,199 @@ function renderRotationFlow(data) {
 // ═══════════════════════════════════════════════════════════════
 
 async function renderCycleTab() {
-  if (!state.eventsData) {
-    try { state.eventsData = await apiFetch("/api/events"); } catch { return; }
-  }
-  if (!state.cycleData) {
-    try { state.cycleData = await apiFetch("/api/cycle"); } catch { return; }
-  }
+  const fetches = [];
+  if (!state.eventsData)     fetches.push(apiFetch("/api/events").then(d => { state.eventsData = d; }));
+  if (!state.cycleData)      fetches.push(apiFetch("/api/cycle").then(d => { state.cycleData = d; }));
+  if (!state.flowMatrixData) fetches.push(apiFetch("/api/flow-matrix?period=1m").then(d => { state.flowMatrixData = d; }));
+  try { await Promise.all(fetches); } catch { return; }
+  renderCycleClock();
   renderEventTimeline();
   renderCycleHeatmap();
   renderPercentileRanks();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  12a.  ECONOMIC CYCLE LOCATOR (Pring-Stovall Rotation Clock)
+// ═══════════════════════════════════════════════════════════════
+
+// clockDeg: 0 = 12 o'clock, 90 = 3 o'clock, going clockwise
+const CYCLE_CLOCK_POS = {
+  "Technology":    { deg: 350 }, "Industrials":  { deg: 328 },
+  "Broad Market":  { deg: 314 }, "International":{ deg: 302 },
+  "Crypto":        { deg: 288 }, "Consumer":     { deg: 272 },
+  "Financials":    { deg: 252 }, "Real Estate":  { deg: 208 },
+  "Bonds":         { deg: 186 }, "Utilities":    { deg: 158 },
+  "Healthcare":    { deg: 122 }, "Energy":       { deg: 72 },
+  "Commodities":   { deg: 54 },  "Materials":    { deg: 38 },
+};
+
+const CLOCK_PHASES = [
+  { start: 298, end:  58, label: "擴張期",    eng: "Expansion",      bg: "#071e12", fg: "#4ade80",  note: "成長股 / 科技主導" },
+  { start:  58, end: 138, label: "後期擴張",  eng: "Late Expansion", bg: "#1e1007", fg: "#fb923c",  note: "原物料 / 能源領漲" },
+  { start: 138, end: 228, label: "收縮衰退",  eng: "Contraction",    bg: "#1e0709", fg: "#f87171",  note: "防禦性板塊優先" },
+  { start: 228, end: 298, label: "復甦期",    eng: "Recovery",       bg: "#07101e", fg: "#60a5fa",  note: "金融 / 早期循環領先" },
+];
+
+function renderCycleClock() {
+  const canvas = document.getElementById("cycleClockCanvas");
+  if (!canvas) return;
+  const size = Math.min(canvas.parentElement.clientWidth * 0.62 || 480, 500);
+  canvas.width = canvas.height = size;
+  const W = size, ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, W, W);
+
+  const cx = W / 2, cy = W / 2;
+  const oR = W * 0.43;   // outer phase ring
+  const iR = W * 0.21;   // inner hole radius
+  const sR = W * 0.34;   // sector dot orbit
+  const lR = W * 0.415;  // sector label orbit
+
+  // clock degrees → canvas radians (0 = 12 o'clock)
+  const toA = d => (d - 90) * Math.PI / 180;
+
+  // ── Phase arc segments ──────────────────────────────────────
+  CLOCK_PHASES.forEach(p => {
+    const a0 = toA(p.start), sweep = (p.end - p.start + 360) % 360 * Math.PI / 180;
+    ctx.beginPath();
+    ctx.arc(cx, cy, oR, a0, a0 + sweep);
+    ctx.arc(cx, cy, iR, a0 + sweep, a0, true);
+    ctx.closePath();
+    ctx.fillStyle = p.bg;
+    ctx.fill();
+    ctx.strokeStyle = "#0d1117";
+    ctx.lineWidth   = 0.6;
+    ctx.stroke();
+  });
+
+  // ── Phase labels (curved inside each arc) ───────────────────
+  CLOCK_PHASES.forEach(p => {
+    const midDeg = p.start + ((p.end - p.start + 360) % 360) / 2;
+    const a = toA(midDeg);
+    const lr = (oR + iR) / 2;
+    ctx.save();
+    ctx.translate(cx + lr * Math.cos(a), cy + lr * Math.sin(a));
+    let rot = a + Math.PI / 2;
+    if (Math.cos(a) < 0) rot += Math.PI;
+    ctx.rotate(rot);
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = p.fg;
+    ctx.font = `bold ${Math.round(W * 0.034)}px Inter, sans-serif`;
+    ctx.fillText(p.label, 0, -W * 0.015);
+    ctx.fillStyle = p.fg + "aa";
+    ctx.font = `${Math.round(W * 0.022)}px Inter, sans-serif`;
+    ctx.fillText(p.eng, 0, W * 0.015);
+    ctx.restore();
+  });
+
+  // ── Outer ring ticks (12 hour marks) ────────────────────────
+  for (let h = 0; h < 12; h++) {
+    const a = toA(h * 30);
+    const r0 = oR * 0.965, r1 = oR;
+    ctx.beginPath();
+    ctx.moveTo(cx + r0 * Math.cos(a), cy + r0 * Math.sin(a));
+    ctx.lineTo(cx + r1 * Math.cos(a), cy + r1 * Math.sin(a));
+    ctx.strokeStyle = "#21262d"; ctx.lineWidth = 1; ctx.stroke();
+  }
+
+  // ── Inner hole ───────────────────────────────────────────────
+  ctx.beginPath();
+  ctx.arc(cx, cy, iR, 0, Math.PI * 2);
+  ctx.fillStyle = "#0d1117"; ctx.fill();
+
+  // ── Flow score map for emphasis ─────────────────────────────
+  const flowMap = {};
+  if (state.flowMatrixData) {
+    state.flowMatrixData.sectors.forEach((s, i) => {
+      flowMap[s] = state.flowMatrixData.flow_scores[i] || 0;
+    });
+  }
+
+  // ── Compute current angle (weighted avg of sector positions) ─
+  let sumX = 0, sumY = 0;
+  Object.entries(CYCLE_CLOCK_POS).forEach(([sec, pos]) => {
+    const score = Math.max(0, (flowMap[sec] || 0) + 3);
+    const a = toA(pos.deg);
+    sumX += Math.cos(a) * score;
+    sumY += Math.sin(a) * score;
+  });
+  const currentAngle = Math.atan2(sumY, sumX);
+
+  // ── Sector dots + labels ─────────────────────────────────────
+  Object.entries(CYCLE_CLOCK_POS).forEach(([sec, pos]) => {
+    const a  = toA(pos.deg);
+    const sx = cx + sR * Math.cos(a), sy = cy + sR * Math.sin(a);
+    const score = flowMap[sec] || 0;
+    const color = SECTOR_COLORS[sec] || "#58a6ff";
+    const r = 4.5 + Math.max(0, score) * 0.6;
+
+    if (score > 1.5) {
+      ctx.save();
+      ctx.shadowColor = color; ctx.shadowBlur = 14;
+      ctx.beginPath(); ctx.arc(sx, sy, r + 3, 0, Math.PI * 2);
+      ctx.fillStyle = color + "33"; ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.strokeStyle = "#0d1117"; ctx.lineWidth = 1; ctx.stroke();
+
+    const cos = Math.cos(a), sin = Math.sin(a);
+    const tx = cx + lR * cos, ty = cy + lR * sin;
+    ctx.font         = `${Math.round(W * 0.026)}px Inter, sans-serif`;
+    ctx.fillStyle    = score > 0.5 ? "#e6edf3" : "#8b949e";
+    ctx.textAlign    = Math.abs(cos) < 0.2 ? "center" : cos > 0 ? "left" : "right";
+    ctx.textBaseline = Math.abs(sin) < 0.2 ? "middle" : sin > 0 ? "top" : "bottom";
+    ctx.fillText(sec.length > 10 ? sec.slice(0, 9) + "…" : sec, tx, ty);
+  });
+
+  // ── Current-position needle ──────────────────────────────────
+  const nLen = iR * 0.82;
+  const nx = cx + nLen * Math.cos(currentAngle);
+  const ny = cy + nLen * Math.sin(currentAngle);
+
+  ctx.save();
+  ctx.shadowColor = "#ffffff"; ctx.shadowBlur = 10;
+  ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2.5; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(nx, ny); ctx.stroke();
+  const aH = 0.48;
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.moveTo(nx, ny);
+  ctx.lineTo(nx - 9 * Math.cos(currentAngle - aH), ny - 9 * Math.sin(currentAngle - aH));
+  ctx.lineTo(nx - 9 * Math.cos(currentAngle + aH), ny - 9 * Math.sin(currentAngle + aH));
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  ctx.beginPath(); ctx.arc(cx, cy, 4.5, 0, Math.PI * 2);
+  ctx.fillStyle = "#ffffff"; ctx.fill();
+
+  // ── Info panel ───────────────────────────────────────────────
+  const curDeg = ((currentAngle * 180 / Math.PI) + 90 + 360) % 360;
+  const phase  = CLOCK_PHASES.find(p => {
+    const e = p.end < p.start ? p.end + 360 : p.end;
+    const d = curDeg < p.start && e > 360 ? curDeg + 360 : curDeg;
+    return d >= p.start && d < e;
+  }) || CLOCK_PHASES[0];
+
+  const info = document.getElementById("cycleClockInfo");
+  if (info) {
+    info.innerHTML = `
+      <div class="cc-subtitle">當前估算階段</div>
+      <div class="cc-phase" style="color:${phase.fg}">${phase.label}</div>
+      <div class="cc-note">${phase.note}</div>
+      <hr class="cc-divider">
+      <div class="cc-legend-title">輪動邏輯</div>
+      ${CLOCK_PHASES.map(p => `
+        <div class="cc-row">
+          <span class="cc-dot" style="background:${p.fg}"></span>
+          <span style="color:${p.fg};font-weight:600">${p.label}</span>
+          <span class="cc-row-note">${p.note}</span>
+        </div>
+      `).join("")}
+    `;
+  }
 }
 
 const EVENT_COLORS = { fed: "#4a90e2", macro: "#27ae60", earnings: "#f7931a", geopolitical: "#e74c3c" };
