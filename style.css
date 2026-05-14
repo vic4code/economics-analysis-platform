@@ -688,6 +688,257 @@ body {
 /* ── Hidden utility ─────────────────────────────────────────────── */
 .hidden { display: none !important; }
 
+/* ══════════════════════════════════════════════════════════════════
+   FLOW & CHIPS TAB
+══════════════════════════════════════════════════════════════════ */
+.flow-top-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+@media (max-width: 800px) { .flow-top-grid { grid-template-columns: 1fr; } }
+
+.chart-sublabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.quadrant-legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  margin-top: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.ql { padding: 2px 6px; background: var(--surface2); border-radius: 4px; text-align: center; }
+.ql-tr, .ql-br { color: #4ade80; }
+.ql-tl, .ql-bl { color: #f87171; }
+
+/* ── Chip controls ─────────────────────────────────────────────── */
+.chip-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.chip-select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.chip-select:focus { outline: none; border-color: var(--accent); }
+
+.chip-period-row { display: flex; gap: 6px; }
+.cp-btn {
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.15s;
+}
+.cp-btn:hover { color: var(--text); border-color: var(--accent); }
+.cp-btn.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+
+.chip-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+@media (max-width: 800px) { .chip-charts-grid { grid-template-columns: 1fr; } }
+
+/* ── Network graph ─────────────────────────────────────────────── */
+.network-wrap {
+  width: 100%;
+  height: 440px;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.network-wrap canvas { display: block; }
+
+/* ══════════════════════════════════════════════════════════════════
+   EVENTS & CYCLES TAB
+══════════════════════════════════════════════════════════════════ */
+
+/* ── Event filter chips ────────────────────────────────────────── */
+.event-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+.ef-btn {
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.15s;
+}
+.ef-btn:hover  { color: var(--text); border-color: var(--accent); }
+.ef-btn.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+
+/* ── Event timeline cards ──────────────────────────────────────── */
+.event-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.ev-card {
+  display: flex;
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  transition: border-color 0.15s;
+}
+.ev-card:hover { border-color: var(--accent); }
+.ev-pos .ev-stripe { background: #3fb95066; }
+.ev-neg .ev-stripe { background: #f8514966; }
+.ev-neu .ev-stripe { background: #58a6ff33; }
+.ev-stripe { width: 4px; flex-shrink: 0; }
+.ev-body { padding: 10px 12px; flex: 1; }
+.ev-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.ev-icon { font-size: 1rem; }
+.ev-date { font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+.ev-badge {
+  font-size: 0.68rem;
+  padding: 1px 7px;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.ev-mag { font-size: 0.72rem; color: var(--text-muted); }
+.ev-title { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+.ev-detail { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 6px; }
+.ev-sectors { display: flex; gap: 6px; flex-wrap: wrap; }
+.ev-sec-tag {
+  font-size: 0.7rem;
+  padding: 1px 7px;
+  border-radius: 10px;
+  border: 1px solid;
+  font-weight: 500;
+}
+
+/* ── Cycle heatmap ─────────────────────────────────────────────── */
+.cycle-heatmap-wrap {
+  overflow-x: auto;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  padding: 8px 4px 4px;
+}
+.cycle-heatmap-wrap canvas { display: block; }
+
+.cycle-tooltip {
+  position: fixed;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  pointer-events: none;
+  z-index: 9999;
+  white-space: nowrap;
+}
+
+/* ── Percentile ranks ──────────────────────────────────────────── */
+.percentile-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.perc-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 48px auto;
+  align-items: center;
+  gap: 10px;
+}
+.perc-sector { font-size: 0.82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.perc-bar-track {
+  height: 8px;
+  background: var(--surface2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.perc-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+.perc-rank { font-size: 0.82rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; text-align: right; }
+.perc-meta { display: flex; gap: 8px; font-size: 0.72rem; color: var(--text-muted); flex-wrap: wrap; }
+.perc-best  { color: #4ade80; }
+.perc-worst { color: #f87171; }
+
+/* ══════════════════════════════════════════════════════════════════
+   ETF MAPPING TABLE
+══════════════════════════════════════════════════════════════════ */
+.etfmap-controls {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  flex-direction: column;
+  margin-bottom: 1rem;
+}
+.etfmap-search {
+  width: 100%;
+  max-width: 320px;
+  padding: 7px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+.etfmap-search:focus { outline: none; border-color: var(--accent); }
+.etfmap-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.etfmap-table .sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+.etfmap-table .sortable:hover { color: var(--accent); }
+.etfmap-row { cursor: pointer; transition: background 0.1s; }
+.etfmap-row:hover td { background: rgba(88,166,255,0.07); }
+
+.sym-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+}
+.sector-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
 /* ── Loading Overlay ────────────────────────────────────────────── */
 .loader-overlay {
   display: none;

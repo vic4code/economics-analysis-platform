@@ -490,6 +490,186 @@
     };
   }
 
+  // ── Mock events (fixed, not random) ───────────────────────────────────
+  const MOCK_EVENTS = [
+    { date: '2024-03-20', title: 'Fed 維持利率 5.25–5.50%',       type: 'fed',          sectors: ['Bonds','Financials','Utilities'],              magnitude: 0,  detail: 'FOMC 決議維持利率不變，點陣圖暗示年內 3 次降息。' },
+    { date: '2024-05-01', title: 'Fed 暗示降息時間表延後',         type: 'fed',          sectors: ['Bonds','Technology','Real Estate'],            magnitude: -1, detail: '通膨數據持續頑固，市場降息預期大幅後移，科技股承壓。' },
+    { date: '2024-07-11', title: 'CPI 低於預期，降息希望升溫',     type: 'macro',        sectors: ['Bonds','Real Estate','Utilities'],             magnitude: 2,  detail: '6 月 CPI YoY 3.0%，低於預期，市場押注 9 月降息。' },
+    { date: '2024-08-05', title: '日圓套利交易解除，全球股市暴跌', type: 'geopolitical', sectors: ['International','Technology','Crypto'],         magnitude: -3, detail: '日銀升息導致日圓套利交易平倉潮，VIX 飆升至 38。' },
+    { date: '2024-09-18', title: 'Fed 首次降息 50bps',             type: 'fed',          sectors: ['Bonds','Real Estate','Financials'],            magnitude: 2,  detail: '聯準會宣布降息 2 碼，為 4 年來首次降息。' },
+    { date: '2024-10-17', title: 'Nvidia Blackwell 晶片量產確認',  type: 'earnings',     sectors: ['Technology'],                                  magnitude: 2,  detail: 'Blackwell GPU 需求爆炸，AI 基礎建設投資持續加速。' },
+    { date: '2024-11-06', title: '川普當選美國總統',               type: 'geopolitical', sectors: ['Financials','Energy','Crypto'],                magnitude: 3,  detail: '共和黨橫掃國會，市場預期減稅＋鬆綁金融監管，金融股大漲。' },
+    { date: '2024-12-18', title: 'Fed 降息但點陣圖偏鷹',           type: 'fed',          sectors: ['Bonds','Technology','Real Estate'],            magnitude: -2, detail: '降息 1 碼但 2025 年預期僅 2 次降息，遠少於市場預期。' },
+    { date: '2025-01-20', title: '川普就職，宣布緊急經濟狀態',     type: 'geopolitical', sectors: ['Energy','Commodities','International'],        magnitude: 1,  detail: '宣布對中國、加拿大、墨西哥加徵關稅，能源政策大轉向。' },
+    { date: '2025-01-27', title: 'DeepSeek R1 震撼 AI 市場',       type: 'earnings',     sectors: ['Technology','Commodities'],                    magnitude: -2, detail: '中國 DeepSeek 以低成本媲美 GPT-4，Nvidia 市值蒸發約 6000 億美元。' },
+    { date: '2025-02-19', title: '比特幣突破 $100,000',             type: 'macro',        sectors: ['Crypto'],                                     magnitude: 3,  detail: '機構持續買進 IBIT，比特幣市值超越白銀，加密板塊整體大漲。' },
+    { date: '2025-03-04', title: '關稅戰升級，中美貿易緊張',       type: 'geopolitical', sectors: ['International','Materials','Consumer'],        magnitude: -2, detail: '美國宣布對中國商品加徵額外 25% 關稅，供應鏈重組預期升溫。' },
+    { date: '2025-04-02', title: '解放日：史上最大規模關稅宣布',   type: 'geopolitical', sectors: ['International','Consumer','Industrials','Materials'], magnitude: -3, detail: '對逾 90 個國家課徵對等關稅，全球股市劇烈震盪。' },
+    { date: '2025-04-09', title: '關稅暫停 90 天，市場強彈',       type: 'geopolitical', sectors: ['Technology','Consumer','International'],       magnitude: 3,  detail: '川普宣布對多數國家關稅暫停，納指單日漲逾 12%。' },
+    { date: '2025-04-22', title: 'Fed 鮑威爾警告關稅推升通膨',     type: 'fed',          sectors: ['Bonds','Technology'],                          magnitude: -1, detail: '主席強調通膨風險上升，降息時間表更加不確定。' },
+    { date: '2025-05-07', title: 'Fed 維持利率不變',               type: 'fed',          sectors: ['Bonds','Real Estate'],                         magnitude: 0,  detail: 'Fed 會後聲明維持謹慎立場，等待更多通膨數據明朗化。' },
+  ];
+
+  // ── Sector ETF map ─────────────────────────────────────────────────────
+  const SECTOR_ETFS = {};
+  for (const [sym, info] of Object.entries(ETF_UNIVERSE)) {
+    if (sym === 'SPY') continue;
+    if (!SECTOR_ETFS[info.sector]) SECTOR_ETFS[info.sector] = [];
+    SECTOR_ETFS[info.sector].push(sym);
+  }
+
+  // ── Chip data (institutional / smart-money / retail simulated) ─────────
+  function getChipsData(period) {
+    const chipDays = { '1d': 5, '5d': 10, '1m': 22, '3m': 66, '6m': 130, '1y': 252, ytd: 100 };
+    const days   = chipDays[period] || 22;
+    const quotes = getAllQuotes();
+    const qmap   = {};
+    for (const q of quotes) qmap[q.symbol] = q;
+
+    const result = [];
+    const todayMs = Date.UTC(...new Date().toISOString().slice(0,10).split('-').map((v,i)=>i===1?+v-1:+v));
+
+    for (const [sector, etfs] of Object.entries(SECTOR_ETFS)) {
+      const validEtfs = etfs.filter(e => qmap[e]);
+      const momentum  = validEtfs.length
+        ? validEtfs.reduce((s, e) => s + (qmap[e][`change_${period}`] || 0), 0) / validEtfs.length
+        : 0;
+      const instBias = momentum * 30;
+
+      const rngI = new SeededRandom(seedFor(sector + '_inst'));
+      const rngS = new SeededRandom(seedFor(sector + '_smart'));
+      const rngR = new SeededRandom(seedFor(sector + '_retail'));
+
+      const dates = [], institutional = [], smart_money = [], retail = [], cumulative = [];
+      let cum = 0;
+
+      for (let i = 0; i < days; i++) {
+        const d = new Date(todayMs - (days - 1 - i) * 86400000);
+        if (d.getUTCDay() === 0 || d.getUTCDay() === 6) continue;
+        dates.push(isoDate(d));
+
+        const inst  = Math.round(rngI.gauss(instBias * 0.6,  Math.abs(instBias) * 0.8 + 80)  * 10) / 10;
+        const smart = Math.round(rngS.gauss(instBias * 0.3,  Math.abs(instBias) * 0.5 + 40)  * 10) / 10;
+        const ret   = Math.round(rngR.gauss(-instBias * 0.2, Math.abs(instBias) * 0.6 + 50)  * 10) / 10;
+        cum = Math.round((cum + inst) * 10) / 10;
+
+        institutional.push(inst);
+        smart_money.push(smart);
+        retail.push(ret);
+        cumulative.push(cum);
+      }
+
+      result.push({
+        sector, flow_score: Math.round(momentum * 1.5 * 100) / 100,
+        dates, institutional, smart_money, retail, cumulative,
+      });
+    }
+
+    result.sort((a, b) => b.flow_score - a.flow_score);
+    return result;
+  }
+
+  // ── Flow matrix ────────────────────────────────────────────────────────
+  function getFlowMatrix(period) {
+    const chips = getChipsData(period);
+    const sectors    = chips.map(c => c.sector);
+    const flowScores = chips.map(c => c.flow_score);
+    const mcaps      = sectors.map(s =>
+      (SECTOR_ETFS[s] || []).reduce((sum, e) => sum + (ETF_UNIVERSE[e]?.mcap || 0), 0)
+    );
+
+    // Volume ratios: compare current vs avg from generateSeries
+    const quotes  = getAllQuotes();
+    const qmap    = {};
+    for (const q of quotes) qmap[q.symbol] = q;
+
+    const volumeRatios = sectors.map(s => {
+      const etfs = (SECTOR_ETFS[s] || []).slice(0, 2);
+      if (!etfs.length) return 1;
+      const curVol  = etfs.reduce((sum, e) => sum + (qmap[e]?.volume || 0), 0) / etfs.length;
+      const series  = generateSeries(etfs[0], 35);
+      const baseVol = series.length > 22
+        ? series.slice(-22).reduce((s, b) => s + b.volume, 0) / 22
+        : curVol;
+      return Math.round((curVol / (baseVol || curVol)) * 100) / 100;
+    });
+
+    const n = sectors.length;
+    const rotationMatrix = Array.from({ length: n }, (_, i) =>
+      Array.from({ length: n }, (_, j) => {
+        if (i === j) return 1;
+        const diff = Math.abs(flowScores[i] - flowScores[j]);
+        const sign = (flowScores[i] > 0) === (flowScores[j] > 0) ? 1 : -1;
+        return Math.round(sign * Math.max(0, 1 - diff / 6) * 100) / 100;
+      })
+    );
+
+    return { sectors, flow_scores: flowScores, volume_ratios: volumeRatios, mcaps, rotation_matrix: rotationMatrix };
+  }
+
+  // ── Cycle data ─────────────────────────────────────────────────────────
+  function getCycleData() {
+    const quotes = getAllQuotes();
+    const qmap   = {};
+    for (const q of quotes) qmap[q.symbol] = q;
+
+    const today  = new Date();
+    const curYr  = today.getUTCFullYear();
+    const curMon = today.getUTCMonth() + 1;
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    const SECTOR_COLORS_MAP = {
+      Crypto: '#f7931a', Technology: '#4a90e2', 'Real Estate': '#8b6d4f',
+      Energy: '#e67e22', Healthcare: '#27ae60', Financials: '#8e44ad',
+      Consumer: '#e91e8c', Industrials: '#607d8b', Materials: '#795548',
+      Utilities: '#00bcd4', Bonds: '#3f51b5', Commodities: '#ffc107',
+      International: '#ff9800',
+    };
+
+    return Object.entries(SECTOR_ETFS).map(([sector, etfs]) => {
+      const validEtfs = etfs.filter(e => qmap[e]).slice(0, 2);
+      if (!validEtfs.length) return null;
+
+      const seriesList = validEtfs.map(e => generateSeries(e, 800));
+      const monthly = {};
+
+      for (let yOff = 0; yOff < 3; yOff++) {
+        for (let m = 1; m <= 12; m++) {
+          const yr = curYr - yOff;
+          if (yr === curYr && m > curMon) continue;
+          const key    = `${yr}-${String(m).padStart(2,'0')}`;
+          const prefix = key + '-';
+          const bars   = seriesList.flatMap(s => s.filter(b => b.date.startsWith(prefix)));
+          if (bars.length < 2) continue;
+          bars.sort((a, b) => a.date < b.date ? -1 : 1);
+          monthly[key] = Math.round((bars.at(-1).close / bars[0].close - 1) * 10000) / 100;
+        }
+      }
+
+      const sortedMonthly = Object.fromEntries(Object.entries(monthly).sort(([a],[b]) => a < b ? -1 : 1));
+      const allRets = Object.values(sortedMonthly);
+      const cur1y   = validEtfs.reduce((s, e) => s + (qmap[e].change_1y || 0), 0) / validEtfs.length;
+      const rank    = allRets.length ? Math.round(allRets.filter(r => r <= cur1y).length / allRets.length * 100) : 50;
+
+      const byMonth = {};
+      for (const [k, v] of Object.entries(monthly)) {
+        const mo = parseInt(k.split('-')[1]);
+        (byMonth[mo] = byMonth[mo] || []).push(v);
+      }
+      const avgByMonth = Object.entries(byMonth).map(([m, v]) => [+m, v.reduce((s,r)=>s+r,0)/v.length]);
+      avgByMonth.sort((a, b) => a[1] - b[1]);
+      const worstMonths = avgByMonth.slice(0, 2).map(([m]) => monthNames[m - 1]);
+      const bestMonths  = avgByMonth.slice(-2).map(([m]) => monthNames[m - 1]);
+
+      return {
+        sector, monthly_returns: sortedMonthly, percentile_rank: rank,
+        current_1y: Math.round(cur1y * 100) / 100,
+        best_months: bestMonths, worst_months: worstMonths,
+        color: SECTOR_COLORS_MAP[sector] || '#58a6ff',
+      };
+    }).filter(Boolean);
+  }
+
   // ── handleLocal – routes static API calls ──────────────────────────────
   function handleLocal(path) {
     const [pathname, qs] = path.split('?');
@@ -517,6 +697,14 @@
         return getMacroData(params.period || '1d');
       case '/api/strategy-backtest':
         return runStrategyBacktest(params.period || '1y', parseInt(params.top_n || '3', 10));
+      case '/api/chips':
+        return getChipsData(params.period || '1m');
+      case '/api/events':
+        return MOCK_EVENTS;
+      case '/api/flow-matrix':
+        return getFlowMatrix(params.period || '1m');
+      case '/api/cycle':
+        return getCycleData();
       default:
         throw new Error(`Unknown static route: ${pathname}`);
     }
@@ -530,6 +718,10 @@
     getMacroData,
     runBacktest,
     runStrategyBacktest,
+    getChipsData,
+    getFlowMatrix,
+    getCycleData,
     handleLocal,
+    MOCK_EVENTS,
   };
 })();

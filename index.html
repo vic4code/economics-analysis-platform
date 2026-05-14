@@ -45,6 +45,8 @@
   <button class="tab-btn" data-tab="overview">📊 Overview</button>
   <button class="tab-btn" data-tab="trends">📈 Trend Analysis</button>
   <button class="tab-btn" data-tab="backtest">🔬 Backtest</button>
+  <button class="tab-btn" data-tab="flow">📡 Flow &amp; Chips</button>
+  <button class="tab-btn" data-tab="cycle">📅 Events &amp; Cycles</button>
 </nav>
 
 <!-- ══════════════════════════════════════════════════════════════════
@@ -179,6 +181,35 @@
     </div>
   </section>
 
+  <!-- ETF-Industry Mapping Table -->
+  <section class="panel">
+    <div class="panel-header">
+      <h2>ETF 產業對應總表</h2>
+      <span class="panel-hint">點選標的可加入趨勢比較</span>
+    </div>
+    <div class="etfmap-controls">
+      <input type="text" id="etfMapSearch" placeholder="搜尋代碼或名稱…" class="etfmap-search" />
+      <div class="etfmap-filters" id="etfMapFilters"></div>
+    </div>
+    <div class="table-wrap">
+      <table class="etf-table etfmap-table" id="etfMapTable">
+        <thead>
+          <tr>
+            <th data-col="symbol" class="sortable">代碼 ↕</th>
+            <th>名稱</th>
+            <th data-col="sector" class="sortable">板塊 ↕</th>
+            <th data-col="price" class="sortable">現價 ↕</th>
+            <th data-col="change_1d" class="sortable">1D ↕</th>
+            <th data-col="change_1m" class="sortable">1M ↕</th>
+            <th data-col="change_1y" class="sortable">1Y ↕</th>
+            <th data-col="mcap" class="sortable">AUM(B) ↕</th>
+          </tr>
+        </thead>
+        <tbody id="etfMapBody"></tbody>
+      </table>
+    </div>
+  </section>
+
 </main>
 
 <!-- ══════════════════════════════════════════════════════════════════
@@ -295,6 +326,111 @@
 
 </main>
 
+<!-- ══════════════════════════════════════════════════════════════════
+     TAB: FLOW & CHIPS
+══════════════════════════════════════════════════════════════════ -->
+<main id="tab-flow" class="tab-panel">
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>資金流向分析</h2>
+      <span class="panel-hint">代理指標：動能 × 成交量異常 推估各板塊資金流向（非真實 fund flow 資料）</span>
+    </div>
+    <div class="flow-top-grid">
+      <div>
+        <div class="chart-sublabel">板塊輪動象限圖</div>
+        <div class="chart-wrap" style="height:340px"><canvas id="flowBubbleChart"></canvas></div>
+        <div class="quadrant-legend">
+          <span class="ql ql-tr">↗ 強勢流入</span><span class="ql ql-tl">↖ 高量洗盤</span>
+          <span class="ql ql-br">↘ 整理蓄勢</span><span class="ql ql-bl">↙ 弱勢流出</span>
+        </div>
+      </div>
+      <div>
+        <div class="chart-sublabel">板塊資金流向強度</div>
+        <div class="chart-wrap" style="height:340px"><canvas id="flowScoreBar"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>法人籌碼</h2>
+      <span class="panel-hint">模擬三大法人每日淨買超（機構 / 聰明錢 / 散戶），單位：百萬美元</span>
+    </div>
+    <div class="chip-controls">
+      <label class="field-label">板塊：</label>
+      <select id="chipSectorSelect" class="chip-select"></select>
+      <div class="chip-period-row">
+        <button class="cp-btn active" data-cp="1m">1M</button>
+        <button class="cp-btn" data-cp="3m">3M</button>
+        <button class="cp-btn" data-cp="6m">6M</button>
+      </div>
+    </div>
+    <div class="chip-charts-grid">
+      <div>
+        <div class="chart-sublabel">每日淨買超（$M）</div>
+        <div class="chart-wrap" style="height:260px"><canvas id="chipBarChart"></canvas></div>
+      </div>
+      <div>
+        <div class="chart-sublabel">累積機構籌碼 vs ETF 價格</div>
+        <div class="chart-wrap" style="height:260px"><canvas id="chipCumChart"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>板塊相關性網絡圖</h2>
+      <span class="panel-hint">基於近1年月報酬相關性 — 藍線=正相關，橘線=負相關，節點大小=AUM</span>
+    </div>
+    <div class="network-wrap">
+      <canvas id="networkCanvas"></canvas>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     TAB: EVENTS & CYCLES
+══════════════════════════════════════════════════════════════════ -->
+<main id="tab-cycle" class="tab-panel">
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>重大市場事件時間軸</h2>
+      <span class="panel-hint">點選事件卡查看詳情與受影響板塊</span>
+    </div>
+    <div class="event-filters" id="eventFilters">
+      <button class="ef-btn active" data-etype="all">全部</button>
+      <button class="ef-btn" data-etype="fed">Fed/央行</button>
+      <button class="ef-btn" data-etype="macro">總體經濟</button>
+      <button class="ef-btn" data-etype="earnings">財報/科技</button>
+      <button class="ef-btn" data-etype="geopolitical">地緣政治</button>
+    </div>
+    <div class="event-timeline" id="eventTimeline"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>板塊歷史月份熱力圖</h2>
+      <span class="panel-hint">各板塊過去 ~25 個月漲跌幅 — 顏色越深代表漲跌越大</span>
+    </div>
+    <div class="cycle-heatmap-wrap">
+      <canvas id="cycleHeatmap"></canvas>
+    </div>
+    <div id="cycleTooltip" class="cycle-tooltip hidden"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>52 週百分位排名</h2>
+      <span class="panel-hint">目前1年期報酬在過去 2 年歷史中的相對位置，100 = 歷史最高</span>
+    </div>
+    <div class="percentile-grid" id="percentileGrid"></div>
+  </section>
+
+</main>
+
 <!-- Loading overlay -->
 <div class="loader-overlay" id="loader">
   <div class="loader-spinner"></div>
@@ -344,9 +480,26 @@ let state = {
   stratChart:   null,
   macroDonut:   null,
   macroBar:     null,
-  macroData:    null,         // full macro tree from API
-  macroPath:    ["global"],   // drill-down breadcrumb stack
+  macroData:    null,
+  macroPath:    ["global"],
   trendSeriesCache: {},
+  // Flow & Chips
+  flowBubbleChart: null,
+  flowScoreBar:    null,
+  chipBarChart:    null,
+  chipCumChart:    null,
+  chipsData:       null,
+  chipsDataPeriod: null,
+  flowMatrixData:  null,
+  flowMatrixPeriod:null,
+  chipSector:      "Technology",
+  chipPeriod:      "1m",
+  networkNodes:    null,
+  networkRunning:  false,
+  // Events & Cycles
+  eventsData:      null,
+  cycleData:       null,
+  eventTypeFilter: "all",
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -817,12 +970,41 @@ async function renderTrendChart() {
     };
   });
 
+  // Event annotation plugin (draws vertical lines for key events on the chart)
+  const eventsPlugin = {
+    id: "eventAnnotations",
+    afterDraw(chart) {
+      if (!state.eventsData) return;
+      const { ctx, chartArea, scales } = chart;
+      state.eventsData.forEach(ev => {
+        const xPx = scales.x.getPixelForValue(ev.date);
+        if (!xPx || xPx < chartArea.left || xPx > chartArea.right) return;
+        ctx.save();
+        ctx.globalAlpha = 0.55;
+        ctx.strokeStyle = EVENT_COLORS[ev.type] || "#58a6ff";
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(xPx, chartArea.top);
+        ctx.lineTo(xPx, chartArea.bottom);
+        ctx.stroke();
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = EVENT_COLORS[ev.type] || "#58a6ff";
+        ctx.font = "10px Inter,sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(ev.magnitude > 0 ? "▲" : ev.magnitude < 0 ? "▼" : "●", xPx, chartArea.top + 8);
+        ctx.restore();
+      });
+    }
+  };
+
   if (state.trendChart) state.trendChart.destroy();
   state.trendChart = new Chart(
     document.getElementById("trendChart"),
     {
       type: "line",
       data: {labels: dates, datasets},
+      plugins: [eventsPlugin],
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -1106,6 +1288,8 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     if (btn.dataset.tab === "macro")    renderMacroTab();
     if (btn.dataset.tab === "trends")   renderTrendChart();
     if (btn.dataset.tab === "backtest") buildWeightGrid();
+    if (btn.dataset.tab === "flow")     renderFlowTab();
+    if (btn.dataset.tab === "cycle")    renderCycleTab();
   });
 });
 
@@ -1173,6 +1357,7 @@ function renderOverview() {
   renderHeatmap();
   renderSectorBar();
   renderTable();
+  renderEtfMappingTable();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1443,21 +1628,580 @@ function renderStrategyResults(data, topN) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  10.  ETF MAPPING TABLE
+// ═══════════════════════════════════════════════════════════════
+
+const ETF_MAP_SORT = { col: "sector", asc: true };
+const ETF_MAP_FILTER = { sector: "all", search: "" };
+
+function renderEtfMappingTable() {
+  if (!state.quotes.length) return;
+  const q = state.quotes.filter(q => q.symbol !== "SPY");
+
+  // Build sector filter chips once
+  const fc = document.getElementById("etfMapFilters");
+  if (!fc.children.length) {
+    const sectors = ["all", ...new Set(q.map(x => x.sector)).values()].sort();
+    fc.innerHTML = sectors.map(s =>
+      `<button class="ef-btn${s==="all"?" active":""}" data-sector="${s}">${s==="all"?"全部":s}</button>`
+    ).join("");
+    fc.addEventListener("click", e => {
+      const btn = e.target.closest(".ef-btn");
+      if (!btn) return;
+      fc.querySelectorAll(".ef-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      ETF_MAP_FILTER.sector = btn.dataset.sector;
+      renderEtfMappingTable();
+    });
+  }
+
+  let rows = [...q];
+  if (ETF_MAP_FILTER.sector !== "all") rows = rows.filter(r => r.sector === ETF_MAP_FILTER.sector);
+  const s = ETF_MAP_FILTER.search.toLowerCase();
+  if (s) rows = rows.filter(r => r.symbol.toLowerCase().includes(s) || r.name.toLowerCase().includes(s));
+
+  rows.sort((a, b) => {
+    const va = a[ETF_MAP_SORT.col] ?? "", vb = b[ETF_MAP_SORT.col] ?? "";
+    return (va < vb ? -1 : va > vb ? 1 : 0) * (ETF_MAP_SORT.asc ? 1 : -1);
+  });
+
+  document.getElementById("etfMapBody").innerHTML = rows.map(r => `
+    <tr class="etfmap-row" data-sym="${r.symbol}" title="點選加入趨勢比較">
+      <td><span class="sym-badge" style="background:${SECTOR_COLORS[r.sector]||"#444"}">${r.symbol}</span></td>
+      <td class="name-cell">${r.name}</td>
+      <td><span class="sector-tag">${r.sector}</span></td>
+      <td>$${r.price}</td>
+      <td style="color:${changeTextColor(r.change_1d)}">${fmtPct(r.change_1d)}</td>
+      <td style="color:${changeTextColor(r.change_1m)}">${fmtPct(r.change_1m)}</td>
+      <td style="color:${changeTextColor(r.change_1y)}">${fmtPct(r.change_1y)}</td>
+      <td>$${r.mcap}B</td>
+    </tr>`).join("");
+
+  document.querySelectorAll(".etfmap-row").forEach(row => {
+    row.addEventListener("click", () => {
+      const sym = row.dataset.sym;
+      if (!state.selected.includes(sym)) {
+        if (state.selected.length >= 6) state.selected.shift();
+        state.selected.push(sym);
+      }
+      document.querySelector('[data-tab="trends"]').click();
+    });
+  });
+
+  // Sortable columns
+  document.querySelectorAll("#etfMapTable th.sortable").forEach(th => {
+    th.style.cursor = "pointer";
+    th.addEventListener("click", () => {
+      const col = th.dataset.col;
+      if (ETF_MAP_SORT.col === col) ETF_MAP_SORT.asc = !ETF_MAP_SORT.asc;
+      else { ETF_MAP_SORT.col = col; ETF_MAP_SORT.asc = true; }
+      renderEtfMappingTable();
+    });
+  });
+}
+
+// Attach search input (once)
+document.getElementById("etfMapSearch").addEventListener("input", e => {
+  ETF_MAP_FILTER.search = e.target.value;
+  renderEtfMappingTable();
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  11.  FLOW & CHIPS TAB
+// ═══════════════════════════════════════════════════════════════
+
+async function renderFlowTab() {
+  // Load flow matrix (period-aware)
+  if (!state.flowMatrixData || state.flowMatrixPeriod !== state.period) {
+    try {
+      state.flowMatrixData = await apiFetch(`/api/flow-matrix?period=${state.period}`);
+      state.flowMatrixPeriod = state.period;
+    } catch { return; }
+  }
+  // Load chip data (chip-period-aware)
+  if (!state.chipsData || state.chipsDataPeriod !== state.chipPeriod) {
+    try {
+      state.chipsData = await apiFetch(`/api/chips?period=${state.chipPeriod}`);
+      state.chipsDataPeriod = state.chipPeriod;
+    } catch { return; }
+  }
+  renderFlowBubble(state.flowMatrixData);
+  renderFlowScoreBar(state.flowMatrixData);
+  populateChipSectorSelect();
+  renderChipCharts();
+  renderNetworkGraph(state.flowMatrixData);
+}
+
+function renderFlowBubble(data) {
+  const ctx = document.getElementById("flowBubbleChart").getContext("2d");
+  if (state.flowBubbleChart) { state.flowBubbleChart.destroy(); state.flowBubbleChart = null; }
+  const n = data.sectors.length;
+  const datasets = data.sectors.map((sec, i) => {
+    const rank = n - i; // sorted desc by flow, rank 1=lowest
+    return {
+      label: sec,
+      data: [{ x: rank, y: data.volume_ratios[i], r: Math.max(6, Math.sqrt(data.mcaps[i] || 1) * 1.8) }],
+      backgroundColor: changeColor(data.flow_scores[i], 0.7),
+      borderColor: changeColor(data.flow_scores[i], 1),
+      borderWidth: 1.5,
+    };
+  });
+  state.flowBubbleChart = new Chart(ctx, {
+    type: "bubble",
+    data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const d = ctx.raw;
+              const sec = ctx.dataset.label;
+              const score = data.flow_scores[data.sectors.indexOf(sec)];
+              return `${sec} | 動能排名:${d.x} | 成交量比:${d.y.toFixed(2)}x | 流向:${score>0?"+":" "}${score}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { title: { display: true, text: "動能排名 →（右=資金流入）", color: "#8b949e" },
+             ticks: { color: "#8b949e" }, grid: { color: "#21262d" },
+             min: 0, max: n + 1 },
+        y: { title: { display: true, text: "成交量比率（vs 30日均）", color: "#8b949e" },
+             ticks: { color: "#8b949e" }, grid: { color: "#21262d" } }
+      },
+      animation: { duration: 400 },
+    },
+    plugins: [{
+      id: "quadrantLines",
+      afterDraw(chart) {
+        const { ctx, chartArea: { left, right, top, bottom }, scales: { x, y } } = chart;
+        const mx = x.getPixelForValue((n + 1) / 2);
+        const my = y.getPixelForValue(1);
+        ctx.save();
+        ctx.strokeStyle = "rgba(139,148,158,0.25)";
+        ctx.setLineDash([5, 4]);
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(mx, top); ctx.lineTo(mx, bottom); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(left, my); ctx.lineTo(right, my); ctx.stroke();
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+function renderFlowScoreBar(data) {
+  const ctx = document.getElementById("flowScoreBar").getContext("2d");
+  if (state.flowScoreBar) { state.flowScoreBar.destroy(); state.flowScoreBar = null; }
+  const sorted = data.sectors.map((s, i) => ({ s, v: data.flow_scores[i] }))
+                              .sort((a, b) => a.v - b.v);
+  state.flowScoreBar = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: sorted.map(d => d.s),
+      datasets: [{ data: sorted.map(d => d.v),
+        backgroundColor: sorted.map(d => changeColor(d.v, 0.75)),
+        borderColor:     sorted.map(d => changeColor(d.v, 1)),
+        borderWidth: 1 }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: c => ` Flow Score: ${c.raw > 0 ? "+" : ""}${c.raw}` } } },
+      scales: {
+        x: { ticks: { color: "#8b949e" }, grid: { color: "#21262d" } },
+        y: { ticks: { color: "#cdd9e5", font: { size: 11 } }, grid: { color: "#21262d" } }
+      },
+      animation: { duration: 300 },
+    }
+  });
+}
+
+function populateChipSectorSelect() {
+  const sel = document.getElementById("chipSectorSelect");
+  if (sel.options.length) return;
+  const sectors = [...new Set((state.chipsData || []).map(c => c.sector))].sort();
+  sel.innerHTML = sectors.map(s => `<option value="${s}"${s===state.chipSector?" selected":""}>${s}</option>`).join("");
+  sel.addEventListener("change", () => { state.chipSector = sel.value; renderChipCharts(); });
+}
+
+function renderChipCharts() {
+  if (!state.chipsData) return;
+  const chipRow = state.chipsData.find(c => c.sector === state.chipSector) || state.chipsData[0];
+  if (!chipRow) return;
+  state.chipSector = chipRow.sector;
+
+  // Bar chart: stacked institutional/smart/retail
+  const bCtx = document.getElementById("chipBarChart").getContext("2d");
+  if (state.chipBarChart) { state.chipBarChart.destroy(); state.chipBarChart = null; }
+  state.chipBarChart = new Chart(bCtx, {
+    type: "bar",
+    data: {
+      labels: chipRow.dates,
+      datasets: [
+        { label: "機構法人", data: chipRow.institutional, backgroundColor: "rgba(74,144,226,0.75)", stack: "s" },
+        { label: "聰明錢",   data: chipRow.smart_money,   backgroundColor: "rgba(142,68,173,0.65)", stack: "s" },
+        { label: "散戶",     data: chipRow.retail,         backgroundColor: "rgba(231,76,60,0.55)",  stack: "s" },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: "#8b949e", boxWidth: 12 } } },
+      scales: {
+        x: { ticks: { color: "#8b949e", maxTicksLimit: 8, maxRotation: 30 }, grid: { color: "#21262d" }, stacked: true },
+        y: { ticks: { color: "#8b949e" }, grid: { color: "#21262d" }, stacked: true,
+             title: { display: true, text: "$M", color: "#8b949e" } }
+      },
+      animation: { duration: 300 },
+    }
+  });
+
+  // Cumulative + ETF price dual axis
+  const cCtx = document.getElementById("chipCumChart").getContext("2d");
+  if (state.chipCumChart) { state.chipCumChart.destroy(); state.chipCumChart = null; }
+  // Find representative ETF price for this sector
+  const repEtf = Object.entries(window.API_IMPL?.SECTOR_ETFS || {})[0];
+  const sectorEtfs = (state.chipsData ? null : null); // just use cumulative alone if no price handy
+  const quotes = state.quotes;
+  const secEtf  = quotes.find(q => q.sector === chipRow.sector && q.symbol !== "SPY");
+  const priceRef = secEtf ? chipRow.dates.map(() => secEtf.price) : null; // flat line as reference
+  state.chipCumChart = new Chart(cCtx, {
+    type: "line",
+    data: {
+      labels: chipRow.dates,
+      datasets: [
+        { label: "累積機構買超", data: chipRow.cumulative, borderColor: "#4a90e2",
+          backgroundColor: "rgba(74,144,226,0.12)", fill: true, tension: 0.3,
+          yAxisID: "y", pointRadius: 0 },
+        ...(priceRef ? [{ label: `${secEtf.symbol} 現價`, data: priceRef,
+          borderColor: "#f7931a", borderDash: [4,3], pointRadius: 0, yAxisID: "y2" }] : [])
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: "#8b949e", boxWidth: 12 } } },
+      scales: {
+        x: { ticks: { color: "#8b949e", maxTicksLimit: 8, maxRotation: 30 }, grid: { color: "#21262d" } },
+        y: { ticks: { color: "#4a90e2" }, grid: { color: "#21262d" }, position: "left",
+             title: { display: true, text: "累積 $M", color: "#4a90e2" } },
+        y2: { ticks: { color: "#f7931a" }, grid: { display: false }, position: "right",
+              title: { display: true, text: "ETF 價格", color: "#f7931a" } }
+      },
+      animation: { duration: 300 },
+    }
+  });
+}
+
+// ── Network Graph (canvas spring-physics) ──────────────────────────────
+
+function renderNetworkGraph(data) {
+  const canvas = document.getElementById("networkCanvas");
+  canvas.width  = canvas.parentElement.clientWidth  || 700;
+  canvas.height = canvas.parentElement.clientHeight || 420;
+  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext("2d");
+  const n = data.sectors.length;
+
+  if (state.networkRunning) { state.networkRunning = false; }
+  // Initialise nodes in a circle
+  const nodes = data.sectors.map((sec, i) => {
+    const angle = (2 * Math.PI * i) / n;
+    return {
+      id: sec, i,
+      x: W / 2 + (W * 0.35) * Math.cos(angle),
+      y: H / 2 + (H * 0.35) * Math.sin(angle),
+      vx: 0, vy: 0,
+      r: Math.max(18, Math.sqrt(data.mcaps[i] || 1) * 2.2),
+      color: (({ Crypto:"#f7931a",Technology:"#4a90e2","Real Estate":"#8b6d4f",
+        Energy:"#e67e22",Healthcare:"#27ae60",Financials:"#8e44ad",
+        Consumer:"#e91e8c",Industrials:"#607d8b",Materials:"#795548",
+        Utilities:"#00bcd4",Bonds:"#3f51b5",Commodities:"#ffc107",
+        International:"#ff9800" })[sec] || "#58a6ff"),
+      label: sec,
+    };
+  });
+
+  // Build edges from rotation matrix (|corr| > 0.25)
+  const edges = [];
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const c = data.rotation_matrix[i][j];
+      if (Math.abs(c) > 0.25) edges.push({ i, j, c });
+    }
+  }
+
+  const K_REPEL = 8000, K_ATTRACT = 0.04, DAMPING = 0.82, DT = 0.9;
+  let frame = 0;
+  state.networkRunning = true;
+
+  function tick() {
+    if (!state.networkRunning) return;
+    frame++;
+
+    // Forces
+    for (let a = 0; a < n; a++) {
+      let fx = 0, fy = 0;
+      // Centre gravity
+      fx += (W / 2 - nodes[a].x) * 0.004;
+      fy += (H / 2 - nodes[a].y) * 0.004;
+      // Repulsion
+      for (let b = 0; b < n; b++) {
+        if (a === b) continue;
+        const dx = nodes[a].x - nodes[b].x, dy = nodes[a].y - nodes[b].y;
+        const dist2 = dx * dx + dy * dy + 1;
+        const f = K_REPEL / dist2;
+        fx += f * dx / Math.sqrt(dist2);
+        fy += f * dy / Math.sqrt(dist2);
+      }
+      // Attraction along edges
+      edges.forEach(e => {
+        if (e.i !== a && e.j !== a) return;
+        const b = e.i === a ? e.j : e.i;
+        const dx = nodes[b].x - nodes[a].x, dy = nodes[b].y - nodes[a].y;
+        const str = Math.abs(e.c) * K_ATTRACT;
+        fx += dx * str; fy += dy * str;
+      });
+
+      nodes[a].vx = (nodes[a].vx + fx * DT) * DAMPING;
+      nodes[a].vy = (nodes[a].vy + fy * DT) * DAMPING;
+    }
+    nodes.forEach(nd => {
+      nd.x = Math.max(nd.r + 2, Math.min(W - nd.r - 2, nd.x + nd.vx));
+      nd.y = Math.max(nd.r + 2, Math.min(H - nd.r - 2, nd.y + nd.vy));
+    });
+
+    // Draw
+    ctx.clearRect(0, 0, W, H);
+    edges.forEach(e => {
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.8, Math.abs(e.c));
+      ctx.strokeStyle = e.c > 0 ? "#4a90e2" : "#e67e22";
+      ctx.lineWidth = Math.abs(e.c) * 3;
+      ctx.beginPath();
+      ctx.moveTo(nodes[e.i].x, nodes[e.i].y);
+      ctx.lineTo(nodes[e.j].x, nodes[e.j].y);
+      ctx.stroke();
+      ctx.restore();
+    });
+    nodes.forEach(nd => {
+      ctx.beginPath();
+      ctx.arc(nd.x, nd.y, nd.r, 0, Math.PI * 2);
+      ctx.fillStyle = nd.color + "cc";
+      ctx.fill();
+      ctx.strokeStyle = nd.color;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = "#fff";
+      ctx.font = `bold ${Math.max(9, Math.min(12, nd.r * 0.55))}px Inter,sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const short = nd.label.length > 8 ? nd.label.slice(0, 7) + "…" : nd.label;
+      ctx.fillText(short, nd.x, nd.y);
+    });
+
+    if (frame < 180) requestAnimationFrame(tick);
+    else state.networkRunning = false;
+  }
+  requestAnimationFrame(tick);
+}
+
+// Chip period buttons
+document.querySelectorAll(".cp-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".cp-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.chipPeriod   = btn.dataset.cp;
+    state.chipsData    = null; // force reload
+    renderChipCharts();
+    apiFetch(`/api/chips?period=${state.chipPeriod}`).then(d => {
+      state.chipsData = d; state.chipsDataPeriod = state.chipPeriod;
+      renderChipCharts();
+    });
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  12.  EVENTS & CYCLES TAB
+// ═══════════════════════════════════════════════════════════════
+
+async function renderCycleTab() {
+  if (!state.eventsData) {
+    try { state.eventsData = await apiFetch("/api/events"); } catch { return; }
+  }
+  if (!state.cycleData) {
+    try { state.cycleData = await apiFetch("/api/cycle"); } catch { return; }
+  }
+  renderEventTimeline();
+  renderCycleHeatmap();
+  renderPercentileRanks();
+}
+
+const EVENT_COLORS = { fed: "#4a90e2", macro: "#27ae60", earnings: "#f7931a", geopolitical: "#e74c3c" };
+const EVENT_ICONS  = { fed: "🏦", macro: "📊", earnings: "📈", geopolitical: "🌐" };
+
+function renderEventTimeline() {
+  const events = (state.eventsData || [])
+    .filter(e => state.eventTypeFilter === "all" || e.type === state.eventTypeFilter)
+    .slice().reverse(); // newest first
+
+  const tl = document.getElementById("eventTimeline");
+  tl.innerHTML = events.map(ev => `
+    <div class="ev-card ${ev.magnitude > 0 ? "ev-pos" : ev.magnitude < 0 ? "ev-neg" : "ev-neu"}">
+      <div class="ev-stripe" style="background:${EVENT_COLORS[ev.type]||"#58a6ff"}"></div>
+      <div class="ev-body">
+        <div class="ev-top">
+          <span class="ev-icon">${EVENT_ICONS[ev.type]||"📌"}</span>
+          <span class="ev-date">${ev.date}</span>
+          <span class="ev-badge" style="background:${EVENT_COLORS[ev.type]||"#58a6ff"}">${ev.type}</span>
+          <span class="ev-mag">${"★".repeat(Math.abs(ev.magnitude))||"—"}${ev.magnitude<0?" 利空":" 利多"}</span>
+        </div>
+        <div class="ev-title">${ev.title}</div>
+        <div class="ev-detail">${ev.detail}</div>
+        <div class="ev-sectors">${(ev.sectors||[]).map(s =>
+          `<span class="ev-sec-tag" style="border-color:${SECTOR_COLORS[s]||"#444"};color:${SECTOR_COLORS[s]||"#ccc"}">${s}</span>`
+        ).join("")}</div>
+      </div>
+    </div>`).join("");
+}
+
+// Event type filter
+document.getElementById("eventFilters").addEventListener("click", e => {
+  const btn = e.target.closest(".ef-btn");
+  if (!btn) return;
+  document.querySelectorAll("#eventFilters .ef-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  state.eventTypeFilter = btn.dataset.etype;
+  renderEventTimeline();
+});
+
+// ── Cycle Heatmap Canvas ────────────────────────────────────────────────
+function renderCycleHeatmap() {
+  if (!state.cycleData || !state.cycleData.length) return;
+  const canvas  = document.getElementById("cycleHeatmap");
+  const wrapper = canvas.parentElement;
+  const data    = state.cycleData;
+
+  // Collect all months from any sector
+  const allMonths = [...new Set(data.flatMap(d => Object.keys(d.monthly_returns)))].sort();
+  const sectors   = data.map(d => d.sector);
+  const LABEL_W = 110, CELL_H = 30, CELL_W = Math.max(34, Math.floor((wrapper.clientWidth - LABEL_W - 16) / allMonths.length));
+  const TOP_H = 36;
+  canvas.width  = LABEL_W + allMonths.length * CELL_W + 4;
+  canvas.height = TOP_H + sectors.length * CELL_H + 4;
+  canvas.style.width  = canvas.width  + "px";
+  canvas.style.height = canvas.height + "px";
+
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Month column headers
+  ctx.fillStyle = "#8b949e";
+  ctx.font = "10px Inter,sans-serif";
+  ctx.textAlign = "center";
+  allMonths.forEach((m, j) => {
+    const label = m.slice(2); // "24-01"
+    ctx.fillText(label, LABEL_W + j * CELL_W + CELL_W / 2, TOP_H - 8);
+  });
+
+  // Cells
+  sectors.forEach((sec, i) => {
+    const row = data[i];
+    const y = TOP_H + i * CELL_H;
+    // Label
+    ctx.fillStyle = "#cdd9e5";
+    ctx.font = "11px Inter,sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText(sec, LABEL_W - 6, y + CELL_H / 2 + 4);
+    // Cells
+    allMonths.forEach((m, j) => {
+      const val = row.monthly_returns[m];
+      const x   = LABEL_W + j * CELL_W;
+      if (val === undefined) {
+        ctx.fillStyle = "#1c2333";
+        ctx.fillRect(x + 1, y + 1, CELL_W - 2, CELL_H - 2);
+        return;
+      }
+      ctx.fillStyle = changeColor(val * 0.5, 0.85); // scale: 2% → moderate color
+      ctx.fillRect(x + 1, y + 1, CELL_W - 2, CELL_H - 2);
+      if (CELL_W > 38) {
+        ctx.fillStyle = Math.abs(val) > 2 ? "#fff" : "#cdd9e5";
+        ctx.font = "9px Inter,sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(fmtPct(val, false), x + CELL_W / 2, y + CELL_H / 2 + 3);
+      }
+    });
+  });
+
+  // Hover tooltip
+  canvas.onmousemove = (ev) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+    const j = Math.floor((mx - LABEL_W) / CELL_W);
+    const i = Math.floor((my - TOP_H) / CELL_H);
+    if (i < 0 || i >= sectors.length || j < 0 || j >= allMonths.length) {
+      document.getElementById("cycleTooltip").classList.add("hidden"); return;
+    }
+    const val = data[i].monthly_returns[allMonths[j]];
+    if (val === undefined) { document.getElementById("cycleTooltip").classList.add("hidden"); return; }
+    const tip = document.getElementById("cycleTooltip");
+    tip.textContent = `${sectors[i]} · ${allMonths[j]} → ${fmtPct(val)}`;
+    tip.style.left = (ev.clientX + 12) + "px";
+    tip.style.top  = (ev.clientY - 28) + "px";
+    tip.classList.remove("hidden");
+  };
+  canvas.onmouseleave = () => document.getElementById("cycleTooltip").classList.add("hidden");
+}
+
+// ── Percentile Rank Bars ────────────────────────────────────────────────
+function renderPercentileRanks() {
+  if (!state.cycleData) return;
+  const sorted = [...state.cycleData].sort((a, b) => b.percentile_rank - a.percentile_rank);
+  document.getElementById("percentileGrid").innerHTML = sorted.map(d => {
+    const clr = d.percentile_rank >= 70 ? "#4ade80" : d.percentile_rank >= 40 ? "#fbbf24" : "#f87171";
+    return `
+    <div class="perc-row">
+      <div class="perc-sector" style="color:${d.color}">${d.sector}</div>
+      <div class="perc-bar-track">
+        <div class="perc-bar-fill" style="width:${d.percentile_rank}%;background:${clr}"></div>
+      </div>
+      <div class="perc-rank" style="color:${clr}">${d.percentile_rank}%</div>
+      <div class="perc-meta">
+        <span title="1Y Return" style="color:${changeTextColor(d.current_1y)}">${fmtPct(d.current_1y)} 1Y</span>
+        <span class="perc-best">↑ ${d.best_months.join("/")} </span>
+        <span class="perc-worst">↓ ${d.worst_months.join("/")}</span>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// Resize → re-render network and heatmap
+window.addEventListener("resize", () => {
+  if (document.getElementById("tab-flow").classList.contains("active") && state.flowMatrixData)
+    renderNetworkGraph(state.flowMatrixData);
+  if (document.getElementById("tab-cycle").classList.contains("active") && state.cycleData)
+    renderCycleHeatmap();
+});
+
+// ═══════════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════════
 
 async function init() {
   document.getElementById("loader").classList.add("active");
   try {
-    // Load quotes + macro data in parallel
-    [state.quotes, state.macroData] = await Promise.all([
+    // Load quotes, macro, events, and cycle data in parallel
+    [state.quotes, state.macroData, state.eventsData, state.cycleData] = await Promise.all([
       apiFetch("/api/quotes"),
       apiFetch(`/api/macro?period=${state.period}`),
+      apiFetch("/api/events"),
+      apiFetch("/api/cycle"),
     ]);
     state._macroDataPeriod = state.period;
     document.getElementById("updateTime").textContent =
       "更新於 " + new Date().toLocaleTimeString("zh-TW");
-    renderMacroView();        // first tab is macro
+    renderMacroView();
     buildSymbolPicker();
     state.weights = {};
     state.quotes.filter(q => q.symbol !== "SPY").forEach(q => {
@@ -1469,7 +2213,9 @@ async function init() {
 
   setInterval(async () => {
     state.trendSeriesCache = {};
-    state.macroData = null;   // force macro refresh
+    state.macroData = null;
+    state.flowMatrixData = null;
+    state.chipsData = null;
     state.quotes = await apiFetch("/api/quotes");
     document.getElementById("updateTime").textContent =
       "更新於 " + new Date().toLocaleTimeString("zh-TW");

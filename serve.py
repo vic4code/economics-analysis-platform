@@ -489,6 +489,260 @@ def _run_strategy_backtest(period: str, top_n: int = 3) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Mock news events  (fixed dates – not randomised)
+# ---------------------------------------------------------------------------
+
+MOCK_EVENTS: list[dict] = [
+    {"date": "2024-03-20", "title": "Fed 維持利率 5.25–5.50%", "type": "fed",
+     "sectors": ["Bonds", "Financials", "Utilities"], "magnitude": 0,
+     "detail": "FOMC 決議維持利率不變，點陣圖暗示年內 3 次降息。"},
+    {"date": "2024-05-01", "title": "Fed 暗示降息時間表延後", "type": "fed",
+     "sectors": ["Bonds", "Technology", "Real Estate"], "magnitude": -1,
+     "detail": "通膨數據持續頑固，市場降息預期大幅後移，科技股承壓。"},
+    {"date": "2024-07-11", "title": "CPI 低於預期，降息希望升溫", "type": "macro",
+     "sectors": ["Bonds", "Real Estate", "Utilities"], "magnitude": 2,
+     "detail": "6 月 CPI YoY 3.0%，低於預期，市場押注 9 月降息。"},
+    {"date": "2024-08-05", "title": "日圓套利交易解除，全球股市暴跌", "type": "geopolitical",
+     "sectors": ["International", "Technology", "Crypto"], "magnitude": -3,
+     "detail": "日銀升息導致日圓套利交易平倉潮，VIX 飆升至 38。"},
+    {"date": "2024-09-18", "title": "Fed 首次降息 50bps", "type": "fed",
+     "sectors": ["Bonds", "Real Estate", "Financials"], "magnitude": 2,
+     "detail": "聯準會宣布降息 2 碼，為 4 年來首次降息。"},
+    {"date": "2024-10-17", "title": "Nvidia Blackwell 晶片量產確認", "type": "earnings",
+     "sectors": ["Technology"], "magnitude": 2,
+     "detail": "Blackwell GPU 需求爆炸，AI 基礎建設投資持續加速。"},
+    {"date": "2024-11-06", "title": "川普當選美國總統", "type": "geopolitical",
+     "sectors": ["Financials", "Energy", "Crypto"], "magnitude": 3,
+     "detail": "共和黨橫掃國會，市場預期減稅＋鬆綁金融監管，金融股大漲。"},
+    {"date": "2024-12-18", "title": "Fed 降息但點陣圖偏鷹", "type": "fed",
+     "sectors": ["Bonds", "Technology", "Real Estate"], "magnitude": -2,
+     "detail": "降息 1 碼但 2025 年預期僅 2 次降息，遠少於市場預期，股市大跌。"},
+    {"date": "2025-01-20", "title": "川普就職，宣布緊急經濟狀態", "type": "geopolitical",
+     "sectors": ["Energy", "Commodities", "International"], "magnitude": 1,
+     "detail": "宣布對中國、加拿大、墨西哥加徵關稅，能源政策大轉向。"},
+    {"date": "2025-01-27", "title": "DeepSeek R1 震撼 AI 市場", "type": "earnings",
+     "sectors": ["Technology", "Commodities"], "magnitude": -2,
+     "detail": "中國 DeepSeek 以低成本媲美 GPT-4，Nvidia 單日市值蒸發約 6000 億美元。"},
+    {"date": "2025-02-19", "title": "比特幣突破 $100,000", "type": "macro",
+     "sectors": ["Crypto"], "magnitude": 3,
+     "detail": "機構持續買進 IBIT，比特幣市值超越白銀，加密板塊整體大漲。"},
+    {"date": "2025-03-04", "title": "關稅戰升級，中美貿易緊張", "type": "geopolitical",
+     "sectors": ["International", "Materials", "Consumer"], "magnitude": -2,
+     "detail": "美國宣布對中國商品加徵額外 25% 關稅，供應鏈重組預期升溫。"},
+    {"date": "2025-04-02", "title": "解放日：史上最大規模關稅宣布", "type": "geopolitical",
+     "sectors": ["International", "Consumer", "Industrials", "Materials"], "magnitude": -3,
+     "detail": "對逾 90 個國家課徵對等關稅，全球股市劇烈震盪。"},
+    {"date": "2025-04-09", "title": "關稅暫停 90 天，市場強彈", "type": "geopolitical",
+     "sectors": ["Technology", "Consumer", "International"], "magnitude": 3,
+     "detail": "川普宣布對多數國家關稅暫停，納指單日漲逾 12%，史上前三大漲幅之一。"},
+    {"date": "2025-04-22", "title": "Fed 鮑威爾警告關稅推升通膨", "type": "fed",
+     "sectors": ["Bonds", "Technology"], "magnitude": -1,
+     "detail": "主席強調通膨風險上升，降息時間表更加不確定。"},
+    {"date": "2025-05-07", "title": "Fed 維持利率不變", "type": "fed",
+     "sectors": ["Bonds", "Real Estate"], "magnitude": 0,
+     "detail": "Fed 會後聲明維持謹慎立場，等待更多通膨數據明朗化。"},
+]
+
+# Sectors covered by at least one ETF (for chip/flow computations)
+_SECTOR_ETFS: dict[str, list[str]] = {}
+for _s, _m in ETF_UNIVERSE.items():
+    if _s == "SPY":
+        continue
+    _SECTOR_ETFS.setdefault(_m["sector"], []).append(_s)
+
+
+# ---------------------------------------------------------------------------
+# Chip data  (simulated institutional / smart-money / retail net-buy)
+# ---------------------------------------------------------------------------
+
+def _get_chips_data(period: str) -> list[dict]:
+    """Return per-sector simulated chip flow for the given period."""
+    days = {"1d": 5, "5d": 10, "1m": 22, "3m": 66, "6m": 130, "1y": 252, "ytd": 100}.get(period, 22)
+    quotes = _get_all_quotes()
+    qmap   = {q["symbol"]: q for q in quotes}
+
+    result: list[dict] = []
+    today = datetime.utcnow().date()
+
+    for sector, etfs in _SECTOR_ETFS.items():
+        # Derive sector momentum as a bias for institutional direction
+        momentum = sum(qmap[e][f"change_{period}"] for e in etfs if e in qmap) / max(len(etfs), 1)
+        inst_bias = momentum * 30  # ~$30M per 1% move
+
+        rng_inst  = random.Random(_seed_for(sector + "_inst"))
+        rng_smart = random.Random(_seed_for(sector + "_smart"))
+        rng_ret   = random.Random(_seed_for(sector + "_retail"))
+
+        dates: list[str] = []
+        institutional: list[float] = []
+        smart_money:   list[float] = []
+        retail:        list[float] = []
+        cumulative:    list[float] = []
+        cum = 0.0
+
+        for i in range(days):
+            d = today - timedelta(days=days - 1 - i)
+            if d.weekday() >= 5:
+                continue
+            dates.append(d.isoformat())
+
+            inst  = round(rng_inst.gauss(inst_bias * 0.6, abs(inst_bias) * 0.8 + 80), 1)
+            smart = round(rng_smart.gauss(inst_bias * 0.3, abs(inst_bias) * 0.5 + 40), 1)
+            ret   = round(rng_ret.gauss(-inst_bias * 0.2, abs(inst_bias) * 0.6 + 50), 1)
+
+            institutional.append(inst)
+            smart_money.append(smart)
+            retail.append(ret)
+            cum += inst
+            cumulative.append(round(cum, 1))
+
+        # Flow score: weighted recent momentum
+        flow_score = round(momentum * 1.5, 2)
+
+        result.append({
+            "sector":        sector,
+            "flow_score":    flow_score,
+            "dates":         dates,
+            "institutional": institutional,
+            "smart_money":   smart_money,
+            "retail":        retail,
+            "cumulative":    cumulative,
+        })
+
+    result.sort(key=lambda x: x["flow_score"], reverse=True)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Flow matrix  (sector rotation + flow scores)
+# ---------------------------------------------------------------------------
+
+def _get_flow_matrix(period: str) -> dict:
+    """Return per-sector flow scores and a pairwise rotation matrix."""
+    chips = _get_chips_data(period)
+    quotes = _get_all_quotes()
+    qmap   = {q["symbol"]: q for q in quotes}
+
+    sectors = [c["sector"] for c in chips]
+    flow_scores = [c["flow_score"] for c in chips]
+
+    # Volume ratio: current vs 30-day avg for each sector's ETFs
+    volume_ratios: list[float] = []
+    for sec in sectors:
+        etfs = _SECTOR_ETFS.get(sec, [])
+        if etfs:
+            avg_vol = sum(qmap[e]["volume"] for e in etfs if e in qmap) / max(len(etfs), 1)
+            # Generate "baseline" volume from series
+            base_vols = []
+            for e in etfs[:2]:  # limit to 2 ETFs for performance
+                series = _generate_series(e, 35)
+                if series:
+                    base_vols.append(sum(b["volume"] for b in series[-22:]) / min(22, len(series)))
+            base_vol = sum(base_vols) / len(base_vols) if base_vols else avg_vol
+            ratio = round(avg_vol / base_vol, 2) if base_vol else 1.0
+        else:
+            ratio = 1.0
+        volume_ratios.append(ratio)
+
+    # Pairwise rotation: simplified correlation proxy from flow_score differences
+    n = len(sectors)
+    rotation_matrix: list[list[float]] = []
+    for i in range(n):
+        row: list[float] = []
+        for j in range(n):
+            if i == j:
+                row.append(1.0)
+            else:
+                # High positive = similar flow direction; negative = opposite (rotation)
+                diff = abs(flow_scores[i] - flow_scores[j])
+                sign = 1 if (flow_scores[i] > 0) == (flow_scores[j] > 0) else -1
+                row.append(round(sign * max(0, 1 - diff / 6), 2))
+        rotation_matrix.append(row)
+
+    return {
+        "sectors":         sectors,
+        "flow_scores":     flow_scores,
+        "volume_ratios":   volume_ratios,
+        "mcaps":           [sum(ETF_UNIVERSE[e]["mcap"] for e in _SECTOR_ETFS.get(s, [])) for s in sectors],
+        "rotation_matrix": rotation_matrix,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Cycle data  (monthly returns + percentile rank per sector)
+# ---------------------------------------------------------------------------
+
+def _get_cycle_data() -> list[dict]:
+    """Return monthly returns + 52-week percentile rank for each sector."""
+    quotes = _get_all_quotes()
+    qmap   = {q["symbol"]: q for q in quotes}
+
+    result: list[dict] = []
+    today = datetime.utcnow().date()
+
+    for sector, etfs in _SECTOR_ETFS.items():
+        etf_syms = [e for e in etfs if e in qmap]
+        if not etf_syms:
+            continue
+
+        # Generate 2 years of daily data for the first 2 ETFs (averaged)
+        series_list = [_generate_series(e, 730) for e in etf_syms[:2]]
+
+        # Build monthly return dict by computing first/last close per month
+        monthly: dict[str, float] = {}
+        for year_offset in range(3):
+            for month in range(1, 13):
+                yr = today.year - year_offset
+                if yr == today.year and month > today.month:
+                    continue
+                key = f"{yr}-{month:02d}"
+                prefix = f"{yr}-{month:02d}-"
+                month_bars: list[dict] = []
+                for series in series_list:
+                    month_bars.extend(b for b in series if b["date"].startswith(prefix))
+                if len(month_bars) < 2:
+                    continue
+                month_bars.sort(key=lambda b: b["date"])
+                ret = round((month_bars[-1]["close"] / month_bars[0]["close"] - 1) * 100, 2)
+                monthly[key] = ret
+
+        # Sort months chronologically
+        monthly_sorted = dict(sorted(monthly.items()))
+
+        # Percentile rank: where is current 1Y return vs all months?
+        cur_1y = sum(qmap[e].get("change_1y", 0) for e in etf_syms) / len(etf_syms)
+        all_returns = list(monthly_sorted.values())
+        if all_returns:
+            rank = round(sum(1 for r in all_returns if r <= cur_1y) / len(all_returns) * 100)
+        else:
+            rank = 50
+
+        # Best / worst calendar months (average across years)
+        by_month: dict[int, list[float]] = {}
+        for key, ret in monthly_sorted.items():
+            m = int(key.split("-")[1])
+            by_month.setdefault(m, []).append(ret)
+        avg_by_month = {m: sum(v) / len(v) for m, v in by_month.items()}
+        sorted_months = sorted(avg_by_month.items(), key=lambda x: x[1])
+        month_names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+        worst_months = [month_names[m - 1] for m, _ in sorted_months[:2]]
+        best_months  = [month_names[m - 1] for m, _ in sorted_months[-2:]]
+
+        result.append({
+            "sector":          sector,
+            "monthly_returns": monthly_sorted,
+            "percentile_rank": rank,
+            "current_1y":      round(cur_1y, 2),
+            "best_months":     best_months,
+            "worst_months":    worst_months,
+            "color":           next((n["color"] for n in MACRO_TREE
+                                     if n.get("etfs") and etf_syms[0] in n["etfs"]), "#58a6ff"),
+        })
+
+    return result
+
+
+# ---------------------------------------------------------------------------
 # HTTP handler
 # ---------------------------------------------------------------------------
 
@@ -584,6 +838,20 @@ class _Handler(http.server.SimpleHTTPRequestHandler):
                 period = qs.get("period", ["1y"])[0]
                 top_n  = int(qs.get("top_n", ["3"])[0])
                 self._json(_run_strategy_backtest(period, top_n))
+
+            elif path == "/api/chips":
+                period = qs.get("period", ["1m"])[0]
+                self._json(_get_chips_data(period))
+
+            elif path == "/api/events":
+                self._json(MOCK_EVENTS)
+
+            elif path == "/api/flow-matrix":
+                period = qs.get("period", ["1m"])[0]
+                self._json(_get_flow_matrix(period))
+
+            elif path == "/api/cycle":
+                self._json(_get_cycle_data())
 
             else:
                 self._json({"error": "not found"}, 404)
