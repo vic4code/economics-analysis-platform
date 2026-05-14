@@ -1,605 +1,2395 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta
-      name="description"
-      content="Single-page global market dashboard with live TradingView and FRED embeds for stocks, bonds, currencies, and commodities."
-    />
-    <title>Global Market Dashboard</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <a class="skip-link" href="#main-content">Skip to main content</a>
-    <header class="top-bar">
-      <div class="brand">🌍 Global Market Dashboard</div>
-      <button
-        class="menu-toggle"
-        type="button"
-        aria-label="Toggle navigation"
-        aria-expanded="false"
-        aria-controls="primary-navigation"
-      >
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-      <nav class="nav-links" id="primary-navigation" aria-label="Section navigation">
-        <ul>
-          <li><a href="#stocks">Stocks</a></li>
-          <li><a href="#bonds">Bonds</a></li>
-          <li><a href="#currencies">Currencies</a></li>
-          <li><a href="#commodities">Commodities</a></li>
-        </ul>
-      </nav>
-    </header>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fund Flow Dashboard | 全球資金流向</title>
+  <!-- Google Fonts loaded async; local stack used as fallback -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'" />
+  <!-- Chart.js bundled locally for offline/air-gapped environments -->
+  <script src="chart.umd.min.js"></script>
+  <!-- Static data engine (used on GitHub Pages; skipped when served locally) -->
+  <script src="data.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
 
-    <main id="main-content">
-      <section class="intro">
-        <p>
-          A lightweight personal market observatory featuring live embeds from
-          TradingView and FRED. Tap any card to launch the full interactive
-          chart in a new tab.
-        </p>
-      </section>
+<!-- ── Top Bar ─────────────────────────────────────────────────── -->
+<header class="topbar">
+  <div class="topbar-brand">
+    <span class="brand-icon">⚡</span>
+    <span class="brand-name">Fund Flow</span>
+    <span class="brand-sub">全球資金流向分析</span>
+  </div>
 
-      <section id="stocks" class="dashboard-section">
-        <div class="section-header">
-          <h2>Stock Markets</h2>
-          <p>Major equity benchmarks across the U.S. and Asia.</p>
+  <div class="topbar-period" id="periodBar">
+    <button class="period-btn active" data-period="1d">1D</button>
+    <button class="period-btn" data-period="5d">5D</button>
+    <button class="period-btn" data-period="1m">1M</button>
+    <button class="period-btn" data-period="3m">3M</button>
+    <button class="period-btn" data-period="6m">6M</button>
+    <button class="period-btn" data-period="1y">1Y</button>
+    <button class="period-btn" data-period="ytd">YTD</button>
+  </div>
+
+  <div class="topbar-meta">
+    <span class="data-badge">⚙ Mock Data</span>
+    <span class="update-time" id="updateTime">—</span>
+  </div>
+</header>
+
+<!-- ── Tab Navigation ───────────────────────────────────────────── -->
+<nav class="tab-nav">
+  <button class="tab-btn active" data-tab="macro">🌐 Macro Flow</button>
+  <button class="tab-btn" data-tab="overview">📊 Overview</button>
+  <button class="tab-btn" data-tab="trends">📈 Trend Analysis</button>
+  <button class="tab-btn" data-tab="backtest">🔬 Backtest</button>
+  <button class="tab-btn" data-tab="flow">📡 Flow &amp; Chips</button>
+  <button class="tab-btn" data-tab="cycle">📅 Events &amp; Cycles</button>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     TAB: MACRO FLOW
+══════════════════════════════════════════════════════════════════ -->
+<main id="tab-macro" class="tab-panel active">
+
+  <section class="panel">
+    <!-- Breadcrumb -->
+    <div class="macro-breadcrumb" id="macroBreadcrumb">
+      <span class="bc-item bc-home" data-node="global">🌐 全球資金</span>
+    </div>
+
+    <!-- Top summary bar -->
+    <div class="macro-summary" id="macroSummary"></div>
+
+    <!-- Two-column layout: donut + bar chart -->
+    <div class="macro-charts">
+      <div class="macro-donut-wrap">
+        <canvas id="macroDonut"></canvas>
+        <div class="donut-center" id="donutCenter">
+          <div class="donut-label">全球 AUM</div>
+          <div class="donut-value" id="donutValue">—</div>
         </div>
-        <div class="cards-grid">
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/SP-SPX/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="card-header">
-              <h3>S&amp;P 500</h3>
-              <p>Large-cap U.S. equities snapshot.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "SP:SPX",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#009688",
-  "underLineColor": "rgba(0, 150, 136, 0.25)",
-  "isTransparent": false,
-  "autosize": true
+      </div>
+      <div class="macro-bar-wrap">
+        <div class="panel-header" style="margin-bottom:0.5rem">
+          <h2 id="macroBarTitle">各類別資金流向</h2>
+          <span class="panel-hint" id="macroBarHint">依漲跌幅排序</span>
+        </div>
+        <div class="chart-wrap" style="height:300px">
+          <canvas id="macroBarChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drill-down cards -->
+    <div class="macro-cards" id="macroCards"></div>
+
+    <!-- ETF leaf detail (shown when drilling to a leaf) -->
+    <div id="macroEtfDetail" class="hidden">
+      <div class="panel-header" style="margin-top:1.5rem">
+        <h2 id="macroEtfTitle">代表 ETF</h2>
+      </div>
+      <div class="table-wrap">
+        <table class="etf-table">
+          <thead><tr><th>代碼</th><th>名稱</th><th>現價</th><th>漲跌 %</th></tr></thead>
+          <tbody id="macroEtfBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     TAB: OVERVIEW
+══════════════════════════════════════════════════════════════════ -->
+<main id="tab-overview" class="tab-panel">
+
+  <!-- Summary stat cards -->
+  <section class="stat-row" id="statCards">
+    <div class="stat-card" id="cardBest">
+      <div class="stat-label">🔥 最強</div>
+      <div class="stat-symbol">—</div>
+      <div class="stat-change positive">—</div>
+      <div class="stat-sector">—</div>
+    </div>
+    <div class="stat-card" id="cardWorst">
+      <div class="stat-label">🧊 最弱</div>
+      <div class="stat-symbol">—</div>
+      <div class="stat-change negative">—</div>
+      <div class="stat-sector">—</div>
+    </div>
+    <div class="stat-card" id="cardHotSector">
+      <div class="stat-label">🌊 熱門板塊</div>
+      <div class="stat-symbol">—</div>
+      <div class="stat-change positive">—</div>
+      <div class="stat-sector">加權平均漲幅</div>
+    </div>
+    <div class="stat-card" id="cardMkt">
+      <div class="stat-label">📍 大盤 SPY</div>
+      <div class="stat-symbol" id="spyPrice">—</div>
+      <div class="stat-change" id="spyChange">—</div>
+      <div class="stat-sector">S&amp;P 500 ETF</div>
+    </div>
+  </section>
+
+  <!-- Heatmap -->
+  <section class="panel">
+    <div class="panel-header">
+      <h2>全球資金熱力圖</h2>
+      <span class="panel-hint">色塊大小 = 市值規模 ／ 顏色深淺 = 漲跌幅</span>
+    </div>
+    <div class="heatmap-wrap">
+      <canvas id="heatmapCanvas"></canvas>
+    </div>
+    <div class="heatmap-legend">
+      <span class="legend-label">跌 &lt; −3%</span>
+      <div class="legend-bar"></div>
+      <span class="legend-label">漲 &gt; +3%</span>
+    </div>
+  </section>
+
+  <!-- Sector bar chart -->
+  <section class="panel">
+    <div class="panel-header">
+      <h2>板塊漲跌排行</h2>
+      <span class="panel-hint">各板塊加權平均漲跌幅</span>
+    </div>
+    <div class="chart-wrap medium">
+      <canvas id="sectorBarChart"></canvas>
+    </div>
+  </section>
+
+  <!-- ETF ranking table -->
+  <section class="panel">
+    <div class="panel-header">
+      <h2>ETF 漲跌排行</h2>
+      <button class="icon-btn" id="sortToggle" title="切換排序">↕</button>
+    </div>
+    <div class="table-wrap">
+      <table class="etf-table" id="etfTable">
+        <thead>
+          <tr>
+            <th>代碼</th><th>名稱</th><th>板塊</th>
+            <th>現價</th><th>漲跌 %</th>
+          </tr>
+        </thead>
+        <tbody id="etfTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ETF-Industry Mapping Table -->
+  <section class="panel">
+    <div class="panel-header">
+      <h2>ETF 產業對應總表</h2>
+      <span class="panel-hint">點選標的可加入趨勢比較</span>
+    </div>
+    <div class="etfmap-controls">
+      <input type="text" id="etfMapSearch" placeholder="搜尋代碼或名稱…" class="etfmap-search" />
+      <div class="etfmap-filters" id="etfMapFilters"></div>
+    </div>
+    <div class="table-wrap">
+      <table class="etf-table etfmap-table" id="etfMapTable">
+        <thead>
+          <tr>
+            <th data-col="symbol" class="sortable">代碼 ↕</th>
+            <th>名稱</th>
+            <th data-col="sector" class="sortable">板塊 ↕</th>
+            <th data-col="price" class="sortable">現價 ↕</th>
+            <th data-col="change_1d" class="sortable">1D ↕</th>
+            <th data-col="change_1m" class="sortable">1M ↕</th>
+            <th data-col="change_1y" class="sortable">1Y ↕</th>
+            <th data-col="mcap" class="sortable">AUM(B) ↕</th>
+          </tr>
+        </thead>
+        <tbody id="etfMapBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     TAB: TREND ANALYSIS
+══════════════════════════════════════════════════════════════════ -->
+<main id="tab-trends" class="tab-panel">
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>多標的趨勢比較</h2>
+      <span class="panel-hint">選擇最多 6 個標的進行比較（基準化 = 起點 100）</span>
+    </div>
+
+    <div class="symbol-picker" id="symbolPicker"></div>
+
+    <div class="chart-wrap tall">
+      <canvas id="trendChart"></canvas>
+    </div>
+
+    <!-- Correlation heatmap -->
+    <div class="panel-header" style="margin-top:2rem">
+      <h2>相關性矩陣</h2>
+      <span class="panel-hint">所選標的間的收益率相關係數</span>
+    </div>
+    <div class="corr-wrap" id="corrMatrix"></div>
+  </section>
+
+</main>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     TAB: BACKTEST
+══════════════════════════════════════════════════════════════════ -->
+<main id="tab-backtest" class="tab-panel">
+
+  <!-- Strategy Comparison -->
+  <section class="panel">
+    <div class="panel-header">
+      <h2>策略比較</h2>
+      <span class="panel-hint">動量輪動 vs 等權重 vs SPY 大盤，看哪個策略更值得</span>
+    </div>
+    <div class="strat-controls">
+      <div class="bt-period-row">
+        <button class="sc-period-btn active" data-scperiod="1y">1 年</button>
+        <button class="sc-period-btn" data-scperiod="3y">3 年</button>
+        <button class="sc-period-btn" data-scperiod="5y">5 年</button>
+      </div>
+      <div class="strat-topn">
+        每次輪動持有前
+        <select id="stratTopN" class="topn-select">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+          <option value="5">5</option>
+        </select>
+        強勢主題
+      </div>
+      <button class="run-btn" id="runStrategyCompare" style="margin-left:auto">▶ 執行比較</button>
+    </div>
+    <div id="stratResults" class="hidden">
+      <div class="strat-stat-grid" id="stratStatGrid"></div>
+      <div class="chart-wrap tall" style="margin-top:1.25rem">
+        <canvas id="stratChart"></canvas>
+      </div>
+      <div class="strat-note">
+        <strong>動量輪動：</strong>每 21 個交易日，依過去一個月報酬選出前 N 強板塊（科技/加密/能源/金融/房地產/債券/黃金等13個主題），等權重持有至下次調倉。
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>自訂組合回測</h2>
+      <span class="panel-hint">配置各 ETF 權重，系統計算歷史績效並與 S&amp;P 500 比較</span>
+    </div>
+
+    <!-- Weight builder -->
+    <div class="backtest-builder">
+      <div class="builder-controls">
+        <label class="field-label">回測區間</label>
+        <div class="bt-period-row">
+          <button class="bt-period-btn active" data-btperiod="1y">1 年</button>
+          <button class="bt-period-btn" data-btperiod="3y">3 年</button>
+          <button class="bt-period-btn" data-btperiod="5y">5 年</button>
+        </div>
+        <label class="field-label" style="margin-top:1rem">快速模板</label>
+        <div class="template-row">
+          <button class="template-btn" data-tpl="aggressive">進攻型</button>
+          <button class="template-btn" data-tpl="balanced">均衡型</button>
+          <button class="template-btn" data-tpl="defensive">防禦型</button>
+          <button class="template-btn" data-tpl="crypto">加密貨幣</button>
+        </div>
+      </div>
+
+      <div class="weight-grid" id="weightGrid"></div>
+
+      <div class="builder-actions">
+        <div class="alloc-total">
+          已配置：<span id="allocTotal">0</span>% &nbsp;
+          <span id="allocWarn" class="alloc-warn hidden">需配置 100%</span>
+        </div>
+        <button class="run-btn" id="runBacktest">▶ 執行回測</button>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="backtestResults" class="hidden">
+      <div class="stats-row" id="btStatCards"></div>
+      <div class="chart-wrap tall" style="margin-top:1.5rem">
+        <canvas id="btChart"></canvas>
+      </div>
+      <div class="bt-composition" id="btComposition"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     TAB: FLOW & CHIPS
+══════════════════════════════════════════════════════════════════ -->
+<main id="tab-flow" class="tab-panel">
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>資金流向分析</h2>
+      <span class="panel-hint">代理指標：動能 × 成交量異常 推估各板塊資金流向（非真實 fund flow 資料）</span>
+    </div>
+    <div class="flow-top-grid">
+      <div>
+        <div class="chart-sublabel">板塊輪動象限圖</div>
+        <div class="chart-wrap" style="height:340px"><canvas id="flowBubbleChart"></canvas></div>
+        <div class="quadrant-legend">
+          <span class="ql ql-tr">↗ 強勢流入</span><span class="ql ql-tl">↖ 高量洗盤</span>
+          <span class="ql ql-br">↘ 整理蓄勢</span><span class="ql ql-bl">↙ 弱勢流出</span>
+        </div>
+      </div>
+      <div>
+        <div class="chart-sublabel">板塊資金流向強度</div>
+        <div class="chart-wrap" style="height:340px"><canvas id="flowScoreBar"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>法人籌碼</h2>
+      <span class="panel-hint">模擬三大法人每日淨買超，單位：百萬美元</span>
+    </div>
+    <div class="chip-controls">
+      <label class="field-label">板塊：</label>
+      <select id="chipSectorSelect" class="chip-select"></select>
+      <div class="chip-period-row">
+        <button class="cp-btn active" data-cp="1m">1M</button>
+        <button class="cp-btn" data-cp="3m">3M</button>
+        <button class="cp-btn" data-cp="6m">6M</button>
+      </div>
+      <div class="chip-mode-row">
+        <button class="cm-btn active" data-cm="us" title="機構法人 / 聰明錢 / 散戶">🇺🇸 美式</button>
+        <button class="cm-btn" data-cm="tw" title="外資 / 投信 / 自營商">🇹🇼 台式</button>
+      </div>
+    </div>
+    <div class="chip-charts-grid">
+      <div>
+        <div class="chart-sublabel">每日淨買超（$M）</div>
+        <div class="chart-wrap" style="height:260px"><canvas id="chipBarChart"></canvas></div>
+      </div>
+      <div>
+        <div class="chart-sublabel">累積機構籌碼 vs ETF 價格</div>
+        <div class="chart-wrap" style="height:260px"><canvas id="chipCumChart"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>板塊關係圖</h2>
+    </div>
+    <div class="network-subtabs" id="networkSubtabs">
+      <button class="nsb active" data-nsb="corr">🕸 相關性網絡</button>
+      <button class="nsb" data-nsb="flow">↗ 資金輪動流向</button>
+    </div>
+    <div id="networkCorrView">
+      <div class="panel-hint" style="margin-bottom:0.75rem">基於近1年月報酬相關性 — 藍線=正相關，橘線=負相關，節點大小=AUM</div>
+      <div class="network-wrap"><canvas id="networkCanvas"></canvas></div>
+    </div>
+    <div id="networkFlowView" class="hidden">
+      <div class="panel-hint" style="margin-bottom:0.75rem">箭頭方向 = 資金估計流出（紅）→ 流入（綠）板塊，根據流向強度差異繪製</div>
+      <div class="network-wrap"><canvas id="networkFlowCanvas"></canvas></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     TAB: EVENTS & CYCLES
+══════════════════════════════════════════════════════════════════ -->
+<main id="tab-cycle" class="tab-panel">
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>重大市場事件時間軸</h2>
+      <span class="panel-hint">點選事件卡查看詳情與受影響板塊</span>
+    </div>
+    <div class="event-filters" id="eventFilters">
+      <button class="ef-btn active" data-etype="all">全部</button>
+      <button class="ef-btn" data-etype="fed">Fed/央行</button>
+      <button class="ef-btn" data-etype="macro">總體經濟</button>
+      <button class="ef-btn" data-etype="earnings">財報/科技</button>
+      <button class="ef-btn" data-etype="geopolitical">地緣政治</button>
+    </div>
+    <div class="event-timeline" id="eventTimeline"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>板塊歷史月份熱力圖</h2>
+      <span class="panel-hint">各板塊過去 ~25 個月漲跌幅 — 顏色越深代表漲跌越大</span>
+    </div>
+    <div class="cycle-heatmap-wrap">
+      <canvas id="cycleHeatmap"></canvas>
+    </div>
+    <div id="cycleTooltip" class="cycle-tooltip hidden"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">
+      <h2>52 週百分位排名</h2>
+      <span class="panel-hint">目前1年期報酬在過去 2 年歷史中的相對位置，100 = 歷史最高</span>
+    </div>
+    <div class="percentile-grid" id="percentileGrid"></div>
+  </section>
+
+</main>
+
+<!-- Loading overlay -->
+<div class="loader-overlay" id="loader">
+  <div class="loader-spinner"></div>
+  <div class="loader-text">載入市場數據中…</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  Constants & State
+// ═══════════════════════════════════════════════════════════════
+
+const SECTOR_COLORS = {
+  "Crypto":        "#f7931a",
+  "Technology":    "#4a90e2",
+  "Real Estate":   "#8b6d4f",
+  "Energy":        "#e67e22",
+  "Healthcare":    "#27ae60",
+  "Financials":    "#8e44ad",
+  "Consumer":      "#e91e8c",
+  "Industrials":   "#607d8b",
+  "Materials":     "#795548",
+  "Utilities":     "#00bcd4",
+  "Bonds":         "#3f51b5",
+  "Commodities":   "#ffc107",
+  "International": "#ff9800",
+  "Broad Market":  "#9e9e9e",
+};
+
+const TEMPLATES = {
+  aggressive: {QQQ:25, SMH:20, IBIT:15, XLE:10, XLF:10, XLY:10, EEM:10},
+  balanced:   {QQQ:20, GLD:10, AGG:15, VNQ:15, EEM:10, XLE:10, XLV:10, TLT:10},
+  defensive:  {AGG:30, TLT:20, XLP:15, XLU:10, GLD:15, VNQ:10},
+  crypto:     {IBIT:50, BITO:30, QQQ:10, ARKK:10},
+};
+
+let state = {
+  quotes:    [],
+  period:    "1d",
+  btPeriod:  "1y",
+  scPeriod:  "1y",
+  sortAsc:   false,
+  selected:  ["QQQ","XLK","GLD","TLT","VNQ","IBIT"],
+  weights:   {...TEMPLATES.balanced},
+  trendChart:   null,
+  sectorChart:  null,
+  btChart:      null,
+  stratChart:   null,
+  macroDonut:   null,
+  macroBar:     null,
+  macroData:    null,
+  macroPath:    ["global"],
+  trendSeriesCache: {},
+  // Flow & Chips
+  flowBubbleChart: null,
+  flowScoreBar:    null,
+  chipBarChart:    null,
+  chipCumChart:    null,
+  chipsData:       null,
+  chipsDataPeriod: null,
+  flowMatrixData:  null,
+  flowMatrixPeriod:null,
+  chipSector:      "Technology",
+  chipPeriod:      "1m",
+  chipMode:        "us",
+  networkNodes:    null,
+  networkRunning:  false,
+  // Events & Cycles
+  eventsData:      null,
+  cycleData:       null,
+  eventTypeFilter: "all",
+};
+
+// Cached DOM references (queried once, reused everywhere)
+const _loader       = document.getElementById("loader");
+const _updateTime   = document.getElementById("updateTime");
+const _tabMacro     = document.getElementById("tab-macro");
+const _tabOverview  = document.getElementById("tab-overview");
+const _tabFlow      = document.getElementById("tab-flow");
+const _tabCycle     = document.getElementById("tab-cycle");
+const _netFlowView  = document.getElementById("networkFlowView");
+const _periodBtns   = document.querySelectorAll(".period-btn");
+const _tabBtns      = document.querySelectorAll(".tab-btn");
+const _tabPanels    = document.querySelectorAll(".tab-panel");
+const _btPeriodBtns = document.querySelectorAll(".bt-period-btn");
+const _scPeriodBtns = document.querySelectorAll(".sc-period-btn");
+const _cpBtns       = document.querySelectorAll(".cp-btn");
+
+// ═══════════════════════════════════════════════════════════════
+//  API helpers
+// ═══════════════════════════════════════════════════════════════
+
+const IS_STATIC = !['localhost', '127.0.0.1'].includes(location.hostname);
+
+async function apiFetch(path) {
+  if (IS_STATIC && window.API_IMPL) {
+    return Promise.resolve(window.API_IMPL.handleLocal(path));
+  }
+  const r = await fetch(path);
+  if (!r.ok) throw new Error(`API ${path} → ${r.status}`);
+  return r.json();
 }
-                </script>
-              </div>
-            </div>
-          </a>
 
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/NASDAQ-IXIC/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="card-header">
-              <h3>NASDAQ</h3>
-              <p>Growth and tech-heavy U.S. composite.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "NASDAQ:IXIC",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#009688",
-  "underLineColor": "rgba(0, 150, 136, 0.25)",
-  "isTransparent": false,
-  "autosize": true
+// ═══════════════════════════════════════════════════════════════
+//  Colour helpers
+// ═══════════════════════════════════════════════════════════════
+
+function changeColor(pct, alpha = 1) {
+  const clamp = Math.max(-6, Math.min(6, pct));
+  if (clamp >= 0) {
+    const t = clamp / 6;
+    const g = Math.round(80 + t * 155);
+    return `rgba(0,${g},60,${alpha})`;
+  } else {
+    const t = -clamp / 6;
+    const r = Math.round(80 + t * 160);
+    return `rgba(${r},20,20,${alpha})`;
+  }
 }
-                </script>
-              </div>
-            </div>
-          </a>
 
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/TWSE-TAIEX/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="card-header">
-              <h3>Taiwan Weighted Index</h3>
-              <p>Semiconductor-led performance barometer.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "TWSE:TAIEX",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#009688",
-  "underLineColor": "rgba(0, 150, 136, 0.25)",
-  "isTransparent": false,
-  "autosize": true
+function changeTextColor(pct) {
+  if (pct > 0.1)  return "#4ade80";
+  if (pct < -0.1) return "#f87171";
+  return "#94a3b8";
 }
-                </script>
-              </div>
-            </div>
-          </a>
-        </div>
-      </section>
 
-      <section id="bonds" class="dashboard-section">
-        <div class="section-header">
-          <h2>U.S. Treasury Yield</h2>
-          <p>FRED 10-year constant maturity treasury rate.</p>
-        </div>
-        <div class="cards-grid single">
-          <a
-            class="card"
-            href="https://fred.stlouisfed.org/series/DGS10"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="card-header">
-              <h3>US Treasury 10Y</h3>
-              <p>Macro benchmark for global discount rates.</p>
-            </div>
-            <div class="card-body">
-              <div class="iframe-wrapper">
-                <iframe
-                  title="10-Year Treasury Constant Maturity Rate"
-                  src="https://fred.stlouisfed.org/graph/fredgraph.html?id=DGS10&cosd=2010-01-01&height=300"
-                  scrolling="no"
-                  frameborder="0"
-                  loading="lazy"
-                ></iframe>
-              </div>
-            </div>
-          </a>
-        </div>
-      </section>
-
-      <section id="currencies" class="dashboard-section">
-        <div class="section-header">
-          <h2>Currencies</h2>
-          <p>Dollar strength vs. broad basket and the Japanese yen.</p>
-        </div>
-        <div class="cards-grid">
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/TVC-DXY/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="card-header">
-              <h3>US Dollar Index (DXY)</h3>
-              <p>Measures USD against a major currency basket.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "TVC:DXY",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#003366",
-  "underLineColor": "rgba(0, 51, 102, 0.25)",
-  "isTransparent": false,
-  "autosize": true
+function fmtPct(v, alwaysSign = true) {
+  const sign = v >= 0 ? "+" : "";
+  return (alwaysSign ? sign : "") + v.toFixed(2) + "%";
 }
-                </script>
-              </div>
-            </div>
-          </a>
 
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/FX-USDJPY/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="card-header">
-              <h3>USD / JPY</h3>
-              <p>Key rate for global carry and risk sentiment.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "FX:USDJPY",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#003366",
-  "underLineColor": "rgba(0, 51, 102, 0.25)",
-  "isTransparent": false,
-  "autosize": true
+// ═══════════════════════════════════════════════════════════════
+//  Period helpers
+// ═══════════════════════════════════════════════════════════════
+
+function periodKey(period) {
+  return `change_${period}`;
 }
-                </script>
-              </div>
-            </div>
-          </a>
-        </div>
-      </section>
 
-      <section id="commodities" class="dashboard-section">
-        <div class="section-header">
-          <h2>Commodities</h2>
-          <p>Energy and precious metals benchmarks.</p>
-        </div>
-        <div class="cards-grid">
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/TVC-USOIL/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="card-header">
-              <h3>WTI Crude Oil</h3>
-              <p>Gauge for global growth and inflation pressures.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "TVC:USOIL",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#009688",
-  "underLineColor": "rgba(0, 150, 136, 0.25)",
-  "isTransparent": false,
-  "autosize": true
+// ═══════════════════════════════════════════════════════════════
+//  1.  STAT CARDS
+// ═══════════════════════════════════════════════════════════════
+
+function renderStatCards() {
+  const key = periodKey(state.period);
+  const sorted = [...state.quotes].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
+  const best   = sorted[0];
+  const worst  = sorted[sorted.length - 1];
+  const spy    = state.quotes.find(q => q.symbol === "SPY");
+
+  // Sector aggregation
+  const secMap = {};
+  state.quotes.forEach(q => {
+    if (!secMap[q.sector]) secMap[q.sector] = {sum: 0, count: 0};
+    secMap[q.sector].sum += (q[key] ?? 0);
+    secMap[q.sector].count++;
+  });
+  const hotSector = Object.entries(secMap)
+    .map(([s, d]) => ({sector: s, avg: d.sum / d.count}))
+    .sort((a, b) => b.avg - a.avg)[0];
+
+  function fill(id, sym, chg, sub) {
+    const el = document.getElementById(id);
+    el.querySelector(".stat-symbol").textContent = sym;
+    const chgEl = el.querySelector(".stat-change");
+    chgEl.textContent = fmtPct(chg);
+    chgEl.style.color = changeTextColor(chg);
+    if (sub) el.querySelector(".stat-sector").textContent = sub;
+  }
+
+  fill("cardBest",      best?.symbol  ?? "—",  best?.[key]  ?? 0, best?.sector);
+  fill("cardWorst",     worst?.symbol ?? "—",  worst?.[key] ?? 0, worst?.sector);
+  fill("cardHotSector", hotSector?.sector ?? "—", hotSector?.avg ?? 0, "加權平均漲幅");
+
+  if (spy) {
+    document.getElementById("spyPrice").textContent = "$" + spy.price.toFixed(2);
+    const c = document.getElementById("spyChange");
+    c.textContent = fmtPct(spy[key] ?? 0);
+    c.style.color = changeTextColor(spy[key] ?? 0);
+  }
 }
-                </script>
-              </div>
-            </div>
-          </a>
 
-          <a
-            class="card"
-            href="https://www.tradingview.com/symbols/TVC-GOLD/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="card-header">
-              <h3>Gold</h3>
-              <p>Store of value and macro hedge signal.</p>
-            </div>
-            <div class="card-body">
-              <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script
-                  type="text/javascript"
-                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js"
-                  async
-                >
-{
-  "symbol": "TVC:GOLD",
-  "width": "100%",
-  "height": "240",
-  "locale": "en",
-  "dateRange": "12M",
-  "colorTheme": "light",
-  "trendLineColor": "#003366",
-  "underLineColor": "rgba(0, 51, 102, 0.25)",
-  "isTransparent": false,
-  "autosize": true
-}
-                </script>
-              </div>
-            </div>
-          </a>
-        </div>
-        <ol class="timeline" aria-label="Upcoming macroeconomic events"></ol>
-      </section>
-    </main>
+// ═══════════════════════════════════════════════════════════════
+//  2.  TREEMAP HEATMAP
+// ═══════════════════════════════════════════════════════════════
 
-    <footer class="site-footer">
-      <p>
-        Data and charts are provided by their respective platforms. This
-        dashboard is for informational purposes only.
-      </p>
-    </footer>
+function squarify(items, x, y, w, h) {
+  // Simple squarify treemap algorithm
+  if (!items.length) return [];
+  const total = items.reduce((s, i) => s + i.value, 0);
+  const area   = w * h;
+  const rects  = [];
 
-    <script>
-      const menuToggle = document.querySelector(".menu-toggle");
-      const nav = document.querySelector(".nav-links");
-      const navLinks = nav.querySelectorAll("a");
+  function row(rowItems, x0, y0, rw, rh) {
+    const rowTotal = rowItems.reduce((s, i) => s + i.value, 0);
+    let cx = x0;
+    rowItems.forEach(item => {
+      const fw = (item.value / rowTotal) * rw;
+      rects.push({...item, x: cx, y: y0, w: fw, h: rh});
+      cx += fw;
+    });
+  }
 
-      const closeMenu = () => {
-        nav.classList.remove("open");
-        menuToggle.setAttribute("aria-expanded", "false");
-      };
-
-      menuToggle.addEventListener("click", () => {
-        const isOpen = nav.classList.toggle("open");
-        menuToggle.setAttribute("aria-expanded", String(isOpen));
+  function layout(items, x0, y0, w0, h0) {
+    if (!items.length) return;
+    if (items.length === 1) {
+      rects.push({...items[0], x: x0, y: y0, w: w0, h: h0});
+      return;
+    }
+    const total0 = items.reduce((s, i) => s + i.value, 0);
+    const target = (w0 * h0) / 2;
+    let acc = 0, split = 0;
+    for (let k = 0; k < items.length; k++) {
+      acc += items[k].value;
+      if (acc >= target * 0.5) { split = k + 1; break; }
+    }
+    split = Math.max(1, Math.min(split, items.length - 1));
+    const first = items.slice(0, split);
+    const rest  = items.slice(split);
+    const frac  = first.reduce((s, i) => s + i.value, 0) / total0;
+    if (w0 >= h0) {
+      const fw = w0 * frac;
+      row(first, x0,      y0, fw,      h0);
+      layout(rest, x0 + fw, y0, w0 - fw, h0);
+    } else {
+      const fh = h0 * frac;
+      const xtmp = x0;
+      first.forEach(item => {
+        const iw = (item.value / first.reduce((s,i)=>s+i.value,0)) * w0;
+        rects.push({...item, x: xtmp, y: y0, w: iw, h: fh});
       });
+      let cx2 = x0;
+      first.forEach(item => { cx2 += item.w ?? 0; }); // just recompute
+      layout(rest, x0, y0 + fh, w0, h0 - fh);
+    }
+  }
 
-      navLinks.forEach((link) => {
-        link.addEventListener("click", () => {
-          if (window.matchMedia("(max-width: 720px)").matches) {
-            closeMenu();
+  // Group by sector first
+  const sectors = {};
+  items.forEach(it => {
+    if (!sectors[it.sector]) sectors[it.sector] = [];
+    sectors[it.sector].push(it);
+  });
+
+  const secItems = Object.entries(sectors).map(([sec, its]) => ({
+    sector: sec,
+    value:  its.reduce((s, i) => s + i.value, 0),
+    etfs:   its,
+  })).sort((a, b) => b.value - a.value);
+
+  layout(secItems.map(s => ({...s, value: s.value})), x, y, w, h);
+
+  // Now recursively layout ETFs within each sector rect
+  const secRects = [...rects];
+  rects.length = 0;
+  secRects.forEach(sr => {
+    if (!sr.etfs) { rects.push(sr); return; }
+    const PAD = 2;
+    const inner = {x: sr.x + PAD, y: sr.y + PAD, w: sr.w - PAD*2, h: sr.h - PAD*2};
+    if (inner.w < 1 || inner.h < 1) return;
+    const etfs = sr.etfs.sort((a, b) => b.value - a.value);
+    etfs.forEach((etf, idx) => {
+      const frac = etf.value / sr.value;
+      // Simple horizontal split for ETFs within sector
+      const ew = inner.w * frac * (etfs.length > 1 ? 1 : 1);
+      rects.push({...etf, x: inner.x, y: inner.y, w: inner.w, h: inner.h / etfs.length, _row: idx});
+    });
+    // Actually do a proper sub-layout
+    rects.splice(rects.length - etfs.length, etfs.length);
+    layoutETFs(etfs, inner.x, inner.y, inner.w, inner.h);
+  });
+
+  function layoutETFs(etfs, x0, y0, w0, h0) {
+    if (!etfs.length) return;
+    if (etfs.length === 1) {
+      rects.push({...etfs[0], x: x0, y: y0, w: w0, h: h0});
+      return;
+    }
+    const total0 = etfs.reduce((s, e) => s + e.value, 0);
+    const half   = total0 / 2;
+    let acc = 0, split = 1;
+    for (let k = 0; k < etfs.length - 1; k++) {
+      acc += etfs[k].value;
+      if (acc >= half) { split = k + 1; break; }
+    }
+    const first = etfs.slice(0, split);
+    const rest  = etfs.slice(split);
+    const frac  = first.reduce((s,e)=>s+e.value,0) / total0;
+    if (w0 >= h0) {
+      const fw = w0 * frac;
+      row(first, x0, y0, fw, h0);
+      layoutETFs(rest, x0 + fw, y0, w0 - fw, h0);
+    } else {
+      const fh = h0 * frac;
+      row(first.map((e,i) => ({...e})), x0, y0, w0, fh);
+      layoutETFs(rest, x0, y0 + fh, w0, h0 - fh);
+    }
+
+    function row(its, rx, ry, rw, rh) {
+      const rt = its.reduce((s, i) => s + i.value, 0);
+      let cx = rx;
+      its.forEach(it => {
+        const fw2 = (it.value / rt) * rw;
+        rects.push({...it, x: cx, y: ry, w: fw2, h: rh});
+        cx += fw2;
+      });
+    }
+  }
+
+  return rects;
+}
+
+function renderHeatmap() {
+  const key = periodKey(state.period);
+  const canvas = document.getElementById("heatmapCanvas");
+  const wrap   = canvas.parentElement;
+  const W = wrap.clientWidth  || 900;
+  const H = Math.max(360, Math.min(500, W * 0.45));
+  canvas.width  = W * devicePixelRatio;
+  canvas.height = H * devicePixelRatio;
+  canvas.style.width  = W + "px";
+  canvas.style.height = H + "px";
+
+  const ctx = canvas.getContext("2d");
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  ctx.clearRect(0, 0, W, H);
+
+  const items = state.quotes
+    .filter(q => q.symbol !== "SPY")
+    .map(q => ({
+      symbol: q.symbol,
+      name:   q.name,
+      sector: q.sector,
+      value:  q.mcap,
+      change: q[key] ?? 0,
+    }));
+
+  const rects = squarify(items, 0, 0, W, H);
+
+  rects.forEach(r => {
+    if (!r.symbol || r.w < 2 || r.h < 2) return;
+    const PAD = 1;
+    const x = r.x + PAD, y = r.y + PAD, w = r.w - PAD*2, h = r.h - PAD*2;
+    if (w < 1 || h < 1) return;
+
+    // Background
+    ctx.fillStyle = changeColor(r.change, 0.85);
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, 3);
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = "rgba(255,255,255,0.06)";
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    if (w < 28 || h < 18) return;
+
+    // Symbol text
+    ctx.fillStyle = "#e2e8f0";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const fontSize = Math.max(8, Math.min(14, w / 5, h / 3));
+    ctx.font = `600 ${fontSize}px Inter, sans-serif`;
+    const cx = x + w / 2, cy = y + h / 2;
+
+    if (h > 36) {
+      ctx.fillText(r.symbol, cx, cy - fontSize * 0.6);
+      const changeFontSize = Math.max(7, fontSize * 0.85);
+      ctx.font = `500 ${changeFontSize}px JetBrains Mono, monospace`;
+      ctx.fillStyle = r.change >= 0 ? "#86efac" : "#fca5a5";
+      ctx.fillText(fmtPct(r.change), cx, cy + changeFontSize * 0.8);
+    } else {
+      ctx.fillText(r.symbol, cx, cy);
+    }
+  });
+
+  // Sector labels overlay (sector name on largest rect per sector)
+  const secBest = {};
+  rects.forEach(r => {
+    if (!r.symbol) return;
+    if (!secBest[r.sector] || r.value > secBest[r.sector].value)
+      secBest[r.sector] = r;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  3.  SECTOR BAR CHART
+// ═══════════════════════════════════════════════════════════════
+
+function renderSectorBar() {
+  const key = periodKey(state.period);
+  const secMap = {};
+  state.quotes.forEach(q => {
+    if (q.symbol === "SPY") return;
+    if (!secMap[q.sector]) secMap[q.sector] = {sum: 0, tw: 0};
+    secMap[q.sector].sum += (q[key] ?? 0) * q.mcap;
+    secMap[q.sector].tw  += q.mcap;
+  });
+  const data = Object.entries(secMap)
+    .map(([sec, d]) => ({sector: sec, change: d.tw ? d.sum / d.tw : 0}))
+    .sort((a, b) => b.change - a.change);
+
+  const labels  = data.map(d => d.sector);
+  const values  = data.map(d => +d.change.toFixed(2));
+  const colors  = data.map(d => changeColor(d.change, 0.85));
+  const borders = data.map(d => changeColor(d.change, 1));
+
+  if (state.sectorChart) state.sectorChart.destroy();
+  state.sectorChart = new Chart(
+    document.getElementById("sectorBarChart"),
+    {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [{
+          label: "漲跌 %",
+          data: values,
+          backgroundColor: colors,
+          borderColor: borders,
+          borderWidth: 1,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {display: false},
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${fmtPct(ctx.raw)}`,
+            }
           }
-        });
-      });
-
-      window.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-          closeMenu();
+        },
+        scales: {
+          x: {
+            grid:  {color: "rgba(255,255,255,0.05)"},
+            ticks: {color: "#94a3b8", callback: v => fmtPct(v)},
+          },
+          y: {
+            grid:  {display: false},
+            ticks: {color: "#e2e8f0", font: {size: 11}},
+          }
         }
+      }
+    }
+  );
+}
 
-        const timelineList = document.querySelector(".timeline");
-        const timelineSection = document.querySelector(".timeline-section");
+// ═══════════════════════════════════════════════════════════════
+//  4.  ETF TABLE
+// ═══════════════════════════════════════════════════════════════
 
-        const renderTimelineStatus = (message, type = "status") => {
-          if (!timelineList) {
-            return;
-          }
+function renderTable() {
+  const key  = periodKey(state.period);
+  const data = [...state.quotes].sort((a, b) =>
+    state.sortAsc
+      ? (a[key] ?? 0) - (b[key] ?? 0)
+      : (b[key] ?? 0) - (a[key] ?? 0)
+  );
+  const tbody = document.getElementById("etfTableBody");
+  tbody.innerHTML = data.map(q => {
+    const chg = q[key] ?? 0;
+    const cc  = changeTextColor(chg);
+    const dot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${SECTOR_COLORS[q.sector]??'#888'};margin-right:5px"></span>`;
+    return `<tr>
+      <td><strong>${q.symbol}</strong></td>
+      <td class="name-cell">${q.name}</td>
+      <td>${dot}${q.sector}</td>
+      <td class="mono">$${q.price.toFixed(2)}</td>
+      <td class="mono" style="color:${cc}">${fmtPct(chg)}</td>
+    </tr>`;
+  }).join("");
+}
 
-          timelineList.innerHTML = "";
-          const statusItem = document.createElement("li");
-          statusItem.className = `timeline-${type}`;
-          statusItem.textContent = message;
-          timelineList.appendChild(statusItem);
-        };
+// ═══════════════════════════════════════════════════════════════
+//  5.  TREND CHART + CORRELATION
+// ═══════════════════════════════════════════════════════════════
 
-        const formatDisplayDate = (date) =>
-          date.toLocaleString(undefined, {
-            month: "short",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-          });
+function buildSymbolPicker() {
+  const container = document.getElementById("symbolPicker");
+  container.innerHTML = "";
+  state.quotes.filter(q => q.symbol !== "SPY").forEach(q => {
+    const btn = document.createElement("button");
+    btn.className = "sym-btn" + (state.selected.includes(q.symbol) ? " active" : "");
+    btn.textContent = q.symbol;
+    btn.title = q.name;
+    btn.style.setProperty("--sc", SECTOR_COLORS[q.sector] ?? "#888");
+    btn.addEventListener("click", () => {
+      if (state.selected.includes(q.symbol)) {
+        if (state.selected.length <= 1) return;
+        state.selected = state.selected.filter(s => s !== q.symbol);
+        btn.classList.remove("active");
+      } else {
+        if (state.selected.length >= 6) {
+          const removed = state.selected.shift();
+          container.querySelector(`[data-sym="${removed}"]`)?.classList.remove("active");
+        }
+        state.selected.push(q.symbol);
+        btn.classList.add("active");
+      }
+      renderTrendChart();
+    });
+    btn.dataset.sym = q.symbol;
+    container.appendChild(btn);
+  });
+}
 
-        const normaliseTime = (value) => {
-          if (!value) {
-            return "00:00:00";
-          }
+const TREND_PALETTE = [
+  "#4a90e2","#f7931a","#27ae60","#e91e8c","#ffc107","#00bcd4","#e74c3c","#8e44ad"
+];
 
-          if (/^\d{2}:\d{2}$/.test(value)) {
-            return `${value}:00`;
-          }
+async function renderTrendChart() {
+  const period = state.period === "1d" ? "5d" : state.period;
+  const allSeries = {};
 
-          return value;
-        };
+  await Promise.all(state.selected.map(async sym => {
+    if (state.trendSeriesCache[sym + period]) {
+      allSeries[sym] = state.trendSeriesCache[sym + period];
+      return;
+    }
+    try {
+      const data = await apiFetch(`/api/history?symbol=${sym}&period=${period}`);
+      state.trendSeriesCache[sym + period] = data.series;
+      allSeries[sym] = data.series;
+    } catch {/* ignore */}
+  }));
 
-        const parseEventDate = (event) => {
-          if (!event || !event.date) {
-            return null;
-          }
+  // Common dates
+  const allDates = Object.values(allSeries).reduce((acc, s) => {
+    const dates = new Set(s.map(b => b.date));
+    return acc === null ? dates : new Set([...acc].filter(d => dates.has(d)));
+  }, null) ?? new Set();
+  const dates = [...allDates].sort();
 
-          const [datePart, timePart] = event.date.split(" ");
-          const baseDate = datePart || event.date;
-          const time = event.time ? normaliseTime(event.time) : normaliseTime(timePart);
+  // Normalise to 100 at start
+  const datasets = state.selected.map((sym, i) => {
+    const s = allSeries[sym] ?? [];
+    const byDate = Object.fromEntries(s.map(b => [b.date, b.close]));
+    const values = dates.map(d => byDate[d] ?? null);
+    const base   = values.find(v => v !== null) ?? 1;
+    return {
+      label:           sym,
+      data:            values.map(v => v === null ? null : +((v / base * 100).toFixed(3))),
+      borderColor:     TREND_PALETTE[i % TREND_PALETTE.length],
+      backgroundColor: TREND_PALETTE[i % TREND_PALETTE.length] + "22",
+      borderWidth:     2,
+      pointRadius:     0,
+      tension:         0.3,
+      fill:            false,
+      spanGaps:        true,
+    };
+  });
 
-          const isoCandidate = `${baseDate}T${time || "00:00:00"}`;
-
-          const utcCandidate = Date.parse(`${isoCandidate}Z`);
-          if (!Number.isNaN(utcCandidate)) {
-            return new Date(utcCandidate);
-          }
-
-          const localCandidate = Date.parse(isoCandidate);
-          if (!Number.isNaN(localCandidate)) {
-            return new Date(localCandidate);
-          }
-
-          return null;
-        };
-
-        const buildTimelineItem = (event) => {
-          const item = document.createElement("li");
-
-          const eventDate = parseEventDate(event);
-          const dateElement = document.createElement("div");
-          dateElement.className = "timeline-date";
-          if (eventDate) {
-            dateElement.textContent = formatDisplayDate(eventDate);
-          } else {
-            dateElement.textContent = event.date || "Upcoming";
-          }
-
-          const content = document.createElement("div");
-          content.className = "timeline-content";
-
-          const title = document.createElement("h3");
-          title.textContent = event.event || event.title || "Economic release";
-
-          const details = document.createElement("p");
-          const info = [];
-          if (event.country) {
-            info.push(event.country);
-          }
-          if (event.importance) {
-            info.push(event.importance);
-          }
-          if (event.category && !event.importance) {
-            info.push(event.category);
-          }
-          if (event.consensus != null) {
-            info.push(`Forecast: ${event.consensus}`);
-          }
-          if (event.actual != null) {
-            info.push(`Actual: ${event.actual}`);
-          }
-          if (event.previous != null) {
-            info.push(`Previous: ${event.previous}`);
-          }
-
-          if (info.length) {
-            details.textContent = info.join(" • ");
-          } else if (event.description) {
-            details.textContent = event.description;
-          } else {
-            details.textContent = "Upcoming economic data";
-          }
-
-          content.append(title, details);
-
-          const tagValue = event.importance || event.category || "";
-          if (tagValue) {
-            const tag = document.createElement("span");
-            tag.className = "event-tag";
-            tag.textContent = tagValue;
-            content.appendChild(tag);
-          }
-
-          item.append(dateElement, content);
-          return { item, eventDate };
-        };
-
-        const fallbackEvents = [
-          {
-            date: new Date().toISOString(),
-            title: "FOMC press conference",
-            description: "Federal Reserve chair provides color on the latest policy decision.",
-            category: "Monetary Policy",
-          },
-          {
-            date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-            title: "US Nonfarm Payrolls",
-            description: "Employment data that often swings risk sentiment and USD crosses.",
-            category: "Labor Market",
-          },
-          {
-            date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
-            title: "Eurozone CPI Flash",
-            description: "Inflation snapshot guiding ECB expectations.",
-            category: "Inflation",
-          },
-        ];
-
-        const loadEconomicCalendar = async () => {
-          if (!timelineList) {
-            return;
-          }
-
-          renderTimelineStatus("Loading upcoming releases…");
-
-          const now = new Date();
-          const formatDateParam = (date) => date.toISOString().split("T")[0];
-          const start = formatDateParam(now);
-          const end = formatDateParam(new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000));
-          const calendarEndpoint =
-            "https://financialmodelingprep.com/api/v3/economic_calendar" +
-            `?from=${start}&to=${end}&apikey=demo`;
-
-          try {
-            const response = await fetch(calendarEndpoint);
-            if (!response.ok) {
-              throw new Error(`Request failed with status ${response.status}`);
-            }
-
-            const payload = await response.json();
-            if (!Array.isArray(payload) || payload.length === 0) {
-              throw new Error("No upcoming events");
-            }
-
-            const upcoming = payload
-              .map((event) => {
-                const { item, eventDate } = buildTimelineItem(event);
-                return { item, eventDate };
-              })
-              .filter(({ eventDate }) => eventDate && eventDate.getTime() >= now.getTime())
-              .sort((a, b) => a.eventDate - b.eventDate)
-              .slice(0, 10);
-
-            timelineList.innerHTML = "";
-
-            if (!upcoming.length) {
-              renderTimelineStatus("No upcoming releases in the next few days.");
-              return;
-            }
-
-            const fragment = document.createDocumentFragment();
-            upcoming.forEach(({ item }) => fragment.appendChild(item));
-            timelineList.appendChild(fragment);
-
-            if (timelineSection) {
-              timelineSection.setAttribute(
-                "data-calendar-source",
-                "financialmodelingprep.com/api/v3/economic_calendar"
-              );
-            }
-          } catch (error) {
-            renderTimelineStatus(
-              "Unable to load live economic releases right now. Please try again later.",
-              "error"
-            );
-            if (timelineSection) {
-              timelineSection.setAttribute("data-calendar-error", String(error));
-            }
-
-            const fragment = document.createDocumentFragment();
-            fallbackEvents.forEach((event) => {
-              const { item } = buildTimelineItem(event);
-              fragment.appendChild(item);
-            });
-            timelineList.appendChild(fragment);
-          }
-        };
-
-        loadEconomicCalendar();
+  // Event annotation plugin (draws vertical lines for key events on the chart)
+  const eventsPlugin = {
+    id: "eventAnnotations",
+    afterDraw(chart) {
+      if (!state.eventsData) return;
+      const { ctx, chartArea, scales } = chart;
+      state.eventsData.forEach(ev => {
+        const xPx = scales.x.getPixelForValue(ev.date);
+        if (!xPx || xPx < chartArea.left || xPx > chartArea.right) return;
+        ctx.save();
+        ctx.globalAlpha = 0.55;
+        ctx.strokeStyle = EVENT_COLORS[ev.type] || "#58a6ff";
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(xPx, chartArea.top);
+        ctx.lineTo(xPx, chartArea.bottom);
+        ctx.stroke();
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = EVENT_COLORS[ev.type] || "#58a6ff";
+        ctx.font = "10px Inter,sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(ev.magnitude > 0 ? "▲" : ev.magnitude < 0 ? "▼" : "●", xPx, chartArea.top + 8);
+        ctx.restore();
       });
-    </script>
-  </body>
+    }
+  };
+
+  if (state.trendChart) state.trendChart.destroy();
+  state.trendChart = new Chart(
+    document.getElementById("trendChart"),
+    {
+      type: "line",
+      data: {labels: dates, datasets},
+      plugins: [eventsPlugin],
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {mode: "index", intersect: false},
+        plugins: {
+          legend: {
+            labels: {color: "#e2e8f0", font: {size: 12}},
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ${ctx.raw?.toFixed(2) ?? "—"}`,
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {color: "#64748b", maxTicksLimit: 10, maxRotation: 0},
+            grid:  {color: "rgba(255,255,255,0.04)"},
+          },
+          y: {
+            ticks: {color: "#94a3b8", callback: v => v.toFixed(0)},
+            grid:  {color: "rgba(255,255,255,0.06)"},
+          }
+        }
+      }
+    }
+  );
+
+  renderCorrelation(allSeries, dates);
+}
+
+function renderCorrelation(allSeries, dates) {
+  const syms = state.selected.filter(s => allSeries[s]);
+  const matrix = document.getElementById("corrMatrix");
+  if (syms.length < 2) { matrix.innerHTML = "<p style='color:#64748b'>選 2+ 個標的</p>"; return; }
+
+  // Daily returns per symbol
+  const returns = {};
+  syms.forEach(sym => {
+    const s = allSeries[sym];
+    const byDate = Object.fromEntries(s.map(b => [b.date, b.close]));
+    const vals = dates.map(d => byDate[d] ?? null);
+    const rets = [];
+    for (let i = 1; i < vals.length; i++) {
+      if (vals[i] !== null && vals[i-1] !== null)
+        rets.push(vals[i] / vals[i-1] - 1);
+      else rets.push(null);
+    }
+    returns[sym] = rets;
+  });
+
+  function corr(a, b) {
+    const pairs = a.map((v, i) => [v, b[i]]).filter(([x,y]) => x!==null && y!==null);
+    if (pairs.length < 5) return 0;
+    const n  = pairs.length;
+    const ma = pairs.reduce((s,[x])=>s+x,0)/n;
+    const mb = pairs.reduce((s,[,y])=>s+y,0)/n;
+    const num = pairs.reduce((s,[x,y])=>s+(x-ma)*(y-mb),0);
+    const da  = Math.sqrt(pairs.reduce((s,[x])=>s+(x-ma)**2,0));
+    const db  = Math.sqrt(pairs.reduce((s,[,y])=>s+(y-mb)**2,0));
+    return da*db === 0 ? 0 : +(num/(da*db)).toFixed(2);
+  }
+
+  let html = `<table class="corr-table"><thead><tr><th></th>${syms.map(s=>`<th>${s}</th>`).join("")}</tr></thead><tbody>`;
+  syms.forEach(sa => {
+    html += `<tr><th>${sa}</th>`;
+    syms.forEach(sb => {
+      const c = corr(returns[sa], returns[sb]);
+      const bg = c >= 0
+        ? `rgba(74,144,226,${Math.abs(c)*0.7})`
+        : `rgba(248,113,113,${Math.abs(c)*0.7})`;
+      html += `<td style="background:${bg};color:#e2e8f0">${c.toFixed(2)}</td>`;
+    });
+    html += "</tr>";
+  });
+  html += "</tbody></table>";
+  matrix.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  6.  BACKTEST
+// ═══════════════════════════════════════════════════════════════
+
+function buildWeightGrid() {
+  const grid = document.getElementById("weightGrid");
+  const SYMBOLS = Object.keys(state.weights.length ? state.weights : TEMPLATES.balanced);
+  const ALL_SYMS = state.quotes.filter(q => q.symbol !== "SPY").map(q => q.symbol);
+
+  grid.innerHTML = ALL_SYMS.map(sym => {
+    const w = state.weights[sym] ?? 0;
+    const color = SECTOR_COLORS[state.quotes.find(q=>q.symbol===sym)?.sector ?? ""] ?? "#888";
+    return `
+    <div class="weight-row" data-sym="${sym}">
+      <span class="w-symbol" style="border-left:3px solid ${color}">${sym}</span>
+      <input type="range" class="w-slider" min="0" max="100" step="5" value="${w}"
+             data-sym="${sym}" />
+      <input type="number" class="w-input" min="0" max="100" step="5" value="${w}"
+             data-sym="${sym}" />
+      <span class="w-pct">%</span>
+    </div>`;
+  }).join("");
+
+  grid.querySelectorAll(".w-slider").forEach(sl => {
+    sl.addEventListener("input", e => syncWeight(e.target.dataset.sym, +e.target.value, "slider"));
+  });
+  grid.querySelectorAll(".w-input").forEach(inp => {
+    inp.addEventListener("input", e => syncWeight(e.target.dataset.sym, +e.target.value, "input"));
+  });
+
+  updateAllocTotal();
+}
+
+function syncWeight(sym, val, src) {
+  val = Math.max(0, Math.min(100, val));
+  state.weights[sym] = val;
+  const row = document.querySelector(`.weight-row[data-sym="${sym}"]`);
+  if (src !== "slider") row.querySelector(".w-slider").value = val;
+  if (src !== "input")  row.querySelector(".w-input").value  = val;
+  updateAllocTotal();
+}
+
+function updateAllocTotal() {
+  const total = Object.values(state.weights).reduce((s, v) => s + v, 0);
+  document.getElementById("allocTotal").textContent = total;
+  const warn = document.getElementById("allocWarn");
+  warn.classList.toggle("hidden", Math.round(total) === 100);
+  document.getElementById("runBacktest").disabled = Math.round(total) !== 100;
+}
+
+function applyTemplate(tpl) {
+  const weights = TEMPLATES[tpl];
+  state.weights = {};
+  state.quotes.filter(q => q.symbol !== "SPY").forEach(q => {
+    state.weights[q.symbol] = weights[q.symbol] ?? 0;
+  });
+  buildWeightGrid();
+}
+
+async function runBacktest() {
+  const active = Object.entries(state.weights)
+    .filter(([, w]) => w > 0)
+    .map(([s, w]) => `${s}:${w}`)
+    .join(",");
+
+  document.getElementById("backtestResults").classList.add("hidden");
+  _loader.classList.add("active");
+
+  try {
+    const data = await apiFetch(`/api/backtest?weights=${active}&period=${state.btPeriod}`);
+    _loader.classList.remove("active");
+    renderBacktestResults(data);
+  } catch(e) {
+    _loader.classList.remove("active");
+    alert("回測失敗: " + e.message);
+  }
+}
+
+function renderBacktestResults(data) {
+  const {portfolio, benchmark, stats} = data;
+  const el = document.getElementById("backtestResults");
+  el.classList.remove("hidden");
+
+  // Stats cards
+  const sc = [
+    {label: "總報酬率",    value: fmtPct(stats.total_return), pos: stats.total_return >= 0},
+    {label: "年化報酬 CAGR", value: fmtPct(stats.cagr),       pos: stats.cagr >= 0},
+    {label: "Sharpe Ratio", value: stats.sharpe.toFixed(2),   pos: stats.sharpe >= 1},
+    {label: "最大回撤",    value: "-" + stats.max_drawdown.toFixed(2) + "%", pos: false},
+    {label: "SPY 報酬",    value: fmtPct(stats.spy_return),   pos: stats.spy_return >= 0},
+    {label: "超額報酬",    value: fmtPct(stats.total_return - stats.spy_return),
+                              pos: stats.total_return > stats.spy_return},
+  ];
+  document.getElementById("btStatCards").innerHTML = sc.map(s => `
+    <div class="bt-stat">
+      <div class="bt-stat-label">${s.label}</div>
+      <div class="bt-stat-value" style="color:${s.pos ? '#4ade80' : '#f87171'}">${s.value}</div>
+    </div>`).join("");
+
+  // Chart
+  const labels = portfolio.map(p => p.date);
+  if (state.btChart) state.btChart.destroy();
+  state.btChart = new Chart(document.getElementById("btChart"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "我的組合",
+          data:  portfolio.map(p => p.value),
+          borderColor: "#4a90e2",
+          backgroundColor: "#4a90e222",
+          borderWidth: 2.5,
+          fill: true,
+          pointRadius: 0,
+          tension: 0.3,
+        },
+        {
+          label: "SPY (標普500)",
+          data:  benchmark.map(b => b.value),
+          borderColor: "#94a3b8",
+          backgroundColor: "transparent",
+          borderWidth: 1.5,
+          borderDash: [5, 5],
+          pointRadius: 0,
+          tension: 0.3,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {mode: "index", intersect: false},
+      plugins: {
+        legend: {labels: {color: "#e2e8f0", font: {size: 12}}},
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.raw?.toFixed(2) ?? "—"}`,
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {color: "#64748b", maxTicksLimit: 12, maxRotation: 0},
+          grid:  {color: "rgba(255,255,255,0.04)"},
+        },
+        y: {
+          ticks: {color: "#94a3b8", callback: v => v.toFixed(0)},
+          grid:  {color: "rgba(255,255,255,0.06)"},
+          title: {display: true, text: "指數化報酬（起點=100）", color: "#64748b"},
+        }
+      }
+    }
+  });
+
+  // Composition donut-like list
+  const activeW = Object.entries(state.weights).filter(([,w])=>w>0)
+    .sort((a,b)=>b[1]-a[1]);
+  document.getElementById("btComposition").innerHTML = `
+    <h3 style="color:#94a3b8;font-size:0.85rem;margin-bottom:0.75rem">組合配置</h3>
+    <div class="comp-grid">
+      ${activeW.map(([sym, w]) => {
+        const q = state.quotes.find(q=>q.symbol===sym);
+        const col = SECTOR_COLORS[q?.sector ?? ""] ?? "#888";
+        return `<div class="comp-item">
+          <div class="comp-bar-wrap">
+            <div class="comp-bar" style="width:${w}%;background:${col}"></div>
+          </div>
+          <span class="comp-sym">${sym}</span>
+          <span class="comp-pct">${w}%</span>
+        </div>`;
+      }).join("")}
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  7.  EVENT WIRING
+// ═══════════════════════════════════════════════════════════════
+
+// Period buttons
+document.getElementById("periodBar").addEventListener("click", e => {
+  const btn = e.target.closest(".period-btn");
+  if (!btn) return;
+  _periodBtns.forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  state.period = btn.dataset.period;
+  if (document.getElementById("tab-macro").classList.contains("active"))
+    renderMacroTab();
+  if (document.getElementById("tab-overview").classList.contains("active"))
+    renderOverview();
+  if (document.getElementById("tab-trends").classList.contains("active"))
+    renderTrendChart();
+});
+
+// Tabs
+_tabBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    // Stop network physics if leaving the flow tab
+    state.networkRunning = false;
+    _tabBtns.forEach(b => b.classList.remove("active"));
+    _tabPanels.forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+    if (btn.dataset.tab === "macro")    renderMacroTab();
+    if (btn.dataset.tab === "trends")   renderTrendChart();
+    if (btn.dataset.tab === "backtest") buildWeightGrid();
+    if (btn.dataset.tab === "flow")     renderFlowTab();
+    if (btn.dataset.tab === "cycle")    renderCycleTab();
+  });
+});
+
+// Sort toggle
+document.getElementById("sortToggle").addEventListener("click", () => {
+  state.sortAsc = !state.sortAsc;
+  renderTable();
+});
+
+// Backtest period buttons
+_btPeriodBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    _btPeriodBtns.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.btPeriod = btn.dataset.btperiod;
+  });
+});
+
+// Strategy comparison period buttons
+_scPeriodBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    _scPeriodBtns.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.scPeriod = btn.dataset.scperiod;
+  });
+});
+
+// Templates
+document.querySelectorAll(".template-btn").forEach(btn => {
+  btn.addEventListener("click", () => applyTemplate(btn.dataset.tpl));
+});
+
+// Run backtest
+document.getElementById("runBacktest").addEventListener("click", runBacktest);
+
+// Run strategy comparison
+document.getElementById("runStrategyCompare").addEventListener("click", runStrategyCompare);
+
+// Macro breadcrumb delegation
+document.getElementById("macroBreadcrumb").addEventListener("click", e => {
+  const item = e.target.closest(".bc-item");
+  if (!item) return;
+  const node = item.dataset.node;
+  const idx  = state.macroPath.indexOf(node);
+  if (idx >= 0) {
+    state.macroPath = state.macroPath.slice(0, idx + 1);
+    renderMacroView();
+  }
+});
+
+// Resize → re-render heatmap / network / macro donut
+window.addEventListener("resize", () => {
+  if (_tabOverview.classList.contains("active"))
+    renderHeatmap();
+  if (_tabMacro.classList.contains("active"))
+    renderMacroDonut();
+  if (_tabFlow.classList.contains("active") && state.flowMatrixData) {
+    if (!_netFlowView.classList.contains("hidden"))
+      renderRotationFlow(state.flowMatrixData);
+    else
+      renderNetworkGraph(state.flowMatrixData);
+  }
+  if (_tabCycle.classList.contains("active") && state.cycleData)
+    renderCycleHeatmap();
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  8.  INIT
+// ═══════════════════════════════════════════════════════════════
+
+function renderOverview() {
+  renderStatCards();
+  renderHeatmap();
+  renderSectorBar();
+  renderTable();
+  renderEtfMappingTable();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  9.  MACRO FLOW TAB
+// ═══════════════════════════════════════════════════════════════
+
+function _findNode(tree, id) {
+  if (tree.id === id) return tree;
+  for (const c of (tree.children || [])) {
+    const found = _findNode(c, id);
+    if (found) return found;
+  }
+  return null;
+}
+
+async function renderMacroTab() {
+  if (!state.macroData || state._macroDataPeriod !== state.period) {
+    try {
+      state.macroData = await apiFetch(`/api/macro?period=${state.period}`);
+      state._macroDataPeriod = state.period;
+    } catch { return; }
+  }
+  // Reset to global if period changed
+  state.macroPath = ["global"];
+  renderMacroView();
+}
+
+function renderMacroView() {
+  const tree = state.macroData;
+  if (!tree) return;
+
+  const currentId = state.macroPath[state.macroPath.length - 1];
+  const current   = _findNode(tree, currentId) || tree;
+
+  // ── Breadcrumb ───────────────────────────────────────────────
+  const bc = document.getElementById("macroBreadcrumb");
+  bc.innerHTML = state.macroPath.map((id, i) => {
+    const node  = _findNode(tree, id) || {name: id};
+    const active = i === state.macroPath.length - 1;
+    return `<span class="bc-item${active ? " bc-active" : ""}" data-node="${id}">${node.name}</span>`;
+  }).join('<span class="bc-sep">›</span>');
+
+  // ── Summary bar ──────────────────────────────────────────────
+  const summary = document.getElementById("macroSummary");
+  const totalAum = current.children?.length
+    ? current.children.reduce((s, c) => s + c.aum, 0)
+    : current.aum;
+  const children = (current.children?.length ? current.children : [current])
+    .sort((a, b) => b.aum - a.aum);
+
+  summary.innerHTML = `
+    <div class="macro-sum-item">
+      <span class="macro-sum-label">管理資產規模</span>
+      <span class="macro-sum-val">${totalAum.toFixed(1)} 兆美元</span>
+    </div>
+    <div class="macro-sum-item">
+      <span class="macro-sum-label">期間漲跌</span>
+      <span class="macro-sum-val" style="color:${changeTextColor(current.change)}">${fmtPct(current.change)}</span>
+    </div>
+    <div class="macro-sum-item">
+      <span class="macro-sum-label">子類別數</span>
+      <span class="macro-sum-val">${current.children?.length || 0}</span>
+    </div>`;
+
+  // ── Donut chart ──────────────────────────────────────────────
+  document.getElementById("donutValue").textContent = totalAum.toFixed(1) + " T";
+  renderMacroDonut(children);
+
+  // ── Bar chart ────────────────────────────────────────────────
+  document.getElementById("macroBarTitle").textContent = `${current.name} — 子類別漲跌`;
+  renderMacroBar(children);
+
+  // ── Category cards ───────────────────────────────────────────
+  const cardsEl = document.getElementById("macroCards");
+  cardsEl.innerHTML = children.map(c => {
+    const hasChildren = c.children?.length > 0;
+    const pct  = c.aum / totalAum * 100;
+    const chgColor = changeTextColor(c.change);
+    return `
+      <div class="macro-card${hasChildren ? " macro-card-drillable" : ""}"
+           data-node="${c.id}" title="${hasChildren ? "點擊深入查看" : ""}">
+        <div class="macro-card-color" style="background:${c.color}"></div>
+        <div class="macro-card-body">
+          <div class="macro-card-name">${c.name}</div>
+          <div class="macro-card-aum">${c.aum >= 1 ? c.aum.toFixed(1)+"T" : (c.aum*1000).toFixed(0)+"B"}</div>
+          <div class="macro-card-pct">${pct.toFixed(1)}% of total</div>
+          <div class="macro-card-change" style="color:${chgColor}">${fmtPct(c.change)}</div>
+          ${hasChildren ? '<div class="macro-card-arrow">›</div>' : ''}
+        </div>
+        <div class="macro-card-bar">
+          <div style="width:${Math.min(100, pct * 3)}%;background:${changeColor(c.change, 0.8)};height:100%;border-radius:2px"></div>
+        </div>
+      </div>`;
+  }).join("");
+
+  // Card click → drill down
+  cardsEl.querySelectorAll(".macro-card-drillable").forEach(card => {
+    card.addEventListener("click", () => {
+      state.macroPath.push(card.dataset.node);
+      renderMacroView();
+    });
+  });
+
+  // ── ETF detail for leaf nodes ────────────────────────────────
+  const etfDetail = document.getElementById("macroEtfDetail");
+  const etfs = current.etf_quotes || [];
+  if (etfs.length) {
+    etfDetail.classList.remove("hidden");
+    document.getElementById("macroEtfTitle").textContent = `${current.name} — 代表 ETF`;
+    document.getElementById("macroEtfBody").innerHTML = etfs.map(e => `
+      <tr>
+        <td><strong>${e.symbol}</strong></td>
+        <td class="name-cell">${e.name}</td>
+        <td class="mono">$${e.price.toFixed(2)}</td>
+        <td class="mono" style="color:${changeTextColor(e.change)}">${fmtPct(e.change)}</td>
+      </tr>`).join("");
+  } else {
+    etfDetail.classList.add("hidden");
+  }
+}
+
+function renderMacroDonut(children) {
+  if (!children) return;
+  const labels = children.map(c => c.name);
+  const data   = children.map(c => c.aum);
+  const colors = children.map(c => c.color + "cc");
+  const borders= children.map(c => c.color);
+
+  if (state.macroDonut) state.macroDonut.destroy();
+  state.macroDonut = new Chart(document.getElementById("macroDonut"), {
+    type: "doughnut",
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderColor: borders, borderWidth: 2 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      cutout: "65%",
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ${ctx.raw >= 1 ? ctx.raw.toFixed(1)+"T" : (ctx.raw*1000).toFixed(0)+"B"} USD`,
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderMacroBar(children) {
+  if (!children) return;
+  const sorted = [...children].sort((a, b) => b.change - a.change);
+  if (state.macroBar) state.macroBar.destroy();
+  state.macroBar = new Chart(document.getElementById("macroBarChart"), {
+    type: "bar",
+    data: {
+      labels:   sorted.map(c => c.name),
+      datasets: [{
+        label: "漲跌 %",
+        data:  sorted.map(c => c.change),
+        backgroundColor: sorted.map(c => changeColor(c.change, 0.85)),
+        borderColor:     sorted.map(c => changeColor(c.change, 1)),
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${fmtPct(ctx.raw)}` } }
+      },
+      scales: {
+        x: { grid: { color: "rgba(255,255,255,0.05)" }, ticks: { color: "#94a3b8", callback: v => fmtPct(v) } },
+        y: { grid: { display: false }, ticks: { color: "#e2e8f0", font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  10. STRATEGY COMPARISON
+// ═══════════════════════════════════════════════════════════════
+
+async function runStrategyCompare() {
+  const period = state.scPeriod;
+  const topN   = +document.getElementById("stratTopN").value;
+  _loader.classList.add("active");
+  try {
+    const data = await apiFetch(`/api/strategy-backtest?period=${period}&top_n=${topN}`);
+    _loader.classList.remove("active");
+    renderStrategyResults(data, topN);
+  } catch (e) {
+    _loader.classList.remove("active");
+    alert("策略比較失敗: " + e.message);
+  }
+}
+
+function renderStrategyResults(data, topN) {
+  document.getElementById("stratResults").classList.remove("hidden");
+
+  const STRATS = [
+    { key: "momentum",     label: `動量輪動 (Top${topN})`, color: "#4ade80" },
+    { key: "equal_weight", label: "等權重",               color: "#60a5fa" },
+    { key: "spy",          label: "SPY 大盤",              color: "#94a3b8" },
+  ];
+
+  // Stat cards (3 strategies × 4 metrics)
+  const grid = document.getElementById("stratStatGrid");
+  grid.innerHTML = `
+    <div class="strat-stat-row strat-header">
+      <div></div>
+      ${STRATS.map(s => `<div class="strat-col-head" style="color:${s.color}">${s.label}</div>`).join("")}
+    </div>
+    ${[
+      {key:"total_return",  label:"總報酬"},
+      {key:"cagr",          label:"年化 CAGR"},
+      {key:"sharpe",        label:"Sharpe Ratio"},
+      {key:"max_drawdown",  label:"最大回撤"},
+    ].map(m => `
+      <div class="strat-stat-row">
+        <div class="strat-row-label">${m.label}</div>
+        ${STRATS.map(s => {
+          const raw = data.stats[s.key]?.[m.key] ?? 0;
+          const isDD = m.key === "max_drawdown";
+          const pos  = isDD ? raw < 10 : (m.key === "sharpe" ? raw >= 1 : raw >= 0);
+          const disp = isDD ? `-${raw.toFixed(2)}%` : (m.key==="sharpe" ? raw.toFixed(2) : fmtPct(raw));
+          return `<div class="strat-cell" style="color:${pos?"#4ade80":"#f87171"}">${disp}</div>`;
+        }).join("")}
+      </div>`).join("")}`;
+
+  // Chart
+  const labels = data.spy.map(p => p.date);
+  if (state.stratChart) state.stratChart.destroy();
+  state.stratChart = new Chart(document.getElementById("stratChart"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: STRATS.map(s => ({
+        label:           s.label,
+        data:            data[s.key].map(p => p.value),
+        borderColor:     s.color,
+        backgroundColor: s.color + "18",
+        borderWidth:     s.key === "spy" ? 1.5 : 2.5,
+        borderDash:      s.key === "spy" ? [5, 5] : [],
+        fill:            s.key === "momentum",
+        pointRadius:     0,
+        tension:         0.3,
+        spanGaps:        true,
+      }))
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { labels: { color: "#e2e8f0", font: { size: 12 } } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw?.toFixed(2)}` } }
+      },
+      scales: {
+        x: { ticks: { color: "#64748b", maxTicksLimit: 12, maxRotation: 0 }, grid: { color: "rgba(255,255,255,0.04)" } },
+        y: { ticks: { color: "#94a3b8", callback: v => v.toFixed(0) }, grid: { color: "rgba(255,255,255,0.06)" },
+             title: { display: true, text: "指數化報酬（起點=100）", color: "#64748b" } }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  10.  ETF MAPPING TABLE
+// ═══════════════════════════════════════════════════════════════
+
+const ETF_MAP_SORT = { col: "sector", asc: true };
+const ETF_MAP_FILTER = { sector: "all", search: "" };
+
+function renderEtfMappingTable() {
+  if (!state.quotes.length) return;
+  const q = state.quotes.filter(q => q.symbol !== "SPY");
+
+  // Build sector filter chips once
+  const fc = document.getElementById("etfMapFilters");
+  if (!fc.children.length) {
+    const sectors = ["all", ...new Set(q.map(x => x.sector)).values()].sort();
+    fc.innerHTML = sectors.map(s =>
+      `<button class="ef-btn${s==="all"?" active":""}" data-sector="${s}">${s==="all"?"全部":s}</button>`
+    ).join("");
+    fc.addEventListener("click", e => {
+      const btn = e.target.closest(".ef-btn");
+      if (!btn) return;
+      fc.querySelectorAll(".ef-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      ETF_MAP_FILTER.sector = btn.dataset.sector;
+      renderEtfMappingTable();
+    });
+  }
+
+  let rows = [...q];
+  if (ETF_MAP_FILTER.sector !== "all") rows = rows.filter(r => r.sector === ETF_MAP_FILTER.sector);
+  const s = ETF_MAP_FILTER.search.toLowerCase();
+  if (s) rows = rows.filter(r => r.symbol.toLowerCase().includes(s) || r.name.toLowerCase().includes(s));
+
+  rows.sort((a, b) => {
+    const va = a[ETF_MAP_SORT.col] ?? "", vb = b[ETF_MAP_SORT.col] ?? "";
+    return (va < vb ? -1 : va > vb ? 1 : 0) * (ETF_MAP_SORT.asc ? 1 : -1);
+  });
+
+  document.getElementById("etfMapBody").innerHTML = rows.map(r => `
+    <tr class="etfmap-row" data-sym="${r.symbol}" title="點選加入趨勢比較">
+      <td><span class="sym-badge" style="background:${SECTOR_COLORS[r.sector]||"#444"}">${r.symbol}</span></td>
+      <td class="name-cell">${r.name}</td>
+      <td><span class="sector-tag">${r.sector}</span></td>
+      <td>$${r.price}</td>
+      <td style="color:${changeTextColor(r.change_1d)}">${fmtPct(r.change_1d)}</td>
+      <td style="color:${changeTextColor(r.change_1m)}">${fmtPct(r.change_1m)}</td>
+      <td style="color:${changeTextColor(r.change_1y)}">${fmtPct(r.change_1y)}</td>
+      <td>$${r.mcap}B</td>
+    </tr>`).join("");
+
+}
+
+// One-time setup: row click delegation and sortable columns
+(function setupEtfMapListeners() {
+  document.getElementById("etfMapBody").addEventListener("click", e => {
+    const row = e.target.closest(".etfmap-row");
+    if (!row) return;
+    const sym = row.dataset.sym;
+    if (!state.selected.includes(sym)) {
+      if (state.selected.length >= 6) state.selected.shift();
+      state.selected.push(sym);
+    }
+    document.querySelector('[data-tab="trends"]').click();
+  });
+
+  document.querySelectorAll("#etfMapTable th.sortable").forEach(th => {
+    th.style.cursor = "pointer";
+    th.addEventListener("click", () => {
+      const col = th.dataset.col;
+      ETF_MAP_SORT.asc = ETF_MAP_SORT.col === col ? !ETF_MAP_SORT.asc : true;
+      ETF_MAP_SORT.col = col;
+      renderEtfMappingTable();
+    });
+  });
+
+  document.getElementById("etfMapSearch").addEventListener("input", e => {
+    ETF_MAP_FILTER.search = e.target.value;
+    renderEtfMappingTable();
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════════
+//  11.  FLOW & CHIPS TAB
+// ═══════════════════════════════════════════════════════════════
+
+async function renderFlowTab() {
+  // Load flow matrix (period-aware)
+  if (!state.flowMatrixData || state.flowMatrixPeriod !== state.period) {
+    try {
+      state.flowMatrixData = await apiFetch(`/api/flow-matrix?period=${state.period}`);
+      state.flowMatrixPeriod = state.period;
+    } catch { return; }
+  }
+  // Load chip data (chip-period-aware)
+  if (!state.chipsData || state.chipsDataPeriod !== state.chipPeriod) {
+    try {
+      state.chipsData = await apiFetch(`/api/chips?period=${state.chipPeriod}`);
+      state.chipsDataPeriod = state.chipPeriod;
+    } catch { return; }
+  }
+  renderFlowBubble(state.flowMatrixData);
+  renderFlowScoreBar(state.flowMatrixData);
+  populateChipSectorSelect();
+  renderChipCharts();
+  renderNetworkGraph(state.flowMatrixData);
+}
+
+function renderFlowBubble(data) {
+  const ctx = document.getElementById("flowBubbleChart").getContext("2d");
+  if (state.flowBubbleChart) { state.flowBubbleChart.destroy(); state.flowBubbleChart = null; }
+  const n = data.sectors.length;
+  const datasets = data.sectors.map((sec, i) => {
+    const rank = n - i; // sorted desc by flow, rank 1=lowest
+    return {
+      label: sec,
+      data: [{ x: rank, y: data.volume_ratios[i], r: Math.max(6, Math.sqrt(data.mcaps[i] || 1) * 1.8) }],
+      backgroundColor: changeColor(data.flow_scores[i], 0.7),
+      borderColor: changeColor(data.flow_scores[i], 1),
+      borderWidth: 1.5,
+    };
+  });
+  state.flowBubbleChart = new Chart(ctx, {
+    type: "bubble",
+    data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const d = ctx.raw;
+              const sec = ctx.dataset.label;
+              const score = data.flow_scores[data.sectors.indexOf(sec)];
+              return `${sec} | 動能排名:${d.x} | 成交量比:${d.y.toFixed(2)}x | 流向:${score>0?"+":" "}${score}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { title: { display: true, text: "動能排名 →（右=資金流入）", color: "#8b949e" },
+             ticks: { color: "#8b949e" }, grid: { color: "#21262d" },
+             min: 0, max: n + 1 },
+        y: { title: { display: true, text: "成交量比率（vs 30日均）", color: "#8b949e" },
+             ticks: { color: "#8b949e" }, grid: { color: "#21262d" } }
+      },
+      animation: { duration: 400 },
+    },
+    plugins: [{
+      id: "quadrantLines",
+      afterDraw(chart) {
+        const { ctx, chartArea: { left, right, top, bottom }, scales: { x, y } } = chart;
+        const mx = x.getPixelForValue((n + 1) / 2);
+        const my = y.getPixelForValue(1);
+        ctx.save();
+        ctx.strokeStyle = "rgba(139,148,158,0.25)";
+        ctx.setLineDash([5, 4]);
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(mx, top); ctx.lineTo(mx, bottom); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(left, my); ctx.lineTo(right, my); ctx.stroke();
+        ctx.restore();
+      }
+    }]
+  });
+}
+
+function renderFlowScoreBar(data) {
+  const ctx = document.getElementById("flowScoreBar").getContext("2d");
+  if (state.flowScoreBar) { state.flowScoreBar.destroy(); state.flowScoreBar = null; }
+  const sorted = data.sectors.map((s, i) => ({ s, v: data.flow_scores[i] }))
+                              .sort((a, b) => a.v - b.v);
+  state.flowScoreBar = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: sorted.map(d => d.s),
+      datasets: [{ data: sorted.map(d => d.v),
+        backgroundColor: sorted.map(d => changeColor(d.v, 0.75)),
+        borderColor:     sorted.map(d => changeColor(d.v, 1)),
+        borderWidth: 1 }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: c => ` Flow Score: ${c.raw > 0 ? "+" : ""}${c.raw}` } } },
+      scales: {
+        x: { ticks: { color: "#8b949e" }, grid: { color: "#21262d" } },
+        y: { ticks: { color: "#cdd9e5", font: { size: 11 } }, grid: { color: "#21262d" } }
+      },
+      animation: { duration: 300 },
+    }
+  });
+}
+
+function populateChipSectorSelect() {
+  const sel = document.getElementById("chipSectorSelect");
+  if (sel.options.length) return;
+  const sectors = [...new Set((state.chipsData || []).map(c => c.sector))].sort();
+  sel.innerHTML = sectors.map(s => `<option value="${s}"${s===state.chipSector?" selected":""}>${s}</option>`).join("");
+  sel.addEventListener("change", () => { state.chipSector = sel.value; renderChipCharts(); });
+}
+
+function renderChipCharts() {
+  if (!state.chipsData) return;
+  const chipRow = state.chipsData.find(c => c.sector === state.chipSector) || state.chipsData[0];
+  if (!chipRow) return;
+  state.chipSector = chipRow.sector;
+
+  // Bar chart: stacked institutional/smart/retail
+  const bCtx = document.getElementById("chipBarChart").getContext("2d");
+  if (state.chipBarChart) { state.chipBarChart.destroy(); state.chipBarChart = null; }
+  const isTW = (state.chipMode === "tw");
+  const chipLabels = isTW
+    ? ["外資", "投信", "自營商"]
+    : ["機構法人", "聰明錢", "散戶"];
+  state.chipBarChart = new Chart(bCtx, {
+    type: "bar",
+    data: {
+      labels: chipRow.dates,
+      datasets: [
+        { label: chipLabels[0], data: chipRow.institutional, backgroundColor: "rgba(74,144,226,0.75)", stack: "s" },
+        { label: chipLabels[1], data: chipRow.smart_money,   backgroundColor: "rgba(142,68,173,0.65)", stack: "s" },
+        { label: chipLabels[2], data: chipRow.retail,         backgroundColor: "rgba(231,76,60,0.55)",  stack: "s" },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: "#8b949e", boxWidth: 12 } } },
+      scales: {
+        x: { ticks: { color: "#8b949e", maxTicksLimit: 8, maxRotation: 30 }, grid: { color: "#21262d" }, stacked: true },
+        y: { ticks: { color: "#8b949e" }, grid: { color: "#21262d" }, stacked: true,
+             title: { display: true, text: "$M", color: "#8b949e" } }
+      },
+      animation: { duration: 300 },
+    }
+  });
+
+  // Cumulative + ETF price dual axis
+  const cCtx = document.getElementById("chipCumChart").getContext("2d");
+  if (state.chipCumChart) { state.chipCumChart.destroy(); state.chipCumChart = null; }
+  // Find representative ETF price for this sector
+  const repEtf = Object.entries(window.API_IMPL?.SECTOR_ETFS || {})[0];
+  const sectorEtfs = (state.chipsData ? null : null); // just use cumulative alone if no price handy
+  const quotes = state.quotes;
+  const secEtf  = quotes.find(q => q.sector === chipRow.sector && q.symbol !== "SPY");
+  const priceRef = secEtf ? chipRow.dates.map(() => secEtf.price) : null; // flat line as reference
+  state.chipCumChart = new Chart(cCtx, {
+    type: "line",
+    data: {
+      labels: chipRow.dates,
+      datasets: [
+        { label: isTW ? "累積外資買超" : "累積機構買超", data: chipRow.cumulative, borderColor: "#4a90e2",
+          backgroundColor: "rgba(74,144,226,0.12)", fill: true, tension: 0.3,
+          yAxisID: "y", pointRadius: 0 },
+        ...(priceRef ? [{ label: `${secEtf.symbol} 現價`, data: priceRef,
+          borderColor: "#f7931a", borderDash: [4,3], pointRadius: 0, yAxisID: "y2" }] : [])
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: "#8b949e", boxWidth: 12 } } },
+      scales: {
+        x: { ticks: { color: "#8b949e", maxTicksLimit: 8, maxRotation: 30 }, grid: { color: "#21262d" } },
+        y: { ticks: { color: "#4a90e2" }, grid: { color: "#21262d" }, position: "left",
+             title: { display: true, text: "累積 $M", color: "#4a90e2" } },
+        y2: { ticks: { color: "#f7931a" }, grid: { display: false }, position: "right",
+              title: { display: true, text: "ETF 價格", color: "#f7931a" } }
+      },
+      animation: { duration: 300 },
+    }
+  });
+}
+
+// ── Network Graph (canvas spring-physics) ──────────────────────────────
+
+function renderNetworkGraph(data) {
+  const canvas = document.getElementById("networkCanvas");
+  canvas.width  = canvas.parentElement.clientWidth  || 700;
+  canvas.height = canvas.parentElement.clientHeight || 420;
+  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext("2d");
+  const n = data.sectors.length;
+
+  if (state.networkRunning) { state.networkRunning = false; }
+  // Initialise nodes in a circle
+  const nodes = data.sectors.map((sec, i) => {
+    const angle = (2 * Math.PI * i) / n;
+    return {
+      id: sec, i,
+      x: W / 2 + (W * 0.35) * Math.cos(angle),
+      y: H / 2 + (H * 0.35) * Math.sin(angle),
+      vx: 0, vy: 0,
+      r: Math.max(18, Math.sqrt(data.mcaps[i] || 1) * 2.2),
+      color: SECTOR_COLORS[sec] || "#58a6ff",
+      label: sec,
+    };
+  });
+
+  // Build edges from rotation matrix (|corr| > 0.25)
+  const edges = [];
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const c = data.rotation_matrix[i][j];
+      if (Math.abs(c) > 0.25) edges.push({ i, j, c });
+    }
+  }
+
+  const K_REPEL = 8000, K_ATTRACT = 0.04, DAMPING = 0.82, DT = 0.9;
+  let frame = 0;
+  state.networkRunning = true;
+
+  function tick() {
+    if (!state.networkRunning) return;
+    frame++;
+
+    // Forces
+    for (let a = 0; a < n; a++) {
+      let fx = 0, fy = 0;
+      // Centre gravity
+      fx += (W / 2 - nodes[a].x) * 0.004;
+      fy += (H / 2 - nodes[a].y) * 0.004;
+      // Repulsion
+      for (let b = 0; b < n; b++) {
+        if (a === b) continue;
+        const dx = nodes[a].x - nodes[b].x, dy = nodes[a].y - nodes[b].y;
+        const dist2 = dx * dx + dy * dy + 1;
+        const f = K_REPEL / dist2;
+        fx += f * dx / Math.sqrt(dist2);
+        fy += f * dy / Math.sqrt(dist2);
+      }
+      // Attraction along edges
+      edges.forEach(e => {
+        if (e.i !== a && e.j !== a) return;
+        const b = e.i === a ? e.j : e.i;
+        const dx = nodes[b].x - nodes[a].x, dy = nodes[b].y - nodes[a].y;
+        const str = Math.abs(e.c) * K_ATTRACT;
+        fx += dx * str; fy += dy * str;
+      });
+
+      nodes[a].vx = (nodes[a].vx + fx * DT) * DAMPING;
+      nodes[a].vy = (nodes[a].vy + fy * DT) * DAMPING;
+    }
+    nodes.forEach(nd => {
+      nd.x = Math.max(nd.r + 2, Math.min(W - nd.r - 2, nd.x + nd.vx));
+      nd.y = Math.max(nd.r + 2, Math.min(H - nd.r - 2, nd.y + nd.vy));
+    });
+
+    // Draw
+    ctx.clearRect(0, 0, W, H);
+    edges.forEach(e => {
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.8, Math.abs(e.c));
+      ctx.strokeStyle = e.c > 0 ? "#4a90e2" : "#e67e22";
+      ctx.lineWidth = Math.abs(e.c) * 3;
+      ctx.beginPath();
+      ctx.moveTo(nodes[e.i].x, nodes[e.i].y);
+      ctx.lineTo(nodes[e.j].x, nodes[e.j].y);
+      ctx.stroke();
+      ctx.restore();
+    });
+    nodes.forEach(nd => {
+      ctx.beginPath();
+      ctx.arc(nd.x, nd.y, nd.r, 0, Math.PI * 2);
+      ctx.fillStyle = nd.color + "cc";
+      ctx.fill();
+      ctx.strokeStyle = nd.color;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = "#fff";
+      ctx.font = `bold ${Math.max(9, Math.min(12, nd.r * 0.55))}px Inter,sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const short = nd.label.length > 8 ? nd.label.slice(0, 7) + "…" : nd.label;
+      ctx.fillText(short, nd.x, nd.y);
+    });
+
+    if (frame < 180) requestAnimationFrame(tick);
+    else state.networkRunning = false;
+  }
+  requestAnimationFrame(tick);
+}
+
+// Chip period buttons
+_cpBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    _cpBtns.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.chipPeriod = btn.dataset.cp;
+    state.chipsData  = null;
+    apiFetch(`/api/chips?period=${state.chipPeriod}`).then(d => {
+      state.chipsData      = d;
+      state.chipsDataPeriod = state.chipPeriod;
+      renderChipCharts();
+    });
+  });
+});
+
+// Chip mode buttons (US / TW labels)
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".cm-btn");
+  if (!btn) return;
+  document.querySelectorAll(".cm-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  state.chipMode = btn.dataset.cm;
+  renderChipCharts();
+});
+
+// Network sub-tabs (correlation / flow rotation)
+document.getElementById("networkSubtabs").addEventListener("click", e => {
+  const btn = e.target.closest(".nsb");
+  if (!btn) return;
+  document.querySelectorAll(".nsb").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  if (btn.dataset.nsb === "corr") {
+    document.getElementById("networkCorrView").classList.remove("hidden");
+    document.getElementById("networkFlowView").classList.add("hidden");
+    if (state.flowMatrixData) renderNetworkGraph(state.flowMatrixData);
+  } else {
+    document.getElementById("networkCorrView").classList.add("hidden");
+    document.getElementById("networkFlowView").classList.remove("hidden");
+    if (state.flowMatrixData) renderRotationFlow(state.flowMatrixData);
+  }
+});
+
+// ── Rotation Flow Canvas (directional arrows) ──────────────────────────
+
+function renderRotationFlow(data) {
+  const canvas = document.getElementById("networkFlowCanvas");
+  canvas.width  = canvas.parentElement.clientWidth  || 700;
+  canvas.height = canvas.parentElement.clientHeight || 420;
+  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, W, H);
+
+  const n = data.sectors.length;
+  const R = Math.min(W, H) * 0.38;
+
+  // Sectors arranged in a circle
+  const nodes = data.sectors.map((sec, i) => {
+    const angle = (2 * Math.PI * i) / n - Math.PI / 2;
+    return {
+      id: sec, i,
+      x: W / 2 + R * Math.cos(angle),
+      y: H / 2 + R * Math.sin(angle),
+      score: data.flow_scores[i],
+      mcap:  data.mcaps[i] || 1,
+      color: SECTOR_COLORS[sec] || "#58a6ff",
+    };
+  });
+
+  // Top 3 inflow (high score) and top 3 outflow (low score) sectors
+  const sorted  = [...nodes].sort((a, b) => b.score - a.score);
+  const inflow  = sorted.slice(0, 3);
+  const outflow = sorted.slice(-3);
+
+  // Draw rotation arrows: each outflow → each inflow
+  function drawArrow(x1, y1, x2, y2, color, alpha, width) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 1) return;
+    const nx = dx / len, ny = dy / len;
+    const nodeR = 22;
+    const sx = x1 + nx * nodeR, sy = y1 + ny * nodeR;
+    const ex = x2 - nx * nodeR, ey = y2 - ny * nodeR;
+    // Control point: offset perpendicular for curve
+    const cx = (sx + ex) / 2 - ny * len * 0.18;
+    const cy = (sy + ey) / 2 + nx * len * 0.18;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = width;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.quadraticCurveTo(cx, cy, ex, ey);
+    ctx.stroke();
+    // Arrowhead
+    const tailX = ex - nx * 8 + ny * 5, tailY = ey - ny * 8 - nx * 5;
+    const tailX2 = ex - nx * 8 - ny * 5, tailY2 = ey - ny * 8 + nx * 5;
+    ctx.beginPath();
+    ctx.moveTo(ex, ey);
+    ctx.lineTo(tailX, tailY);
+    ctx.lineTo(tailX2, tailY2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  outflow.forEach(out => {
+    inflow.forEach(inn => {
+      if (out.id === inn.id) return;
+      const strength = Math.min(1, (Math.abs(out.score) + inn.score) / 20);
+      drawArrow(out.x, out.y, inn.x, inn.y, "#f7931a", 0.25 + strength * 0.45, 1 + strength * 2.5);
+    });
+  });
+
+  // Draw nodes
+  nodes.forEach(nd => {
+    const r = Math.max(18, Math.sqrt(nd.mcap) * 1.8);
+    ctx.beginPath();
+    ctx.arc(nd.x, nd.y, r, 0, Math.PI * 2);
+    const isInflow  = inflow.some(n => n.id === nd.id);
+    const isOutflow = outflow.some(n => n.id === nd.id);
+    ctx.fillStyle   = nd.color + "cc";
+    ctx.fill();
+    ctx.strokeStyle = isInflow ? "#4ade80" : isOutflow ? "#f87171" : nd.color;
+    ctx.lineWidth   = isInflow || isOutflow ? 2.5 : 1;
+    ctx.stroke();
+
+    ctx.fillStyle = "#fff";
+    const fs = Math.max(9, Math.min(11, r * 0.55));
+    ctx.font = `bold ${fs}px Inter,sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(nd.id.length > 8 ? nd.id.slice(0, 7) + "…" : nd.id, nd.x, nd.y - 3);
+    ctx.font = `${Math.max(8, fs - 1)}px Inter,sans-serif`;
+    ctx.fillStyle = nd.score > 0 ? "#4ade80" : "#f87171";
+    ctx.fillText((nd.score > 0 ? "+" : "") + nd.score, nd.x, nd.y + 8);
+  });
+
+  // Legend
+  ctx.globalAlpha = 1;
+  ctx.font = "11px Inter,sans-serif";
+  ctx.fillStyle = "#4ade80"; ctx.textAlign = "left";
+  ctx.fillText("→ 資金流入（綠框）", 12, H - 28);
+  ctx.fillStyle = "#f87171";
+  ctx.fillText("← 資金流出（紅框）", 12, H - 12);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  12.  EVENTS & CYCLES TAB
+// ═══════════════════════════════════════════════════════════════
+
+async function renderCycleTab() {
+  if (!state.eventsData) {
+    try { state.eventsData = await apiFetch("/api/events"); } catch { return; }
+  }
+  if (!state.cycleData) {
+    try { state.cycleData = await apiFetch("/api/cycle"); } catch { return; }
+  }
+  renderEventTimeline();
+  renderCycleHeatmap();
+  renderPercentileRanks();
+}
+
+const EVENT_COLORS = { fed: "#4a90e2", macro: "#27ae60", earnings: "#f7931a", geopolitical: "#e74c3c" };
+const EVENT_ICONS  = { fed: "🏦", macro: "📊", earnings: "📈", geopolitical: "🌐" };
+
+function renderEventTimeline() {
+  const events = (state.eventsData || [])
+    .filter(e => state.eventTypeFilter === "all" || e.type === state.eventTypeFilter)
+    .slice().reverse(); // newest first
+
+  const tl = document.getElementById("eventTimeline");
+  tl.innerHTML = events.map(ev => `
+    <div class="ev-card ${ev.magnitude > 0 ? "ev-pos" : ev.magnitude < 0 ? "ev-neg" : "ev-neu"}">
+      <div class="ev-stripe" style="background:${EVENT_COLORS[ev.type]||"#58a6ff"}"></div>
+      <div class="ev-body">
+        <div class="ev-top">
+          <span class="ev-icon">${EVENT_ICONS[ev.type]||"📌"}</span>
+          <span class="ev-date">${ev.date}</span>
+          <span class="ev-badge" style="background:${EVENT_COLORS[ev.type]||"#58a6ff"}">${ev.type}</span>
+          <span class="ev-mag">${"★".repeat(Math.abs(ev.magnitude))||"—"}${ev.magnitude<0?" 利空":" 利多"}</span>
+        </div>
+        <div class="ev-title">${ev.title}</div>
+        <div class="ev-detail">${ev.detail}</div>
+        <div class="ev-sectors">${(ev.sectors||[]).map(s =>
+          `<span class="ev-sec-tag" style="border-color:${SECTOR_COLORS[s]||"#444"};color:${SECTOR_COLORS[s]||"#ccc"}">${s}</span>`
+        ).join("")}</div>
+      </div>
+    </div>`).join("");
+}
+
+// Event type filter
+document.getElementById("eventFilters").addEventListener("click", e => {
+  const btn = e.target.closest(".ef-btn");
+  if (!btn) return;
+  document.querySelectorAll("#eventFilters .ef-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  state.eventTypeFilter = btn.dataset.etype;
+  renderEventTimeline();
+});
+
+// ── Cycle Heatmap Canvas ────────────────────────────────────────────────
+function renderCycleHeatmap() {
+  if (!state.cycleData || !state.cycleData.length) return;
+  const canvas  = document.getElementById("cycleHeatmap");
+  const wrapper = canvas.parentElement;
+  const data    = state.cycleData;
+
+  // Collect all months from any sector
+  const allMonths = [...new Set(data.flatMap(d => Object.keys(d.monthly_returns)))].sort();
+  const sectors   = data.map(d => d.sector);
+  const LABEL_W = 110, CELL_H = 30, CELL_W = Math.max(34, Math.floor((wrapper.clientWidth - LABEL_W - 16) / allMonths.length));
+  const TOP_H = 36;
+  canvas.width  = LABEL_W + allMonths.length * CELL_W + 4;
+  canvas.height = TOP_H + sectors.length * CELL_H + 4;
+  canvas.style.width  = canvas.width  + "px";
+  canvas.style.height = canvas.height + "px";
+
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Month column headers
+  ctx.fillStyle = "#8b949e";
+  ctx.font = "10px Inter,sans-serif";
+  ctx.textAlign = "center";
+  allMonths.forEach((m, j) => {
+    const label = m.slice(2); // "24-01"
+    ctx.fillText(label, LABEL_W + j * CELL_W + CELL_W / 2, TOP_H - 8);
+  });
+
+  // Cells
+  sectors.forEach((sec, i) => {
+    const row = data[i];
+    const y = TOP_H + i * CELL_H;
+    // Label
+    ctx.fillStyle = "#cdd9e5";
+    ctx.font = "11px Inter,sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText(sec, LABEL_W - 6, y + CELL_H / 2 + 4);
+    // Cells
+    allMonths.forEach((m, j) => {
+      const val = row.monthly_returns[m];
+      const x   = LABEL_W + j * CELL_W;
+      if (val === undefined) {
+        ctx.fillStyle = "#1c2333";
+        ctx.fillRect(x + 1, y + 1, CELL_W - 2, CELL_H - 2);
+        return;
+      }
+      ctx.fillStyle = changeColor(val * 0.5, 0.85); // scale: 2% → moderate color
+      ctx.fillRect(x + 1, y + 1, CELL_W - 2, CELL_H - 2);
+      if (CELL_W > 38) {
+        ctx.fillStyle = Math.abs(val) > 2 ? "#fff" : "#cdd9e5";
+        ctx.font = "9px Inter,sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(fmtPct(val, false), x + CELL_W / 2, y + CELL_H / 2 + 3);
+      }
+    });
+  });
+
+  // Hover tooltip
+  canvas.onmousemove = (ev) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+    const j = Math.floor((mx - LABEL_W) / CELL_W);
+    const i = Math.floor((my - TOP_H) / CELL_H);
+    if (i < 0 || i >= sectors.length || j < 0 || j >= allMonths.length) {
+      document.getElementById("cycleTooltip").classList.add("hidden"); return;
+    }
+    const val = data[i].monthly_returns[allMonths[j]];
+    if (val === undefined) { document.getElementById("cycleTooltip").classList.add("hidden"); return; }
+    const tip = document.getElementById("cycleTooltip");
+    tip.textContent = `${sectors[i]} · ${allMonths[j]} → ${fmtPct(val)}`;
+    tip.style.left = (ev.clientX + 12) + "px";
+    tip.style.top  = (ev.clientY - 28) + "px";
+    tip.classList.remove("hidden");
+  };
+  canvas.onmouseleave = () => document.getElementById("cycleTooltip").classList.add("hidden");
+}
+
+// ── Percentile Rank Bars ────────────────────────────────────────────────
+function renderPercentileRanks() {
+  if (!state.cycleData) return;
+  const sorted = [...state.cycleData].sort((a, b) => b.percentile_rank - a.percentile_rank);
+  document.getElementById("percentileGrid").innerHTML = sorted.map(d => {
+    const clr = d.percentile_rank >= 70 ? "#4ade80" : d.percentile_rank >= 40 ? "#fbbf24" : "#f87171";
+    return `
+    <div class="perc-row">
+      <div class="perc-sector" style="color:${d.color}">${d.sector}</div>
+      <div class="perc-bar-track">
+        <div class="perc-bar-fill" style="width:${d.percentile_rank}%;background:${clr}"></div>
+      </div>
+      <div class="perc-rank" style="color:${clr}">${d.percentile_rank}%</div>
+      <div class="perc-meta">
+        <span title="1Y Return" style="color:${changeTextColor(d.current_1y)}">${fmtPct(d.current_1y)} 1Y</span>
+        <span class="perc-best">↑ ${d.best_months.join("/")} </span>
+        <span class="perc-worst">↓ ${d.worst_months.join("/")}</span>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
+
+function _setUpdateTime() {
+  _updateTime.textContent = "更新於 " + new Date().toLocaleTimeString("zh-TW");
+}
+
+async function init() {
+  _loader.classList.add("active");
+  try {
+    [state.quotes, state.macroData, state.eventsData, state.cycleData] = await Promise.all([
+      apiFetch("/api/quotes"),
+      apiFetch(`/api/macro?period=${state.period}`),
+      apiFetch("/api/events"),
+      apiFetch("/api/cycle"),
+    ]);
+    state._macroDataPeriod = state.period;
+    _setUpdateTime();
+    renderMacroView();
+    buildSymbolPicker();
+    state.weights = {};
+    state.quotes.filter(q => q.symbol !== "SPY").forEach(q => {
+      state.weights[q.symbol] = TEMPLATES.balanced[q.symbol] ?? 0;
+    });
+  } finally {
+    _loader.classList.remove("active");
+  }
+
+  setInterval(async () => {
+    state.trendSeriesCache = {};
+    state.macroData        = null;
+    state.flowMatrixData   = null;
+    state.chipsData        = null;
+    state.quotes = await apiFetch("/api/quotes");
+    _setUpdateTime();
+    if (_tabOverview.classList.contains("active")) renderOverview();
+    if (_tabMacro.classList.contains("active"))    renderMacroTab();
+  }, 60_000);
+}
+
+init();
+</script>
+</body>
 </html>
