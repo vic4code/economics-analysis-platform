@@ -40,16 +40,30 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
-      - name: Verify Vercel token
+      - name: Verify Vercel token + show account
+        id: vercel_auth
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          echo "Checking token validity..."
-          vercel whoami --token="$VERCEL_TOKEN" || {
-            echo "::error::VERCEL_TOKEN is invalid or expired."
-            echo "::error::Please generate a new token at vercel.com/account/tokens and update the GitHub secret."
+          set -euo pipefail
+          echo "=== vercel whoami ==="
+          WHOAMI=$(vercel whoami --token="$VERCEL_TOKEN" 2>&1) || {
+            echo "::error::VERCEL_TOKEN is invalid or expired — regenerate at vercel.com/account/tokens"
+            echo "$WHOAMI"
             exit 1
           }
+          echo "Logged in as: $WHOAMI"
+          echo "scope=$WHOAMI" >> $GITHUB_OUTPUT
+
+      - name: Link project
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "=== vercel link ==="
+          vercel link --yes --token="$VERCEL_TOKEN" 2>&1
+          echo "✅ Project linked"
+          cat .vercel/project.json 2>/dev/null || echo "(no project.json yet)"
 
       # ── Production deploy (merge to main) ─────────────────────
       - name: Deploy to Production
@@ -57,9 +71,11 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          echo "Deploying to production..."
-          vercel deploy --yes --prod --token="$VERCEL_TOKEN" 2>&1 | tee /tmp/deploy.log
-          DEPLOY_URL=$(grep -E '^https://' /tmp/deploy.log | tail -1)
+          set -euo pipefail
+          echo "=== vercel deploy --prod ==="
+          OUTPUT=$(vercel deploy --prod --token="$VERCEL_TOKEN" 2>&1)
+          echo "$OUTPUT"
+          DEPLOY_URL=$(echo "$OUTPUT" | grep -E '^https://' | tail -1)
           echo "✅ Production: $DEPLOY_URL"
 
       # ── Preview deploy (every PR) ──────────────────────────────
@@ -69,9 +85,11 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          echo "Deploying preview..."
-          vercel deploy --yes --token="$VERCEL_TOKEN" 2>&1 | tee /tmp/deploy.log
-          PREVIEW_URL=$(grep -E '^https://' /tmp/deploy.log | tail -1)
+          set -euo pipefail
+          echo "=== vercel deploy (preview) ==="
+          OUTPUT=$(vercel deploy --token="$VERCEL_TOKEN" 2>&1)
+          echo "$OUTPUT"
+          PREVIEW_URL=$(echo "$OUTPUT" | grep -E '^https://' | tail -1)
           echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
           echo "🔍 Preview: $PREVIEW_URL"
 
