@@ -15,6 +15,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check VERCEL_TOKEN
+        run: |
+          if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
+            echo "::error::VERCEL_TOKEN secret is missing."
+            echo "::error::Go to: Settings → Secrets and variables → Actions → New repository secret"
+            echo "::error::Name: VERCEL_TOKEN  |  Value: your token from vercel.com/account/tokens"
+            exit 1
+          fi
+          echo "✅ VERCEL_TOKEN is set"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -44,7 +54,7 @@ jobs:
           echo "🔍 Preview: $PREVIEW_URL"
 
       - name: Comment Preview URL on PR
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.preview.outputs.preview_url != ''
         uses: actions/github-script@v7
         with:
           script: |
