@@ -137,8 +137,18 @@
     '國際': 'VEA',
   };
 
-  const PERIOD_DAYS = { '1d': 2, '5d': 7, '1m': 35, '3m': 100, '6m': 195, '1y': 380, ytd: 200 };
+  const PERIOD_DAYS      = { '1d': 2, '5d': 7, '1m': 35, '3m': 100, '6m': 195, '1y': 380, ytd: 200 };
   const PERIOD_VOL_SCALE = { '1d': 1, '5d': 2.2, '1m': 4.5, '3m': 7.5, '6m': 10, '1y': 14, ytd: 10 };
+  const TRADING_DAYS_PER_YEAR = 252;
+
+  // Sector → display colour (single source of truth for all data functions)
+  const SECTOR_COLORS_MAP = {
+    Crypto: '#f7931a', Technology: '#4a90e2', 'Real Estate': '#8b6d4f',
+    Energy: '#e67e22', Healthcare: '#27ae60', Financials: '#8e44ad',
+    Consumer: '#e91e8c', Industrials: '#607d8b', Materials: '#795548',
+    Utilities: '#00bcd4', Bonds: '#3f51b5', Commodities: '#ffc107',
+    International: '#ff9800',
+  };
 
   // ── Date helpers ───────────────────────────────────────────────────────
   function isoDate(d) { return d.toISOString().slice(0, 10); }
@@ -309,6 +319,29 @@
     return enrich('global');
   }
 
+  // ── Shared stats helper ────────────────────────────────────────────────
+  function calcStats(vals) {
+    if (vals.length < 5) return {};
+    const ret    = vals[vals.length - 1].value / 100 - 1;
+    const ny     = vals.length / TRADING_DAYS_PER_YEAR;
+    const cagr   = ny > 0 ? Math.pow(1 + ret, 1 / ny) - 1 : 0;
+    const dr     = vals.slice(1).map((v, i) => v.value / vals[i].value - 1);
+    const mean   = dr.reduce((s, r) => s + r, 0) / dr.length;
+    const std    = Math.sqrt(dr.reduce((s, r) => s + (r - mean) ** 2, 0) / dr.length);
+    const sharpe = std > 0 ? mean / std * Math.sqrt(TRADING_DAYS_PER_YEAR) : 0;
+    let peak = vals[0].value, maxDd = 0;
+    for (const v of vals) {
+      if (v.value > peak) peak = v.value;
+      maxDd = Math.max(maxDd, (peak - v.value) / peak);
+    }
+    return {
+      total_return: Math.round(ret    * 10000) / 100,
+      cagr:         Math.round(cagr   * 10000) / 100,
+      sharpe:       Math.round(sharpe * 100)   / 100,
+      max_drawdown: Math.round(maxDd  * 10000) / 100,
+    };
+  }
+
   // ── Portfolio backtest ─────────────────────────────────────────────────
   function runBacktest(weightsStr, period) {
     const weights = {};
@@ -355,29 +388,10 @@
     }
     if (portfolio.length < 2) return { portfolio: [], benchmark: [], stats: {} };
 
-    const portRet = portfolio[portfolio.length - 1].value / 100 - 1;
-    const spyRet  = bench[bench.length - 1].value / 100 - 1;
-    const nYears  = portfolio.length / 252;
-    const cagr    = nYears > 0 ? Math.pow(1 + portRet, 1 / nYears) - 1 : 0;
-    const dr      = portfolio.slice(1).map((p, i) => p.value / portfolio[i].value - 1);
-    const mean    = dr.reduce((s, r) => s + r, 0) / dr.length;
-    const std     = Math.sqrt(dr.reduce((s, r) => s + (r - mean) ** 2, 0) / dr.length);
-    const sharpe  = std > 0 ? mean / std * Math.sqrt(252) : 0;
-    let peak = portfolio[0].value, maxDd = 0;
-    for (const p of portfolio) {
-      if (p.value > peak) peak = p.value;
-      maxDd = Math.max(maxDd, (peak - p.value) / peak);
-    }
-    return {
-      portfolio, benchmark: bench,
-      stats: {
-        total_return: Math.round(portRet * 10000) / 100,
-        cagr:         Math.round(cagr    * 10000) / 100,
-        sharpe:       Math.round(sharpe  * 100)   / 100,
-        max_drawdown: Math.round(maxDd   * 10000) / 100,
-        spy_return:   Math.round(spyRet  * 10000) / 100,
-      },
-    };
+    const spyRet = bench.length ? bench[bench.length - 1].value / 100 - 1 : 0;
+    const stats  = calcStats(portfolio);
+    stats.spy_return = Math.round(spyRet * 10000) / 100;
+    return { portfolio, benchmark: bench, stats };
   }
 
   // ── Strategy backtest ──────────────────────────────────────────────────
@@ -453,28 +467,6 @@
     const spyVals = allDates.filter(d => spyByDate[d]).map(d => ({
       date: d, value: Math.round(spyByDate[d] / spyBase * 100 * 10000) / 10000,
     }));
-
-    function calcStats(vals) {
-      if (vals.length < 5) return {};
-      const ret    = vals[vals.length - 1].value / 100 - 1;
-      const ny     = vals.length / 252;
-      const cagr   = ny > 0 ? Math.pow(1 + ret, 1 / ny) - 1 : 0;
-      const dr     = vals.slice(1).map((v, i) => v.value / vals[i].value - 1);
-      const mean   = dr.reduce((s, r) => s + r, 0) / dr.length;
-      const std    = Math.sqrt(dr.reduce((s, r) => s + (r - mean) ** 2, 0) / dr.length);
-      const sharpe = std > 0 ? mean / std * Math.sqrt(252) : 0;
-      let peak = vals[0].value, maxDd = 0;
-      for (const v of vals) {
-        if (v.value > peak) peak = v.value;
-        maxDd = Math.max(maxDd, (peak - v.value) / peak);
-      }
-      return {
-        total_return: Math.round(ret    * 10000) / 100,
-        cagr:         Math.round(cagr   * 10000) / 100,
-        sharpe:       Math.round(sharpe * 100)   / 100,
-        max_drawdown: Math.round(maxDd  * 10000) / 100,
-      };
-    }
 
     const themeNames = {};
     for (const [k, v] of Object.entries(THEME_ETF)) themeNames[v] = k;
@@ -615,16 +607,8 @@
 
     const today  = new Date();
     const curYr  = today.getUTCFullYear();
-    const curMon = today.getUTCMonth() + 1;
+    const curMon    = today.getUTCMonth() + 1;
     const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-    const SECTOR_COLORS_MAP = {
-      Crypto: '#f7931a', Technology: '#4a90e2', 'Real Estate': '#8b6d4f',
-      Energy: '#e67e22', Healthcare: '#27ae60', Financials: '#8e44ad',
-      Consumer: '#e91e8c', Industrials: '#607d8b', Materials: '#795548',
-      Utilities: '#00bcd4', Bonds: '#3f51b5', Commodities: '#ffc107',
-      International: '#ff9800',
-    };
 
     return Object.entries(SECTOR_ETFS).map(([sector, etfs]) => {
       const validEtfs = etfs.filter(e => qmap[e]).slice(0, 2);

@@ -515,6 +515,21 @@ let state = {
   eventTypeFilter: "all",
 };
 
+// Cached DOM references (queried once, reused everywhere)
+const _loader       = document.getElementById("loader");
+const _updateTime   = document.getElementById("updateTime");
+const _tabMacro     = document.getElementById("tab-macro");
+const _tabOverview  = document.getElementById("tab-overview");
+const _tabFlow      = document.getElementById("tab-flow");
+const _tabCycle     = document.getElementById("tab-cycle");
+const _netFlowView  = document.getElementById("networkFlowView");
+const _periodBtns   = document.querySelectorAll(".period-btn");
+const _tabBtns      = document.querySelectorAll(".tab-btn");
+const _tabPanels    = document.querySelectorAll(".tab-panel");
+const _btPeriodBtns = document.querySelectorAll(".bt-period-btn");
+const _scPeriodBtns = document.querySelectorAll(".sc-period-btn");
+const _cpBtns       = document.querySelectorAll(".cp-btn");
+
 // ═══════════════════════════════════════════════════════════════
 //  API helpers
 // ═══════════════════════════════════════════════════════════════
@@ -1163,14 +1178,14 @@ async function runBacktest() {
     .join(",");
 
   document.getElementById("backtestResults").classList.add("hidden");
-  document.getElementById("loader").classList.add("active");
+  _loader.classList.add("active");
 
   try {
     const data = await apiFetch(`/api/backtest?weights=${active}&period=${state.btPeriod}`);
-    document.getElementById("loader").classList.remove("active");
+    _loader.classList.remove("active");
     renderBacktestResults(data);
   } catch(e) {
-    document.getElementById("loader").classList.remove("active");
+    _loader.classList.remove("active");
     alert("回測失敗: " + e.message);
   }
 }
@@ -1280,7 +1295,7 @@ function renderBacktestResults(data) {
 document.getElementById("periodBar").addEventListener("click", e => {
   const btn = e.target.closest(".period-btn");
   if (!btn) return;
-  document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("active"));
+  _periodBtns.forEach(b => b.classList.remove("active"));
   btn.classList.add("active");
   state.period = btn.dataset.period;
   if (document.getElementById("tab-macro").classList.contains("active"))
@@ -1292,10 +1307,12 @@ document.getElementById("periodBar").addEventListener("click", e => {
 });
 
 // Tabs
-document.querySelectorAll(".tab-btn").forEach(btn => {
+_tabBtns.forEach(btn => {
   btn.addEventListener("click", () => {
-    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    // Stop network physics if leaving the flow tab
+    state.networkRunning = false;
+    _tabBtns.forEach(b => b.classList.remove("active"));
+    _tabPanels.forEach(p => p.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
     if (btn.dataset.tab === "macro")    renderMacroTab();
@@ -1313,18 +1330,18 @@ document.getElementById("sortToggle").addEventListener("click", () => {
 });
 
 // Backtest period buttons
-document.querySelectorAll(".bt-period-btn").forEach(btn => {
+_btPeriodBtns.forEach(btn => {
   btn.addEventListener("click", () => {
-    document.querySelectorAll(".bt-period-btn").forEach(b => b.classList.remove("active"));
+    _btPeriodBtns.forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     state.btPeriod = btn.dataset.btperiod;
   });
 });
 
 // Strategy comparison period buttons
-document.querySelectorAll(".sc-period-btn").forEach(btn => {
+_scPeriodBtns.forEach(btn => {
   btn.addEventListener("click", () => {
-    document.querySelectorAll(".sc-period-btn").forEach(b => b.classList.remove("active"));
+    _scPeriodBtns.forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     state.scPeriod = btn.dataset.scperiod;
   });
@@ -1353,12 +1370,20 @@ document.getElementById("macroBreadcrumb").addEventListener("click", e => {
   }
 });
 
-// Resize → re-render heatmap
+// Resize → re-render heatmap / network / macro donut
 window.addEventListener("resize", () => {
-  if (document.getElementById("tab-overview").classList.contains("active"))
+  if (_tabOverview.classList.contains("active"))
     renderHeatmap();
-  if (document.getElementById("tab-macro").classList.contains("active"))
+  if (_tabMacro.classList.contains("active"))
     renderMacroDonut();
+  if (_tabFlow.classList.contains("active") && state.flowMatrixData) {
+    if (!_netFlowView.classList.contains("hidden"))
+      renderRotationFlow(state.flowMatrixData);
+    else
+      renderNetworkGraph(state.flowMatrixData);
+  }
+  if (_tabCycle.classList.contains("active") && state.cycleData)
+    renderCycleHeatmap();
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -1559,13 +1584,13 @@ function renderMacroBar(children) {
 async function runStrategyCompare() {
   const period = state.scPeriod;
   const topN   = +document.getElementById("stratTopN").value;
-  document.getElementById("loader").classList.add("active");
+  _loader.classList.add("active");
   try {
     const data = await apiFetch(`/api/strategy-backtest?period=${period}&top_n=${topN}`);
-    document.getElementById("loader").classList.remove("active");
+    _loader.classList.remove("active");
     renderStrategyResults(data, topN);
   } catch (e) {
-    document.getElementById("loader").classList.remove("active");
+    _loader.classList.remove("active");
     alert("策略比較失敗: " + e.message);
   }
 }
@@ -1690,34 +1715,36 @@ function renderEtfMappingTable() {
       <td>$${r.mcap}B</td>
     </tr>`).join("");
 
-  document.querySelectorAll(".etfmap-row").forEach(row => {
-    row.addEventListener("click", () => {
-      const sym = row.dataset.sym;
-      if (!state.selected.includes(sym)) {
-        if (state.selected.length >= 6) state.selected.shift();
-        state.selected.push(sym);
-      }
-      document.querySelector('[data-tab="trends"]').click();
-    });
+}
+
+// One-time setup: row click delegation and sortable columns
+(function setupEtfMapListeners() {
+  document.getElementById("etfMapBody").addEventListener("click", e => {
+    const row = e.target.closest(".etfmap-row");
+    if (!row) return;
+    const sym = row.dataset.sym;
+    if (!state.selected.includes(sym)) {
+      if (state.selected.length >= 6) state.selected.shift();
+      state.selected.push(sym);
+    }
+    document.querySelector('[data-tab="trends"]').click();
   });
 
-  // Sortable columns
   document.querySelectorAll("#etfMapTable th.sortable").forEach(th => {
     th.style.cursor = "pointer";
     th.addEventListener("click", () => {
       const col = th.dataset.col;
-      if (ETF_MAP_SORT.col === col) ETF_MAP_SORT.asc = !ETF_MAP_SORT.asc;
-      else { ETF_MAP_SORT.col = col; ETF_MAP_SORT.asc = true; }
+      ETF_MAP_SORT.asc = ETF_MAP_SORT.col === col ? !ETF_MAP_SORT.asc : true;
+      ETF_MAP_SORT.col = col;
       renderEtfMappingTable();
     });
   });
-}
 
-// Attach search input (once)
-document.getElementById("etfMapSearch").addEventListener("input", e => {
-  ETF_MAP_FILTER.search = e.target.value;
-  renderEtfMappingTable();
-});
+  document.getElementById("etfMapSearch").addEventListener("input", e => {
+    ETF_MAP_FILTER.search = e.target.value;
+    renderEtfMappingTable();
+  });
+})();
 
 // ═══════════════════════════════════════════════════════════════
 //  11.  FLOW & CHIPS TAB
@@ -1931,11 +1958,7 @@ function renderNetworkGraph(data) {
       y: H / 2 + (H * 0.35) * Math.sin(angle),
       vx: 0, vy: 0,
       r: Math.max(18, Math.sqrt(data.mcaps[i] || 1) * 2.2),
-      color: (({ Crypto:"#f7931a",Technology:"#4a90e2","Real Estate":"#8b6d4f",
-        Energy:"#e67e22",Healthcare:"#27ae60",Financials:"#8e44ad",
-        Consumer:"#e91e8c",Industrials:"#607d8b",Materials:"#795548",
-        Utilities:"#00bcd4",Bonds:"#3f51b5",Commodities:"#ffc107",
-        International:"#ff9800" })[sec] || "#58a6ff"),
+      color: SECTOR_COLORS[sec] || "#58a6ff",
       label: sec,
     };
   });
@@ -2025,15 +2048,15 @@ function renderNetworkGraph(data) {
 }
 
 // Chip period buttons
-document.querySelectorAll(".cp-btn").forEach(btn => {
+_cpBtns.forEach(btn => {
   btn.addEventListener("click", () => {
-    document.querySelectorAll(".cp-btn").forEach(b => b.classList.remove("active"));
+    _cpBtns.forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
-    state.chipPeriod   = btn.dataset.cp;
-    state.chipsData    = null;
-    renderChipCharts();
+    state.chipPeriod = btn.dataset.cp;
+    state.chipsData  = null;
     apiFetch(`/api/chips?period=${state.chipPeriod}`).then(d => {
-      state.chipsData = d; state.chipsDataPeriod = state.chipPeriod;
+      state.chipsData      = d;
+      state.chipsDataPeriod = state.chipPeriod;
       renderChipCharts();
     });
   });
@@ -2088,11 +2111,7 @@ function renderRotationFlow(data) {
       y: H / 2 + R * Math.sin(angle),
       score: data.flow_scores[i],
       mcap:  data.mcaps[i] || 1,
-      color: (({ Crypto:"#f7931a",Technology:"#4a90e2","Real Estate":"#8b6d4f",
-        Energy:"#e67e22",Healthcare:"#27ae60",Financials:"#8e44ad",
-        Consumer:"#e91e8c",Industrials:"#607d8b",Materials:"#795548",
-        Utilities:"#00bcd4",Bonds:"#3f51b5",Commodities:"#ffc107",
-        International:"#ff9800" })[sec] || "#58a6ff"),
+      color: SECTOR_COLORS[sec] || "#58a6ff",
     };
   });
 
@@ -2328,26 +2347,18 @@ function renderPercentileRanks() {
   }).join("");
 }
 
-// Resize → re-render network and heatmap
-window.addEventListener("resize", () => {
-  if (document.getElementById("tab-flow").classList.contains("active") && state.flowMatrixData) {
-    if (!document.getElementById("networkFlowView").classList.contains("hidden"))
-      renderRotationFlow(state.flowMatrixData);
-    else
-      renderNetworkGraph(state.flowMatrixData);
-  }
-  if (document.getElementById("tab-cycle").classList.contains("active") && state.cycleData)
-    renderCycleHeatmap();
-});
 
 // ═══════════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════════
 
+function _setUpdateTime() {
+  _updateTime.textContent = "更新於 " + new Date().toLocaleTimeString("zh-TW");
+}
+
 async function init() {
-  document.getElementById("loader").classList.add("active");
+  _loader.classList.add("active");
   try {
-    // Load quotes, macro, events, and cycle data in parallel
     [state.quotes, state.macroData, state.eventsData, state.cycleData] = await Promise.all([
       apiFetch("/api/quotes"),
       apiFetch(`/api/macro?period=${state.period}`),
@@ -2355,8 +2366,7 @@ async function init() {
       apiFetch("/api/cycle"),
     ]);
     state._macroDataPeriod = state.period;
-    document.getElementById("updateTime").textContent =
-      "更新於 " + new Date().toLocaleTimeString("zh-TW");
+    _setUpdateTime();
     renderMacroView();
     buildSymbolPicker();
     state.weights = {};
@@ -2364,21 +2374,18 @@ async function init() {
       state.weights[q.symbol] = TEMPLATES.balanced[q.symbol] ?? 0;
     });
   } finally {
-    document.getElementById("loader").classList.remove("active");
+    _loader.classList.remove("active");
   }
 
   setInterval(async () => {
     state.trendSeriesCache = {};
-    state.macroData = null;
-    state.flowMatrixData = null;
-    state.chipsData = null;
+    state.macroData        = null;
+    state.flowMatrixData   = null;
+    state.chipsData        = null;
     state.quotes = await apiFetch("/api/quotes");
-    document.getElementById("updateTime").textContent =
-      "更新於 " + new Date().toLocaleTimeString("zh-TW");
-    if (document.getElementById("tab-overview").classList.contains("active"))
-      renderOverview();
-    if (document.getElementById("tab-macro").classList.contains("active"))
-      renderMacroTab();
+    _setUpdateTime();
+    if (_tabOverview.classList.contains("active")) renderOverview();
+    if (_tabMacro.classList.contains("active"))    renderMacroTab();
   }, 60_000);
 }
 
