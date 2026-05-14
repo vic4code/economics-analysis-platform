@@ -738,7 +738,7 @@ body {
 }
 .chip-select:focus { outline: none; border-color: var(--accent); }
 
-.chip-period-row { display: flex; gap: 6px; }
+.chip-period-row, .chip-mode-row { display: flex; gap: 6px; }
 .cp-btn {
   padding: 4px 12px;
   border-radius: var(--radius-sm);
@@ -751,6 +751,32 @@ body {
 }
 .cp-btn:hover { color: var(--text); border-color: var(--accent); }
 .cp-btn.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+.cm-btn {
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.15s;
+}
+.cm-btn:hover { color: var(--text); border-color: var(--accent); }
+.cm-btn.active { background: #8e44ad; color: #fff; border-color: #8e44ad; }
+/* Network subtabs */
+.network-subtabs { display: flex; gap: 6px; margin-bottom: 0.75rem; }
+.nsb {
+  padding: 5px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.82rem;
+  transition: all 0.15s;
+}
+.nsb:hover  { color: var(--text); border-color: var(--accent); }
+.nsb.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
 
 .chip-charts-grid {
   display: grid;

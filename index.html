@@ -355,7 +355,7 @@
   <section class="panel">
     <div class="panel-header">
       <h2>法人籌碼</h2>
-      <span class="panel-hint">模擬三大法人每日淨買超（機構 / 聰明錢 / 散戶），單位：百萬美元</span>
+      <span class="panel-hint">模擬三大法人每日淨買超，單位：百萬美元</span>
     </div>
     <div class="chip-controls">
       <label class="field-label">板塊：</label>
@@ -364,6 +364,10 @@
         <button class="cp-btn active" data-cp="1m">1M</button>
         <button class="cp-btn" data-cp="3m">3M</button>
         <button class="cp-btn" data-cp="6m">6M</button>
+      </div>
+      <div class="chip-mode-row">
+        <button class="cm-btn active" data-cm="us" title="機構法人 / 聰明錢 / 散戶">🇺🇸 美式</button>
+        <button class="cm-btn" data-cm="tw" title="外資 / 投信 / 自營商">🇹🇼 台式</button>
       </div>
     </div>
     <div class="chip-charts-grid">
@@ -380,11 +384,19 @@
 
   <section class="panel">
     <div class="panel-header">
-      <h2>板塊相關性網絡圖</h2>
-      <span class="panel-hint">基於近1年月報酬相關性 — 藍線=正相關，橘線=負相關，節點大小=AUM</span>
+      <h2>板塊關係圖</h2>
     </div>
-    <div class="network-wrap">
-      <canvas id="networkCanvas"></canvas>
+    <div class="network-subtabs" id="networkSubtabs">
+      <button class="nsb active" data-nsb="corr">🕸 相關性網絡</button>
+      <button class="nsb" data-nsb="flow">↗ 資金輪動流向</button>
+    </div>
+    <div id="networkCorrView">
+      <div class="panel-hint" style="margin-bottom:0.75rem">基於近1年月報酬相關性 — 藍線=正相關，橘線=負相關，節點大小=AUM</div>
+      <div class="network-wrap"><canvas id="networkCanvas"></canvas></div>
+    </div>
+    <div id="networkFlowView" class="hidden">
+      <div class="panel-hint" style="margin-bottom:0.75rem">箭頭方向 = 資金估計流出（紅）→ 流入（綠）板塊，根據流向強度差異繪製</div>
+      <div class="network-wrap"><canvas id="networkFlowCanvas"></canvas></div>
     </div>
   </section>
 
@@ -494,6 +506,7 @@ let state = {
   flowMatrixPeriod:null,
   chipSector:      "Technology",
   chipPeriod:      "1m",
+  chipMode:        "us",
   networkNodes:    null,
   networkRunning:  false,
   // Events & Cycles
@@ -1836,14 +1849,18 @@ function renderChipCharts() {
   // Bar chart: stacked institutional/smart/retail
   const bCtx = document.getElementById("chipBarChart").getContext("2d");
   if (state.chipBarChart) { state.chipBarChart.destroy(); state.chipBarChart = null; }
+  const isTW = (state.chipMode === "tw");
+  const chipLabels = isTW
+    ? ["外資", "投信", "自營商"]
+    : ["機構法人", "聰明錢", "散戶"];
   state.chipBarChart = new Chart(bCtx, {
     type: "bar",
     data: {
       labels: chipRow.dates,
       datasets: [
-        { label: "機構法人", data: chipRow.institutional, backgroundColor: "rgba(74,144,226,0.75)", stack: "s" },
-        { label: "聰明錢",   data: chipRow.smart_money,   backgroundColor: "rgba(142,68,173,0.65)", stack: "s" },
-        { label: "散戶",     data: chipRow.retail,         backgroundColor: "rgba(231,76,60,0.55)",  stack: "s" },
+        { label: chipLabels[0], data: chipRow.institutional, backgroundColor: "rgba(74,144,226,0.75)", stack: "s" },
+        { label: chipLabels[1], data: chipRow.smart_money,   backgroundColor: "rgba(142,68,173,0.65)", stack: "s" },
+        { label: chipLabels[2], data: chipRow.retail,         backgroundColor: "rgba(231,76,60,0.55)",  stack: "s" },
       ]
     },
     options: {
@@ -1872,7 +1889,7 @@ function renderChipCharts() {
     data: {
       labels: chipRow.dates,
       datasets: [
-        { label: "累積機構買超", data: chipRow.cumulative, borderColor: "#4a90e2",
+        { label: isTW ? "累積外資買超" : "累積機構買超", data: chipRow.cumulative, borderColor: "#4a90e2",
           backgroundColor: "rgba(74,144,226,0.12)", fill: true, tension: 0.3,
           yAxisID: "y", pointRadius: 0 },
         ...(priceRef ? [{ label: `${secEtf.symbol} 現價`, data: priceRef,
@@ -2013,7 +2030,7 @@ document.querySelectorAll(".cp-btn").forEach(btn => {
     document.querySelectorAll(".cp-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     state.chipPeriod   = btn.dataset.cp;
-    state.chipsData    = null; // force reload
+    state.chipsData    = null;
     renderChipCharts();
     apiFetch(`/api/chips?period=${state.chipPeriod}`).then(d => {
       state.chipsData = d; state.chipsDataPeriod = state.chipPeriod;
@@ -2021,6 +2038,141 @@ document.querySelectorAll(".cp-btn").forEach(btn => {
     });
   });
 });
+
+// Chip mode buttons (US / TW labels)
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".cm-btn");
+  if (!btn) return;
+  document.querySelectorAll(".cm-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  state.chipMode = btn.dataset.cm;
+  renderChipCharts();
+});
+
+// Network sub-tabs (correlation / flow rotation)
+document.getElementById("networkSubtabs").addEventListener("click", e => {
+  const btn = e.target.closest(".nsb");
+  if (!btn) return;
+  document.querySelectorAll(".nsb").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  if (btn.dataset.nsb === "corr") {
+    document.getElementById("networkCorrView").classList.remove("hidden");
+    document.getElementById("networkFlowView").classList.add("hidden");
+    if (state.flowMatrixData) renderNetworkGraph(state.flowMatrixData);
+  } else {
+    document.getElementById("networkCorrView").classList.add("hidden");
+    document.getElementById("networkFlowView").classList.remove("hidden");
+    if (state.flowMatrixData) renderRotationFlow(state.flowMatrixData);
+  }
+});
+
+// ── Rotation Flow Canvas (directional arrows) ──────────────────────────
+
+function renderRotationFlow(data) {
+  const canvas = document.getElementById("networkFlowCanvas");
+  canvas.width  = canvas.parentElement.clientWidth  || 700;
+  canvas.height = canvas.parentElement.clientHeight || 420;
+  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, W, H);
+
+  const n = data.sectors.length;
+  const R = Math.min(W, H) * 0.38;
+
+  // Sectors arranged in a circle
+  const nodes = data.sectors.map((sec, i) => {
+    const angle = (2 * Math.PI * i) / n - Math.PI / 2;
+    return {
+      id: sec, i,
+      x: W / 2 + R * Math.cos(angle),
+      y: H / 2 + R * Math.sin(angle),
+      score: data.flow_scores[i],
+      mcap:  data.mcaps[i] || 1,
+      color: (({ Crypto:"#f7931a",Technology:"#4a90e2","Real Estate":"#8b6d4f",
+        Energy:"#e67e22",Healthcare:"#27ae60",Financials:"#8e44ad",
+        Consumer:"#e91e8c",Industrials:"#607d8b",Materials:"#795548",
+        Utilities:"#00bcd4",Bonds:"#3f51b5",Commodities:"#ffc107",
+        International:"#ff9800" })[sec] || "#58a6ff"),
+    };
+  });
+
+  // Top 3 inflow (high score) and top 3 outflow (low score) sectors
+  const sorted  = [...nodes].sort((a, b) => b.score - a.score);
+  const inflow  = sorted.slice(0, 3);
+  const outflow = sorted.slice(-3);
+
+  // Draw rotation arrows: each outflow → each inflow
+  function drawArrow(x1, y1, x2, y2, color, alpha, width) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 1) return;
+    const nx = dx / len, ny = dy / len;
+    const nodeR = 22;
+    const sx = x1 + nx * nodeR, sy = y1 + ny * nodeR;
+    const ex = x2 - nx * nodeR, ey = y2 - ny * nodeR;
+    // Control point: offset perpendicular for curve
+    const cx = (sx + ex) / 2 - ny * len * 0.18;
+    const cy = (sy + ey) / 2 + nx * len * 0.18;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = width;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.quadraticCurveTo(cx, cy, ex, ey);
+    ctx.stroke();
+    // Arrowhead
+    const tailX = ex - nx * 8 + ny * 5, tailY = ey - ny * 8 - nx * 5;
+    const tailX2 = ex - nx * 8 - ny * 5, tailY2 = ey - ny * 8 + nx * 5;
+    ctx.beginPath();
+    ctx.moveTo(ex, ey);
+    ctx.lineTo(tailX, tailY);
+    ctx.lineTo(tailX2, tailY2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  outflow.forEach(out => {
+    inflow.forEach(inn => {
+      if (out.id === inn.id) return;
+      const strength = Math.min(1, (Math.abs(out.score) + inn.score) / 20);
+      drawArrow(out.x, out.y, inn.x, inn.y, "#f7931a", 0.25 + strength * 0.45, 1 + strength * 2.5);
+    });
+  });
+
+  // Draw nodes
+  nodes.forEach(nd => {
+    const r = Math.max(18, Math.sqrt(nd.mcap) * 1.8);
+    ctx.beginPath();
+    ctx.arc(nd.x, nd.y, r, 0, Math.PI * 2);
+    const isInflow  = inflow.some(n => n.id === nd.id);
+    const isOutflow = outflow.some(n => n.id === nd.id);
+    ctx.fillStyle   = nd.color + "cc";
+    ctx.fill();
+    ctx.strokeStyle = isInflow ? "#4ade80" : isOutflow ? "#f87171" : nd.color;
+    ctx.lineWidth   = isInflow || isOutflow ? 2.5 : 1;
+    ctx.stroke();
+
+    ctx.fillStyle = "#fff";
+    const fs = Math.max(9, Math.min(11, r * 0.55));
+    ctx.font = `bold ${fs}px Inter,sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(nd.id.length > 8 ? nd.id.slice(0, 7) + "…" : nd.id, nd.x, nd.y - 3);
+    ctx.font = `${Math.max(8, fs - 1)}px Inter,sans-serif`;
+    ctx.fillStyle = nd.score > 0 ? "#4ade80" : "#f87171";
+    ctx.fillText((nd.score > 0 ? "+" : "") + nd.score, nd.x, nd.y + 8);
+  });
+
+  // Legend
+  ctx.globalAlpha = 1;
+  ctx.font = "11px Inter,sans-serif";
+  ctx.fillStyle = "#4ade80"; ctx.textAlign = "left";
+  ctx.fillText("→ 資金流入（綠框）", 12, H - 28);
+  ctx.fillStyle = "#f87171";
+  ctx.fillText("← 資金流出（紅框）", 12, H - 12);
+}
 
 // ═══════════════════════════════════════════════════════════════
 //  12.  EVENTS & CYCLES TAB
@@ -2178,8 +2330,12 @@ function renderPercentileRanks() {
 
 // Resize → re-render network and heatmap
 window.addEventListener("resize", () => {
-  if (document.getElementById("tab-flow").classList.contains("active") && state.flowMatrixData)
-    renderNetworkGraph(state.flowMatrixData);
+  if (document.getElementById("tab-flow").classList.contains("active") && state.flowMatrixData) {
+    if (!document.getElementById("networkFlowView").classList.contains("hidden"))
+      renderRotationFlow(state.flowMatrixData);
+    else
+      renderNetworkGraph(state.flowMatrixData);
+  }
   if (document.getElementById("tab-cycle").classList.contains("active") && state.cycleData)
     renderCycleHeatmap();
 });
