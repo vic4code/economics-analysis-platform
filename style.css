@@ -20,7 +20,7 @@
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
   font-size: 14px;
@@ -179,7 +179,7 @@ body {
   font-size: 1rem;
   font-weight: 600;
   margin-bottom: 0.2rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', 'Courier New', Consolas, monospace;
 }
 .stat-sector {
   font-size: 0.72rem;
@@ -280,7 +280,7 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.mono { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; }
+.mono { font-family: 'JetBrains Mono', 'Courier New', Consolas, monospace; font-size: 0.82rem; }
 
 .icon-btn {
   background: var(--surface2);
@@ -312,7 +312,7 @@ body {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', 'Courier New', Consolas, monospace;
 }
 .sym-btn:hover {
   border-color: var(--sc);
@@ -341,7 +341,7 @@ body {
   background: var(--surface2);
   color: var(--text-muted);
   font-weight: 500;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', 'Courier New', Consolas, monospace;
 }
 
 /* ── Backtest Builder ───────────────────────────────────────────── */
@@ -409,7 +409,7 @@ body {
   background: var(--surface2);
 }
 .w-symbol {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', 'Courier New', Consolas, monospace;
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text);
@@ -431,7 +431,7 @@ body {
   font-size: 0.78rem;
   padding: 2px 5px;
   text-align: right;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', 'Courier New', Consolas, monospace;
 }
 .w-input:focus { outline: none; border-color: var(--accent2); }
 .w-pct { font-size: 0.72rem; color: var(--text-muted); }
@@ -493,7 +493,7 @@ body {
 .bt-stat-value {
   font-size: 1.1rem;
   font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', 'Courier New', Consolas, monospace;
 }
 
 .bt-composition { margin-top: 1.5rem; }
@@ -522,7 +522,7 @@ body {
 }
 .comp-sym {
   width: 40px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', 'Courier New', Consolas, monospace;
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text);
@@ -530,7 +530,7 @@ body {
 }
 .comp-pct {
   width: 36px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', 'Courier New', Consolas, monospace;
   font-size: 0.78rem;
   color: var(--text-muted);
 }

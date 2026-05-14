@@ -4,10 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Fund Flow Dashboard | 全球資金流向</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Google Fonts loaded async; local stack used as fallback -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'" />
+  <!-- Chart.js bundled locally for offline/air-gapped environments -->
+  <script src="chart.umd.min.js"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -233,7 +234,7 @@ const SECTOR_COLORS = {
 
 const TEMPLATES = {
   aggressive: {QQQ:25, SMH:20, IBIT:15, XLE:10, XLF:10, XLY:10, EEM:10},
-  balanced:   {SPY:30, QQQ:20, GLD:10, AGG:15, VNQ:10, EEM:10, XLE:5},
+  balanced:   {QQQ:20, GLD:10, AGG:15, VNQ:15, EEM:10, XLE:10, XLV:10, TLT:10},
   defensive:  {AGG:30, TLT:20, XLP:15, XLU:10, GLD:15, VNQ:10},
   crypto:     {IBIT:50, BITO:30, QQQ:10, ARKK:10},
 };
