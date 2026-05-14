@@ -109,6 +109,21 @@ jobs:
           echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
           echo "🔍 Preview: $PREVIEW_URL"
 
+      - name: Post deploy failure to PR
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let log = '(no log captured)';
+            try { log = fs.readFileSync('/tmp/deploy.log', 'utf8').slice(-3000); } catch(e) {}
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ❌ Deploy failed — debug log\n\`\`\`\n${log}\n\`\`\``
+            });
+
       - name: Comment Preview URL on PR
         if: github.event_name == 'pull_request' && steps.preview.outputs.preview_url != ''
         uses: actions/github-script@v7
