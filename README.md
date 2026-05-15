@@ -1,104 +1,122 @@
-# 🌍 Global Market Dashboard
+# Fund Flow Dashboard
 
-A minimal, responsive, and visually clean web application that aggregates key global financial indicators into a single-page dashboard. Designed for quick observation of the world’s markets without setting up any backend or database.
+A single-page global capital flow analysis platform built with Next.js. All market data is simulated using a deterministic seeded PRNG — results are fully reproducible within a calendar day.
 
-## 🚀 Live Demo
+**Live:** [fund-flow-dashboard.vercel.app](https://fund-flow-dashboard.vercel.app) · deployed automatically on every merge to `main`
 
-Visit the GitHub Pages deployment: [https://vic4code.github.io/economics-analysis-platform/](https://vic4code.github.io/economics-analysis-platform/)
+---
 
-## 🎯 Project Goals
+## Features
 
-- Provide a one-stop glance at global markets: stocks, bonds, currencies, and commodities.
-- Use public embeds (TradingView, FRED, etc.) instead of managing raw data.
-- Deliver a mobile-friendly, responsive interface for smooth usage on desktop and smartphones.
-- Serve as a personalized financial observatory that is lightweight yet expandable.
+| Tab | Description |
+|-----|-------------|
+| **Macro Flow** | Recursive capital hierarchy tree — equities → sectors → ETFs with AUM and period change |
+| **Overview** | Quote grid for all 31 ETFs with sortable columns and sparklines |
+| **Trend Analysis** | Multi-symbol candlestick / line overlay with event annotations |
+| **Backtest** | Portfolio vs SPY backtest with custom weights; momentum rotation strategy |
+| **Flow & Chips** | Sankey capital rotation diagram, quadrant bubble chart, institutional chip tracker |
+| **Events & Cycles** | Economic cycle rotation clock, event timeline, sector heatmap, 52-week percentile ranks |
 
-## 📊 Dashboard Components
+---
 
-1. **Stock Markets**
-   - S&P 500
-   - NASDAQ
-   - Taiwan Weighted Index
-2. **Bonds**
-   - US Treasury 10Y Yield Curve (FRED embed)
-3. **Currencies**
-   - US Dollar Index (DXY)
-   - USD/JPY
-4. **Commodities**
-   - WTI Crude Oil
-   - Gold
+## Tech stack
 
-## 🎨 Frontend Style Guide
+| Layer | Choice |
+|-------|--------|
+| Framework | Next.js 15 (App Router) |
+| Language | TypeScript |
+| Styling | CSS custom properties + Tailwind utilities |
+| Charts | Chart.js 4 (via react-chartjs-2) + custom SVG components |
+| Data | Deterministic mock engine (`src/lib/data-engine/`) |
+| Deployment | Vercel (Singapore region) |
+| CI | GitHub Actions — build check + Vercel deploy on every PR and push to `main` |
 
-- **Layout**
-  - Responsive grid (two columns on desktop, one column on mobile).
-  - Each indicator sits inside a Card UI with subtle shadow and rounded corners.
-- **Color Palette**
-  - Background: light gray or off-white (`#f9f9f9`)
-  - Cards: white (`#ffffff`)
-  - Text: dark gray (`#333333`)
-  - Accent: teal (`#009688`) or navy (`#003366`)
-- **Typography**
-  - Headings: bold, clean sans-serif (e.g., Inter, Roboto)
-  - Body: regular sans-serif with minimal text (title + short note)
-- **Interactions**
-  - Hover on card → slight scale-up & shadow glow
-  - Cards are clickable for the full TradingView/FRED page
+---
 
-## 📱 Responsive Design (RWD)
+## Project structure
 
-- **Desktop**
-  - Grid layout with two columns.
-  - Charts fill roughly 40–45% width each.
-- **Tablet / Mobile**
-  - Collapses into a single-column stack.
-  - Cards scale to 100% width.
-  - Navigation bar converts to a hamburger menu.
-
-## ⚙️ How It Works
-
-- Uses TradingView embed widgets for stocks, FX, and commodities.
-- Uses a FRED iframe embed for bond yields.
-- Combines everything into a single HTML file (no backend, no database).
-- Adds a minimal CSS file for clean styling and responsive behavior.
-
-## 📂 Project Structure
-
-```text
-economics-analysis-platform/
-├── index.html   # Main dashboard page with embeds
-├── style.css    # Custom styling (cards, grid, RWD)
-├── serve.py     # Helper script to run a local HTTP server
-└── README.md    # Project documentation
+```
+.
+├── .claude/                    # Claude Code settings
+├── .github/workflows/          # CI: build check + Vercel deploy
+├── src/
+│   ├── app/
+│   │   ├── api/                # Next.js route handlers (one per data function)
+│   │   ├── globals.css         # Dark-theme design system (CSS custom properties)
+│   │   ├── layout.tsx
+│   │   └── page.tsx            # Root SPA shell — fetches data, owns tab state
+│   ├── components/
+│   │   ├── charts/             # Reusable chart primitives (Sankey, RotationClock, …)
+│   │   ├── layout/             # TopBar, TabNav, Loader
+│   │   └── tabs/               # One component per tab
+│   ├── lib/
+│   │   ├── data-engine/        # All mock data generation (TypeScript port)
+│   │   └── utils/              # Color helpers, formatters
+│   └── types/                  # Shared TypeScript interfaces
+├── tests/                      # Unit tests (jest — run separately)
+│   ├── components/charts/
+│   └── lib/data-engine/
+├── vercel.json                 # Vercel project config
+├── next.config.ts
+└── tailwind.config.ts
 ```
 
-## ✨ Future Extensions
+> **Legacy files** (`index.html`, `style.css`, `data.js`, `data_engine.py`, `serve.py`) are kept for historical reference but are no longer part of the active deployment.
 
-- Add a fear/greed index widget for market sentiment.
-- Add an event timeline section (earnings, FOMC meetings).
-- Add a personal notes panel for daily observations.
-- Add a dark mode toggle.
+---
 
-## 📸 Mockup Idea
+## Local development
 
-Imagine a clean white dashboard:
+```bash
+# Install dependencies (first time only)
+npm install
 
-- Top header: “🌍 Global Market Dashboard”.
-- Below: grid of 6–7 cards, each showing a chart (stocks, bonds, FX, commodities).
-- On mobile: cards stack vertically for easy scrolling.
-- Each card has a title, chart, and optional note.
+# Start the dev server
+npm run dev          # → http://localhost:3000
 
-## 🛠️ Local Preview (Desktop & Mobile)
+# Type check
+npm run type-check
 
-Because the dashboard is a static site, you can use the included `serve.py` helper to run a local HTTP server and review it from any device on the same network.
+# Production build
+npm run build
+```
 
-1. Make sure Python 3.8+ is installed.
-2. From the project root, run:
-   ```bash
-   python3 serve.py
-   ```
-   This binds to `0.0.0.0:8000` so both your computer and your phone/tablet can reach it.
-3. The script prints two URLs:
-   - `http://localhost:8000` for your computer.
-   - `http://<your-local-ip>:8000` for other devices (open this on your phone while connected to the same Wi‑Fi).
-4. When you are done, press `Ctrl+C` in the terminal to stop the server.
+---
+
+## Data engine
+
+All data is generated client-side (API routes call `src/lib/data-engine/`). The engine uses a seeded PRNG anchored to `floor(Date.now() / 86400000)` so every symbol produces the same series within a calendar day.
+
+| Module | Description |
+|--------|-------------|
+| `quotes.ts` | Current quote snapshot for all 31 ETFs (60 s TTL) |
+| `series.ts` | OHLCV daily series for one ETF |
+| `macro.ts` | Recursive capital hierarchy tree |
+| `backtest.ts` | Portfolio vs SPY backtest |
+| `chips.ts` | Institutional / smart-money / retail net-buy + flow matrix |
+| `cycle.ts` | Monthly return history + percentile rank per sector |
+| `stats.ts` | Shared: total return, CAGR, Sharpe, max-drawdown (252 days/year) |
+| `prng.ts` | Seeded PRNG — `SeededRandom` + `seedFor(symbol)` |
+| `constants.ts` | `ETF_UNIVERSE`, `SECTOR_DRIFT`, `MOCK_EVENTS`, `MACRO_TREE` |
+
+---
+
+## Adding a new API endpoint
+
+1. Add a generator function to `src/lib/data-engine/`
+2. Re-export it from `src/lib/data-engine/index.ts`
+3. Create `src/app/api/<name>/route.ts` calling the function
+4. Consume via `fetch('/api/<name>')` in the relevant tab component
+
+## Adding a new ETF
+
+1. Add an entry to `ETF_UNIVERSE` in `src/lib/data-engine/constants.ts`
+2. If it introduces a new sector, add the drift to `SECTOR_DRIFT` and a colour to `SECTOR_COLORS` in `src/lib/utils/colors.ts`
+
+---
+
+## Deployment
+
+Every push to `main` triggers a Vercel production deploy via `.github/workflows/vercel.yml`. Every PR gets an isolated preview deployment with a unique URL posted as a PR comment.
+
+Required repository secret: `VERCEL_TOKEN`
