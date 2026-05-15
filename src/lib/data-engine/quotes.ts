@@ -19,7 +19,7 @@ export interface Quote {
 }
 
 export class QuoteCache {
-  private static readonly TTL = 60_000;
+  private static readonly TTL = 30_000; // 30s — match snapshot TTL
   private _data: Quote[] | null = null;
   private _ts = 0;
   private _inFlight: Promise<Quote[]> | null = null;
@@ -28,7 +28,6 @@ export class QuoteCache {
     if (this._data && Date.now() - this._ts < QuoteCache.TTL) {
       return this._data;
     }
-    // Deduplicate concurrent refreshes
     if (this._inFlight) return this._inFlight;
     this._inFlight = this._refresh().finally(() => { this._inFlight = null; });
     return this._inFlight;
@@ -38,31 +37,55 @@ export class QuoteCache {
     const yearStart = new Date().getUTCFullYear() + '-01-01';
     const symbols   = Object.keys(ETF_UNIVERSE);
 
-    // Fetch all series in parallel + snapshot quotes for intraday accuracy
-    const [seriesResults, snapshots] = await Promise.all([
-      Promise.all(symbols.map(sym => generateSeries(sym, 380).catch(() => []))),
-      fetchYahooSnapshots().catch(() => new Map()),
-    ]);
+    // Snapshots: single batch call — most reliable, gives us price + change_1d
+    const snapshots = await fetchYahooSnapshots().catch(() => new Map<string, ReturnType<typeof Map.prototype.get>>());
+
+    // Historical series for period returns — use concurrency limiter in yahoo.ts
+    // Fetch with a grace period so quote response isn't blocked waiting for all history
+    const seriesResults = await Promise.all(
+      symbols.map(sym => generateSeries(sym, 400).catch(() => [] as import('./series').DailySeries[])),
+    );
 
     const result: Quote[] = [];
 
     for (let i = 0; i < symbols.length; i++) {
       const sym    = symbols[i];
       const series = seriesResults[i];
-      if (series.length < 30) continue;
+      const snap   = snapshots.get(sym) as { price: number; change_1d: number; volume: number; mcap: number } | undefined;
 
-      const n   = series.length;
-      const cur = series[n - 1].close;
+      // If we have neither snapshot nor meaningful history, skip
+      if (!snap && series.length < 5) continue;
 
-      const p = (idx: number) =>
-        idx >= 0 && idx < n ? series[idx].close : series[0].close;
+      // Price: always prefer the live snapshot (real-time / 15-min delayed)
+      const livePrice = snap?.price;
 
+      if (livePrice && series.length < 5) {
+        // Only snapshot available — use it with zeros for period returns
+        result.push({
+          symbol:     sym,
+          name:       ETF_UNIVERSE[sym].name,
+          sector:     ETF_UNIVERSE[sym].sector,
+          mcap:       snap?.mcap ?? ETF_UNIVERSE[sym].mcap,
+          price:      livePrice,
+          change_1d:  snap?.change_1d ?? 0,
+          change_5d:  0,
+          change_1m:  0,
+          change_3m:  0,
+          change_6m:  0,
+          change_1y:  0,
+          change_ytd: 0,
+          volume:     snap?.volume ?? 0,
+        });
+        continue;
+      }
+
+      const n = series.length;
+      const p = (idx: number) => idx >= 0 && idx < n ? series[idx].close : series[0].close;
       const ytdI = series.findIndex(b => b.date >= yearStart);
       const cYtd = ytdI >= 0 ? series[ytdI].close : series[0].close;
 
-      const snap = snapshots.get(sym);
-      // Use snapshot price as base so all period returns reflect today's intraday price
-      const basePrice = snap?.price ?? Math.round(cur * 100) / 100;
+      // Use snapshot price as the base (live price), fall back to last close
+      const basePrice = livePrice ?? (Math.round(series[n - 1].close * 100) / 100);
       const pct = (past: number) => Math.round((basePrice / past - 1) * 10000) / 100;
 
       result.push({

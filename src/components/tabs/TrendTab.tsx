@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { createChart, ColorType, CrosshairMode, LineStyle, AreaSeries, type IChartApi, type ISeriesApi } from 'lightweight-charts';
+import { createChart, ColorType, CrosshairMode, LineStyle, LineSeries, type IChartApi, type ISeriesApi } from 'lightweight-charts';
 import { SECTOR_COLORS, TREND_PALETTE } from '@/lib/utils/colors';
 import type { Quote, MockEvent, Period, DailySeries } from '@/types';
 
@@ -137,16 +137,15 @@ export default function TrendTab({
       const s = allSeries[sym];
       if (!s || s.length === 0) return;
       const color = TREND_PALETTE[i % TREND_PALETTE.length];
-      const series: ISeriesApi<'Area'> = chart.addSeries(AreaSeries, {
-        lineColor: color,
-        topColor: color + '30',
-        bottomColor: color + '04',
-        lineWidth: 2,
+      const series: ISeriesApi<'Line'> = chart.addSeries(LineSeries, {
+        color,
+        lineWidth: selected.length === 1 ? 2 : 1,
         title: sym,
         priceLineVisible: false,
         lastValueVisible: true,
         crosshairMarkerVisible: true,
         crosshairMarkerRadius: 4,
+        lineType: 0,
       });
 
       const byDate = Object.fromEntries(s.map(b => [b.date, b.close]));
