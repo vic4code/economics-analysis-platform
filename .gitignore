@@ -10,3 +10,6 @@ out/
 
 # TypeScript
 tsconfig.tsbuildinfo
+
+# Claude Code agent worktrees (ephemeral, never commit)
+.claude/worktrees/
