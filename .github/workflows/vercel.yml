@@ -88,7 +88,7 @@ jobs:
         run: |
           set -euo pipefail
           vercel deploy --prod --token="$VERCEL_TOKEN" 2>&1 | tee /tmp/deploy.log
-          DEPLOY_URL=$(grep -E '^https://' /tmp/deploy.log | tail -1)
+          DEPLOY_URL=$(grep -oE 'https://[a-zA-Z0-9-]+\.vercel\.app' /tmp/deploy.log | tail -1)
           echo "✅ Production: $DEPLOY_URL"
 
       # ── Preview deploy (every PR) ──────────────────────────────
@@ -102,7 +102,7 @@ jobs:
         run: |
           set -euo pipefail
           vercel deploy --token="$VERCEL_TOKEN" 2>&1 | tee /tmp/deploy.log
-          PREVIEW_URL=$(grep -E '^https://' /tmp/deploy.log | tail -1)
+          PREVIEW_URL=$(grep -oE 'https://[a-zA-Z0-9-]+\.vercel\.app' /tmp/deploy.log | tail -1)
           echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
           echo "🔍 Preview: $PREVIEW_URL"
 
