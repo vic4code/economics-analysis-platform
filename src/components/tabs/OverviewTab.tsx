@@ -3,6 +3,7 @@ import { useRef, useEffect, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
 import { SECTOR_COLORS, changeColor, changeTextColor, fmtPct } from '@/lib/utils/colors';
+import { getChartTheme } from '@/lib/utils/chartTheme';
 import type { Quote, Period } from '@/types';
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
@@ -201,7 +202,7 @@ export default function OverviewTab({ quotes, period, onSelectSymbolForTrend }: 
 
   if (!quotes.length) return (
     <main className="tab-panel active">
-      <div className="panel"><p style={{color:'#64748b'}}>載入中…</p></div>
+      <div className="panel"><p style={{color:'#64748b'}}>Loading…</p></div>
     </main>
   );
 
@@ -238,13 +239,14 @@ export default function OverviewTab({ quotes, period, onSelectSymbolForTrend }: 
   const barData = {
     labels: secData.map(d => d.sector),
     datasets: [{
-      label: '漲跌 %',
+      label: 'Return %',
       data: secData.map(d => +d.change.toFixed(2)),
       backgroundColor: secData.map(d => changeColor(d.change, 0.85)),
       borderColor: secData.map(d => changeColor(d.change, 1)),
       borderWidth: 1, borderRadius: 4,
     }],
   };
+  const ct = getChartTheme();
   const barOptions = {
     indexAxis: 'y' as const,
     responsive: true, maintainAspectRatio: false,
@@ -254,12 +256,12 @@ export default function OverviewTab({ quotes, period, onSelectSymbolForTrend }: 
     },
     scales: {
       x: {
-        grid: { color: 'rgba(255,255,255,0.05)' },
-        ticks: { color: '#94a3b8', callback: (v: string | number) => fmtPct(v as number) },
+        grid: { color: ct.grid },
+        ticks: { color: ct.tick, callback: (v: string | number) => fmtPct(v as number) },
       },
       y: {
         grid: { display: false },
-        ticks: { color: '#e2e8f0', font: { size: 11 } },
+        ticks: { color: ct.text, font: { size: 11 } },
       },
     },
   };
@@ -289,7 +291,7 @@ export default function OverviewTab({ quotes, period, onSelectSymbolForTrend }: 
   }
 
   const mapColumns: [string, string][] = [
-    ['symbol', '代碼'], ['', '名稱'], ['sector', '板塊'], ['price', '現價'],
+    ['symbol', 'Ticker'], ['', 'Name'], ['sector', 'Sector'], ['price', 'Price'],
     ['change_1d', '1D'], ['change_1m', '1M'], ['change_1y', '1Y'], ['mcap', 'AUM(B)'],
   ];
 
@@ -298,7 +300,7 @@ export default function OverviewTab({ quotes, period, onSelectSymbolForTrend }: 
       {/* Stat Cards */}
       <section className="stat-row">
         <div className="stat-card">
-          <div className="stat-label">🔥 最強</div>
+          <div className="stat-label">🔥 Top Gainer</div>
           <div className="stat-symbol">{best?.symbol ?? '—'}</div>
           <div className="stat-change" style={{color: changeTextColor((best?.[key] as number) ?? 0)}}>
             {fmtPct((best?.[key] as number) ?? 0)}
@@ -306,7 +308,7 @@ export default function OverviewTab({ quotes, period, onSelectSymbolForTrend }: 
           <div className="stat-sector">{best?.sector ?? '—'}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">🧊 最弱</div>
+          <div className="stat-label">🧊 Top Loser</div>
           <div className="stat-symbol">{worst?.symbol ?? '—'}</div>
           <div className="stat-change" style={{color: changeTextColor((worst?.[key] as number) ?? 0)}}>
             {fmtPct((worst?.[key] as number) ?? 0)}
@@ -314,15 +316,15 @@ export default function OverviewTab({ quotes, period, onSelectSymbolForTrend }: 
           <div className="stat-sector">{worst?.sector ?? '—'}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">🌊 熱門板塊</div>
+          <div className="stat-label">🌊 Hot Sector</div>
           <div className="stat-symbol">{hotSector?.sector ?? '—'}</div>
           <div className="stat-change" style={{color: changeTextColor(hotSector?.avg ?? 0)}}>
             {fmtPct(hotSector?.avg ?? 0)}
           </div>
-          <div className="stat-sector">加權平均漲幅</div>
+          <div className="stat-sector">Weighted avg. return</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">📍 大盤 SPY</div>
+          <div className="stat-label">📍 S&amp;P 500 SPY</div>
           <div className="stat-symbol">{spy ? `$${spy.price.toFixed(2)}` : '—'}</div>
           <div className="stat-change" style={{color: changeTextColor((spy?.[key] as number) ?? 0)}}>
             {spy ? fmtPct((spy[key] as number) ?? 0) : '—'}
@@ -334,22 +336,22 @@ export default function OverviewTab({ quotes, period, onSelectSymbolForTrend }: 
       {/* Heatmap */}
       <section className="panel">
         <div className="panel-header">
-          <h2>全球資金熱力圖</h2>
-          <span className="panel-hint">色塊大小 = 市值規模 ／ 顏色深淺 = 漲跌幅</span>
+          <h2>Global Capital Heatmap</h2>
+          <span className="panel-hint">Size = market cap · Color = % change</span>
         </div>
         <HeatmapCanvas quotes={quotes} period={period} />
         <div className="heatmap-legend">
-          <span className="legend-label">跌 &lt; −3%</span>
+          <span className="legend-label">&lt; −3%</span>
           <div className="legend-bar"></div>
-          <span className="legend-label">漲 &gt; +3%</span>
+          <span className="legend-label">&gt; +3%</span>
         </div>
       </section>
 
       {/* Sector bar */}
       <section className="panel">
         <div className="panel-header">
-          <h2>板塊漲跌排行</h2>
-          <span className="panel-hint">各板塊加權平均漲跌幅</span>
+          <h2>Sector Performance</h2>
+          <span className="panel-hint">Market-cap weighted avg. return per sector</span>
         </div>
         <div className="chart-wrap medium">
           <Bar data={barData} options={barOptions} />
@@ -359,14 +361,14 @@ export default function OverviewTab({ quotes, period, onSelectSymbolForTrend }: 
       {/* ETF ranking table */}
       <section className="panel">
         <div className="panel-header">
-          <h2>ETF 漲跌排行</h2>
-          <button className="icon-btn" onClick={() => setSortAsc(!sortAsc)} title="切換排序">↕</button>
+          <h2>ETF Performance Ranking</h2>
+          <button className="icon-btn" onClick={() => setSortAsc(!sortAsc)} title="Toggle sort">↕</button>
         </div>
         <div className="table-wrap">
           <table className="etf-table">
             <thead>
               <tr>
-                <th>代碼</th><th>名稱</th><th>板塊</th><th>現價</th><th>漲跌 %</th>
+                <th>Ticker</th><th>Name</th><th>Sector</th><th>Price</th><th>Change %</th>
               </tr>
             </thead>
             <tbody>
@@ -389,13 +391,13 @@ export default function OverviewTab({ quotes, period, onSelectSymbolForTrend }: 
       {/* ETF Mapping Table */}
       <section className="panel">
         <div className="panel-header">
-          <h2>ETF 產業對應總表</h2>
-          <span className="panel-hint">點選標的可加入趨勢比較</span>
+          <h2>ETF Universe</h2>
+          <span className="panel-hint">Click a row to add to Trend Analysis</span>
         </div>
         <div className="etfmap-controls">
           <input
             type="text"
-            placeholder="搜尋代碼或名稱…"
+            placeholder="Search symbol or name…"
             className="etfmap-search"
             value={mapSearch}
             onChange={e => setMapSearch(e.target.value)}
@@ -407,7 +409,7 @@ export default function OverviewTab({ quotes, period, onSelectSymbolForTrend }: 
                 className={`ef-btn${mapSector === sec ? ' active' : ''}`}
                 onClick={() => setMapSector(sec)}
               >
-                {sec === 'all' ? '全部' : sec}
+                {sec === 'all' ? 'All' : sec}
               </button>
             ))}
           </div>
@@ -435,7 +437,7 @@ export default function OverviewTab({ quotes, period, onSelectSymbolForTrend }: 
                   key={r.symbol}
                   className="etfmap-row"
                   style={{ cursor: 'pointer' }}
-                  title="點選加入趨勢比較"
+                  title="Click to add to Trend Analysis"
                   onClick={() => onSelectSymbolForTrend(r.symbol)}
                 >
                   <td>

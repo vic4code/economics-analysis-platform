@@ -40,8 +40,8 @@ export interface SankeyLayout {
 
 // ── Layout constants ────────────────────────────────────────────────────────
 const NODE_WIDTH = 136;
-const NODE_GAP   = 8;
-const MARGIN     = { top: 24, right: 16, bottom: 24, left: 16 };
+const NODE_GAP   = 10;
+const MARGIN     = { top: 28, right: 16, bottom: 28, left: 16 };
 
 // ── Pure layout algorithm (exported for unit tests) ─────────────────────────
 export function computeSankeyLayout(
@@ -80,7 +80,7 @@ export function computeSankeyLayout(
     const totalVal = nodes.reduce((s, n) => s + n.value, 0) || 1;
     let y = MARGIN.top;
     nodes.forEach(n => {
-      n.height = Math.max(22, ((n.value / totalVal) * (availH - totalPad)));
+      n.height = Math.max(28, ((n.value / totalVal) * (availH - totalPad)));
       n.y      = y;
       y += n.height + NODE_GAP;
     });
@@ -179,18 +179,106 @@ export default function SankeyChart({ data }: Props) {
   const totalFlow = sources.reduce((s, n) => s + n.mcap * Math.abs(n.score), 0);
   const totalFlowB = (totalFlow / 100).toFixed(1);
 
+  // Node renderer: gradient + accent bar + label + score badge + AUM
+  function renderNode(n: SankeyNode, x: number, isSource: boolean) {
+    const gradId = `ng-${n.id.replace(/\s+/g, '-')}`;
+    const accentBarW = 3;
+    const labelX = x + NODE_WIDTH / 2;
+    const labelY = n.y + n.height / 2;
+    // Score display
+    const isOut = isSource;
+    const scoreStr = isOut
+      ? `▼ ${Math.abs(n.score).toFixed(1)}`
+      : `▲ ${n.score.toFixed(1)}`;
+    const scoreColor = isOut ? '#f87171' : '#4ade80';
+
+    return (
+      <g key={n.id}>
+        <defs>
+          <linearGradient id={gradId} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%"   stopColor={n.color + 'dd'} />
+            <stop offset="100%" stopColor={n.color + '88'} />
+          </linearGradient>
+        </defs>
+
+        {/* Main node rect with gradient */}
+        <rect
+          x={x} y={n.y}
+          width={NODE_WIDTH} height={n.height}
+          rx={6}
+          fill={`url(#${gradId})`}
+        />
+
+        {/* Accent bar */}
+        <rect
+          x={x} y={n.y}
+          width={accentBarW} height={n.height}
+          rx={3}
+          fill={n.color}
+          fillOpacity={1}
+        />
+
+        {/* Name label */}
+        {n.height >= 20 && (
+          <text
+            x={labelX}
+            y={labelY - (n.height >= 52 ? 14 : 6)}
+            textAnchor="middle"
+            fill="#fff"
+            fontSize={11}
+            fontWeight="700"
+            fontFamily="Inter, sans-serif"
+          >
+            {n.id.length > 14 ? n.id.slice(0, 13) + '…' : n.id}
+          </text>
+        )}
+
+        {/* Score badge */}
+        {n.height >= 38 && (
+          <text
+            x={labelX}
+            y={labelY + 4}
+            textAnchor="middle"
+            fill={scoreColor}
+            fontSize={10}
+            fontWeight="600"
+            fontFamily="Inter, sans-serif"
+          >
+            {scoreStr}
+          </text>
+        )}
+
+        {/* AUM sub-label */}
+        {n.height >= 52 && (
+          <text
+            x={labelX}
+            y={labelY + 18}
+            textAnchor="middle"
+            fill="rgba(255,255,255,0.55)"
+            fontSize={9}
+            fontFamily="Inter, sans-serif"
+          >
+            AUM ${n.mcap}B
+          </text>
+        )}
+      </g>
+    );
+  }
+
   return (
     <div style={{ position: 'relative', width: '100%' }}>
       {/* Legend row */}
       <div className="sankey-legend">
         <span className="sankey-legend-item sankey-legend-out">
-          ← 資金流出板塊
+          <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#f87171', marginRight: 5 }} />
+          Outflow
         </span>
         <span className="sankey-legend-center">
-          估計轉移總量 ~${totalFlowB}B
+          Est. total rotation ~${totalFlowB}B
         </span>
         <span className="sankey-legend-item sankey-legend-in">
-          資金流入板塊 →
+          Inflow
+          <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#4ade80', marginLeft: 5 }} />
         </span>
       </div>
 
@@ -200,6 +288,11 @@ export default function SankeyChart({ data }: Props) {
         aria-label="Capital flow Sankey diagram"
       >
         <defs>
+          <radialGradient id="bg-grad" cx="50%" cy="50%" r="70%">
+            <stop offset="0%"   stopColor="var(--accent)" stopOpacity="0.03" />
+            <stop offset="100%" stopColor="transparent"   stopOpacity="0" />
+          </radialGradient>
+
           {links.map((lk, i) => (
             <linearGradient
               key={i}
@@ -212,6 +305,9 @@ export default function SankeyChart({ data }: Props) {
           ))}
         </defs>
 
+        {/* Subtle radial background */}
+        <rect width="100%" height="100%" fill="url(#bg-grad)" />
+
         {/* Links (drawn behind nodes) */}
         {links.map((lk, i) => {
           const srcX  = srcRightX;
@@ -221,131 +317,75 @@ export default function SankeyChart({ data }: Props) {
           const y2top = lk.target.y + lk.ty;
           const y2bot = y2top + lk.width;
           const isHov = hoveredLink === i;
+          const midX  = (srcX + snkX) / 2;
+          const midY  = (y1top + y2top) / 2 + lk.width / 2;
+          const flowB = (lk.value * lk.source.mcap * 0.01).toFixed(1);
 
           return (
-            <path
-              key={i}
-              d={linkPath(srcX, y1top, y1bot, snkX, y2top, y2bot)}
-              fill={`url(#lg-${i})`}
-              opacity={hoveredLink === null ? 0.65 : isHov ? 0.9 : 0.2}
-              style={{ cursor: 'pointer', transition: 'opacity 0.15s' }}
-              onMouseEnter={e => {
-                setHoveredLink(i);
-                setTooltip({
-                  text: `${lk.source.id} → ${lk.target.id}：估計 $${(lk.value * lk.source.mcap * 0.01).toFixed(1)}B`,
-                  x: e.clientX + 12,
-                  y: e.clientY - 30,
-                });
-              }}
-              onMouseLeave={() => { setHoveredLink(null); setTooltip(null); }}
-            />
+            <g key={i}>
+              <path
+                d={linkPath(srcX, y1top, y1bot, snkX, y2top, y2bot)}
+                fill={`url(#lg-${i})`}
+                fillOpacity={hoveredLink === null ? 0.45 : isHov ? 0.85 : 0.2}
+                style={{
+                  cursor: 'pointer',
+                  transition: 'fill-opacity 0.15s',
+                  filter: isHov
+                    ? `drop-shadow(0 0 6px rgb(${hexToRgb(lk.source.color)}))`
+                    : undefined,
+                }}
+                onMouseEnter={e => {
+                  setHoveredLink(i);
+                  setTooltip({
+                    text: `${lk.source.id} → ${lk.target.id}: ~$${(lk.value * lk.source.mcap * 0.01).toFixed(1)}B`,
+                    x: e.clientX + 12,
+                    y: e.clientY - 30,
+                  });
+                }}
+                onMouseLeave={() => { setHoveredLink(null); setTooltip(null); }}
+              />
+              {/* Flow label on wide links */}
+              {lk.width > 12 && (
+                <text
+                  x={midX}
+                  y={midY}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill="#fff"
+                  fontSize={8}
+                  opacity={0.7}
+                  fontFamily="Inter, sans-serif"
+                  style={{ pointerEvents: 'none' }}
+                >
+                  ${flowB}b
+                </text>
+              )}
+            </g>
           );
         })}
 
         {/* Source nodes */}
-        {sources.map(n => (
-          <g key={n.id}>
-            <rect
-              x={sourceX} y={n.y}
-              width={NODE_WIDTH} height={n.height}
-              rx={4}
-              fill={n.color}
-              fillOpacity={0.85}
-            />
-            <text
-              x={sourceX + NODE_WIDTH / 2}
-              y={n.y + n.height / 2 - 7}
-              textAnchor="middle"
-              fill="#fff"
-              fontSize={11}
-              fontWeight="600"
-              fontFamily="Inter, sans-serif"
-            >
-              {n.id.length > 14 ? n.id.slice(0, 13) + '…' : n.id}
-            </text>
-            <text
-              x={sourceX + NODE_WIDTH / 2}
-              y={n.y + n.height / 2 + 8}
-              textAnchor="middle"
-              fill="#f87171"
-              fontSize={10}
-              fontFamily="Inter, sans-serif"
-            >
-              {n.score.toFixed(1)} 流出
-            </text>
-            <text
-              x={sourceX + NODE_WIDTH / 2}
-              y={n.y + n.height / 2 + 21}
-              textAnchor="middle"
-              fill="rgba(255,255,255,0.55)"
-              fontSize={9}
-              fontFamily="Inter, sans-serif"
-            >
-              AUM ${n.mcap}B
-            </text>
-          </g>
-        ))}
+        {sources.map(n => renderNode(n, sourceX, true))}
 
         {/* Sink nodes */}
-        {sinks.map(n => (
-          <g key={n.id}>
-            <rect
-              x={sinkX} y={n.y}
-              width={NODE_WIDTH} height={n.height}
-              rx={4}
-              fill={n.color}
-              fillOpacity={0.85}
-            />
-            <text
-              x={sinkX + NODE_WIDTH / 2}
-              y={n.y + n.height / 2 - 7}
-              textAnchor="middle"
-              fill="#fff"
-              fontSize={11}
-              fontWeight="600"
-              fontFamily="Inter, sans-serif"
-            >
-              {n.id.length > 14 ? n.id.slice(0, 13) + '…' : n.id}
-            </text>
-            <text
-              x={sinkX + NODE_WIDTH / 2}
-              y={n.y + n.height / 2 + 8}
-              textAnchor="middle"
-              fill="#4ade80"
-              fontSize={10}
-              fontFamily="Inter, sans-serif"
-            >
-              +{n.score.toFixed(1)} 流入
-            </text>
-            <text
-              x={sinkX + NODE_WIDTH / 2}
-              y={n.y + n.height / 2 + 21}
-              textAnchor="middle"
-              fill="rgba(255,255,255,0.55)"
-              fontSize={9}
-              fontFamily="Inter, sans-serif"
-            >
-              AUM ${n.mcap}B
-            </text>
-          </g>
-        ))}
+        {sinks.map(n => renderNode(n, sinkX, false))}
 
         {/* Column headers */}
         <text
-          x={sourceX + NODE_WIDTH / 2} y={12}
+          x={sourceX + NODE_WIDTH / 2} y={14}
           textAnchor="middle" fill="#f87171"
           fontSize={11} fontWeight="700"
           fontFamily="Inter, sans-serif"
         >
-          流出板塊
+          Outflow
         </text>
         <text
-          x={sinkX + NODE_WIDTH / 2} y={12}
+          x={sinkX + NODE_WIDTH / 2} y={14}
           textAnchor="middle" fill="#4ade80"
           fontSize={11} fontWeight="700"
           fontFamily="Inter, sans-serif"
         >
-          流入板塊
+          Inflow
         </text>
       </svg>
 

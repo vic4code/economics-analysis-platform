@@ -129,16 +129,16 @@ export default function CycleTab({ eventsData, cycleData }: Props) {
       {/* Economic Cycle Rotation Clock ─────────────────────────── */}
       <section className="panel">
         <div className="panel-header">
-          <h2>經濟週期定位儀</h2>
+          <h2>Economic Cycle Locator</h2>
           <span className="panel-hint">
-            根據各板塊 52 週百分位排名推估當前市場所處的經濟週期階段
+            Phase estimated from 52-week percentile rank across sectors
           </span>
         </div>
         {cycleData && cycleData.length > 0 ? (
           <div className="clock-layout">
             <RotationClock cycleData={cycleData} />
             <div className="clock-sidebar">
-              <div className="clock-sidebar-title">板塊強弱排名</div>
+              <div className="clock-sidebar-title">Sector Strength Rank</div>
               {sortedCycle.slice(0, 8).map(d => {
                 const clr = d.percentile_rank >= 70 ? '#4ade80'
                           : d.percentile_rank >= 40 ? '#fbbf24'
@@ -163,24 +163,24 @@ export default function CycleTab({ eventsData, cycleData }: Props) {
             </div>
           </div>
         ) : (
-          <p style={{ color: '#64748b' }}>載入中…</p>
+          <p style={{ color: '#64748b' }}>Loading…</p>
         )}
       </section>
 
       {/* Event Timeline ─────────────────────────────────────────── */}
       <section className="panel">
         <div className="panel-header">
-          <h2>重大市場事件時間軸</h2>
-          <span className="panel-hint">點選事件卡查看詳情與受影響板塊</span>
+          <h2>Major Market Events</h2>
+          <span className="panel-hint">Event details and affected sectors</span>
         </div>
         <div className="event-filters">
           {(
             [
-              ['all', '全部'],
-              ['fed', 'Fed/央行'],
-              ['macro', '總體經濟'],
-              ['earnings', '財報/科技'],
-              ['geopolitical', '地緣政治'],
+              ['all', 'All'],
+              ['fed', 'Fed / CB'],
+              ['macro', 'Macro'],
+              ['earnings', 'Earnings'],
+              ['geopolitical', 'Geopolitical'],
             ] as [string, string][]
           ).map(([t, l]) => (
             <button
@@ -208,7 +208,7 @@ export default function CycleTab({ eventsData, cycleData }: Props) {
                   </span>
                   <span className="ev-mag">
                     {'★'.repeat(Math.abs(ev.magnitude)) || '—'}
-                    {ev.magnitude < 0 ? ' 利空' : ' 利多'}
+                    {ev.magnitude < 0 ? ' Bearish' : ' Bullish'}
                   </span>
                 </div>
                 <div className="ev-title">{ev.title}</div>
@@ -233,9 +233,9 @@ export default function CycleTab({ eventsData, cycleData }: Props) {
       {/* Cycle Heatmap ──────────────────────────────────────────── */}
       <section className="panel">
         <div className="panel-header">
-          <h2>板塊歷史月份熱力圖</h2>
+          <h2>Sector Monthly Return Heatmap</h2>
           <span className="panel-hint">
-            各板塊過去 ~25 個月漲跌幅 — 顏色越深代表漲跌越大
+            ~25-month sector returns — deeper color = larger move
           </span>
         </div>
         {cycleData && <CycleHeatmapCanvas cycleData={cycleData} />}
@@ -244,9 +244,9 @@ export default function CycleTab({ eventsData, cycleData }: Props) {
       {/* Percentile Ranks ───────────────────────────────────────── */}
       <section className="panel">
         <div className="panel-header">
-          <h2>52 週百分位排名</h2>
+          <h2>52-Week Percentile Rank</h2>
           <span className="panel-hint">
-            目前1年期報酬在過去 2 年歷史中的相對位置，100 = 歷史最高
+            1Y return ranked against 2Y history · 100 = all-time high
           </span>
         </div>
         <div className="percentile-grid">

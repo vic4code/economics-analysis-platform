@@ -6,6 +6,7 @@ import {
   Tooltip, Legend, type TooltipItem,
 } from 'chart.js';
 import { changeColor, changeTextColor, fmtPct } from '@/lib/utils/colors';
+import { getChartTheme } from '@/lib/utils/chartTheme';
 import type { MacroNode, Period } from '@/types';
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
@@ -30,8 +31,9 @@ export default function MacroTab({ macroData, period }: Props) {
   // Reset path when period changes
   useEffect(() => { setMacroPath(['global']); }, [period]);
 
-  if (!macroData) return <div className="panel"><p style={{color:'#64748b'}}>載入中…</p></div>;
+  if (!macroData) return <div className="panel"><p style={{color:'var(--text-muted)'}}>Loading…</p></div>;
 
+  const ct = getChartTheme();
   const currentId = macroPath[macroPath.length - 1];
   const current = findNode(macroData, currentId) ?? macroData;
   const totalAum = current.children?.length
@@ -76,7 +78,7 @@ export default function MacroTab({ macroData, period }: Props) {
   const barData = {
     labels: sorted.map(c => c.name),
     datasets: [{
-      label: '漲跌 %',
+      label: 'Return %',
       data: sorted.map(c => c.change),
       backgroundColor: sorted.map(c => changeColor(c.change, 0.85)),
       borderColor: sorted.map(c => changeColor(c.change, 1)),
@@ -92,12 +94,12 @@ export default function MacroTab({ macroData, period }: Props) {
     },
     scales: {
       x: {
-        grid: { color: 'rgba(255,255,255,0.05)' },
-        ticks: { color: '#94a3b8', callback: (v: string | number) => fmtPct(v as number) }
+        grid: { color: ct.grid },
+        ticks: { color: ct.tick, callback: (v: string | number) => fmtPct(v as number) }
       },
       y: {
         grid: { display: false },
-        ticks: { color: '#e2e8f0', font: { size: 11 } }
+        ticks: { color: ct.text, font: { size: 11 } }
       }
     }
   };
@@ -125,15 +127,15 @@ export default function MacroTab({ macroData, period }: Props) {
 
         <div className="macro-summary">
           <div className="macro-sum-item">
-            <span className="macro-sum-label">管理資產規模</span>
-            <span className="macro-sum-val">{totalAum.toFixed(1)} 兆美元</span>
+            <span className="macro-sum-label">Total AUM</span>
+            <span className="macro-sum-val">{totalAum.toFixed(1)} T USD</span>
           </div>
           <div className="macro-sum-item">
-            <span className="macro-sum-label">期間漲跌</span>
+            <span className="macro-sum-label">Period Return</span>
             <span className="macro-sum-val" style={{color: changeTextColor(current.change)}}>{fmtPct(current.change)}</span>
           </div>
           <div className="macro-sum-item">
-            <span className="macro-sum-label">子類別數</span>
+            <span className="macro-sum-label">Sub-categories</span>
             <span className="macro-sum-val">{current.children?.length ?? 0}</span>
           </div>
         </div>
@@ -142,14 +144,14 @@ export default function MacroTab({ macroData, period }: Props) {
           <div className="macro-donut-wrap">
             <Doughnut data={donutData} options={donutOptions} />
             <div className="donut-center">
-              <div className="donut-label">全球 AUM</div>
+              <div className="donut-label">Global AUM</div>
               <div className="donut-value">{totalAum.toFixed(1)} T</div>
             </div>
           </div>
           <div className="macro-bar-wrap">
             <div className="panel-header" style={{marginBottom:'0.5rem'}}>
-              <h2>{current.name} — 子類別漲跌</h2>
-              <span className="panel-hint">依漲跌幅排序</span>
+              <h2>{current.name} — Sub-category Returns</h2>
+              <span className="panel-hint">Sorted by return</span>
             </div>
             <div className="chart-wrap" style={{height:'300px'}}>
               <Bar data={barData} options={barOptions} />
@@ -166,7 +168,7 @@ export default function MacroTab({ macroData, period }: Props) {
                 key={c.id}
                 className={`macro-card${hasChildren ? ' macro-card-drillable' : ''}`}
                 onClick={() => hasChildren && drillDown(c.id)}
-                title={hasChildren ? '點擊深入查看' : ''}
+                title={hasChildren ? 'Click to drill down' : ''}
               >
                 <div className="macro-card-color" style={{background: c.color}} />
                 <div className="macro-card-body">
@@ -187,11 +189,11 @@ export default function MacroTab({ macroData, period }: Props) {
         {etfs.length > 0 && (
           <div>
             <div className="panel-header" style={{marginTop:'1.5rem'}}>
-              <h2>{current.name} — 代表 ETF</h2>
+              <h2>{current.name} — Representative ETFs</h2>
             </div>
             <div className="table-wrap">
               <table className="etf-table">
-                <thead><tr><th>代碼</th><th>名稱</th><th>現價</th><th>漲跌 %</th></tr></thead>
+                <thead><tr><th>Ticker</th><th>Name</th><th>Price</th><th>Change %</th></tr></thead>
                 <tbody>
                   {etfs.map(e => (
                     <tr key={e.symbol}>

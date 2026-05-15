@@ -19,6 +19,24 @@
   --radius:    10px;
   --radius-sm: 6px;
   --shadow:    0 4px 16px rgba(0,0,0,0.4);
+  --chart-grid:rgba(255,255,255,0.05);
+  --chart-tick:#94a3b8;
+}
+
+[data-theme="light"] {
+  --bg:        #f6f8fa;
+  --surface:   #ffffff;
+  --surface2:  #eef0f3;
+  --border:    #d0d7de;
+  --text:      #1f2328;
+  --text-muted:#636c76;
+  --accent:    #0969da;
+  --accent2:   #0550ae;
+  --pos:       #1a7f37;
+  --neg:       #cf222e;
+  --shadow:    0 4px 16px rgba(0,0,0,0.12);
+  --chart-grid:rgba(0,0,0,0.06);
+  --chart-tick:#57606a;
 }
 
 html { scroll-behavior: smooth; }
@@ -99,11 +117,11 @@ body {
 }
 .data-badge {
   font-size: 0.7rem;
-  background: #2d333b;
+  background: var(--surface2);
   color: #ffc107;
   padding: 3px 8px;
   border-radius: 20px;
-  border: 1px solid #4a3f1a;
+  border: 1px solid var(--border);
 }
 .update-time {
   font-size: 0.7rem;
@@ -974,7 +992,7 @@ body {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(13, 17, 23, 0.75);
+  background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(4px);
   z-index: 999;
   flex-direction: column;

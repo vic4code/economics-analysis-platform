@@ -12,6 +12,7 @@ import {
   Filler,
 } from 'chart.js';
 import { SECTOR_COLORS, fmtPct } from '@/lib/utils/colors';
+import { getChartTheme } from '@/lib/utils/chartTheme';
 import { TEMPLATES } from '@/types';
 import type { Quote } from '@/types';
 
@@ -122,12 +123,13 @@ export default function BacktestTab({ quotes }: Props) {
     }
   }
 
+  const ct = getChartTheme();
   const lineOpts: Record<string, unknown> = {
     responsive: true,
     maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: { labels: { color: '#e2e8f0', font: { size: 12 } } },
+      legend: { labels: { color: ct.text, font: { size: 12 } } },
       tooltip: {
         callbacks: {
           label: (ctx: { dataset: { label: string }; raw: number | null }) =>
@@ -137,35 +139,35 @@ export default function BacktestTab({ quotes }: Props) {
     },
     scales: {
       x: {
-        ticks: { color: '#64748b', maxTicksLimit: 12, maxRotation: 0 },
-        grid: { color: 'rgba(255,255,255,0.04)' },
+        ticks: { color: ct.tick, maxTicksLimit: 12, maxRotation: 0 },
+        grid: { color: ct.grid },
       },
       y: {
         ticks: {
-          color: '#94a3b8',
+          color: ct.tick,
           callback: (v: unknown) => (v as number).toFixed(0),
         },
-        grid: { color: 'rgba(255,255,255,0.06)' },
+        grid: { color: ct.grid },
         title: {
           display: true,
-          text: '指數化報酬（起點=100）',
-          color: '#64748b',
+          text: 'Indexed Return (base = 100)',
+          color: ct.tick,
         },
       },
     },
   };
 
   const STRATS = [
-    { key: 'momentum' as const, label: `動量輪動 (Top${topN})`, color: '#4ade80' },
-    { key: 'equal_weight' as const, label: '等權重', color: '#60a5fa' },
-    { key: 'spy' as const, label: 'SPY 大盤', color: '#94a3b8' },
+    { key: 'momentum' as const, label: `Momentum Rotation (Top${topN})`, color: '#4ade80' },
+    { key: 'equal_weight' as const, label: 'Equal Weight', color: '#60a5fa' },
+    { key: 'spy' as const, label: 'SPY Benchmark', color: '#94a3b8' },
   ];
 
   const STAT_ROWS = [
-    { key: 'total_return' as const, label: '總報酬' },
-    { key: 'cagr' as const, label: '年化 CAGR' },
+    { key: 'total_return' as const, label: 'Total Return' },
+    { key: 'cagr' as const, label: 'CAGR' },
     { key: 'sharpe' as const, label: 'Sharpe Ratio' },
-    { key: 'max_drawdown' as const, label: '最大回撤' },
+    { key: 'max_drawdown' as const, label: 'Max Drawdown' },
   ];
 
   return (
@@ -173,8 +175,8 @@ export default function BacktestTab({ quotes }: Props) {
       {/* Strategy Comparison */}
       <section className="panel">
         <div className="panel-header">
-          <h2>策略比較</h2>
-          <span className="panel-hint">動量輪動 vs 等權重 vs SPY 大盤</span>
+          <h2>Strategy Comparison</h2>
+          <span className="panel-hint">Momentum rotation vs Equal-weight vs SPY</span>
         </div>
         <div className="strat-controls">
           <div className="bt-period-row">
@@ -184,12 +186,12 @@ export default function BacktestTab({ quotes }: Props) {
                 className={`sc-period-btn${scPeriod === p ? ' active' : ''}`}
                 onClick={() => setScPeriod(p)}
               >
-                {p === '1y' ? '1 年' : p === '3y' ? '3 年' : '5 年'}
+                {p === '1y' ? '1Y' : p === '3y' ? '3Y' : '5Y'}
               </button>
             ))}
           </div>
           <div className="strat-topn">
-            每次輪動持有前
+            Hold top
             <select
               className="topn-select"
               value={topN}
@@ -201,7 +203,7 @@ export default function BacktestTab({ quotes }: Props) {
                 </option>
               ))}
             </select>
-            強勢主題
+            Top sectors
           </div>
           <button
             className="run-btn"
@@ -209,7 +211,7 @@ export default function BacktestTab({ quotes }: Props) {
             onClick={runStrategy}
             disabled={stratLoading}
           >
-            {stratLoading ? '計算中…' : '▶ 執行比較'}
+            {stratLoading ? 'Computing…' : '▶ Run Comparison'}
           </button>
         </div>
 
@@ -282,9 +284,8 @@ export default function BacktestTab({ quotes }: Props) {
               />
             </div>
             <div className="strat-note">
-              <strong>動量輪動：</strong>
-              每 21 個交易日，依過去一個月報酬選出前 N
-              強板塊，等權重持有至下次調倉。
+              <strong>Momentum Rotation:</strong>{' '}
+              Every 21 trading days, select the top-N sectors by prior-month return and hold equal-weight until the next rebalance.
             </div>
           </div>
         )}
@@ -293,14 +294,14 @@ export default function BacktestTab({ quotes }: Props) {
       {/* Custom Backtest */}
       <section className="panel">
         <div className="panel-header">
-          <h2>自訂組合回測</h2>
+          <h2>Custom Portfolio Backtest</h2>
           <span className="panel-hint">
-            配置各 ETF 權重，系統計算歷史績效並與 S&P 500 比較
+            Assign ETF weights to compute historical performance vs S&P 500
           </span>
         </div>
         <div className="backtest-builder">
           <div className="builder-controls">
-            <label className="field-label">回測區間</label>
+            <label className="field-label">Backtest Period</label>
             <div className="bt-period-row">
               {['1y', '3y', '5y'].map(p => (
                 <button
@@ -308,12 +309,12 @@ export default function BacktestTab({ quotes }: Props) {
                   className={`bt-period-btn${btPeriod === p ? ' active' : ''}`}
                   onClick={() => setBtPeriod(p)}
                 >
-                  {p === '1y' ? '1 年' : p === '3y' ? '3 年' : '5 年'}
+                  {p === '1y' ? '1Y' : p === '3y' ? '3Y' : '5Y'}
                 </button>
               ))}
             </div>
             <label className="field-label" style={{ marginTop: '1rem' }}>
-              快速模板
+              Quick Templates
             </label>
             <div className="template-row">
               {['aggressive', 'balanced', 'defensive', 'crypto'].map(tpl => (
@@ -323,12 +324,12 @@ export default function BacktestTab({ quotes }: Props) {
                   onClick={() => applyTemplate(tpl)}
                 >
                   {tpl === 'aggressive'
-                    ? '進攻型'
+                    ? 'Aggressive'
                     : tpl === 'balanced'
-                      ? '均衡型'
+                      ? 'Balanced'
                       : tpl === 'defensive'
-                        ? '防禦型'
-                        : '加密貨幣'}
+                        ? 'Defensive'
+                        : 'Crypto'}
                 </button>
               ))}
             </div>
@@ -371,9 +372,9 @@ export default function BacktestTab({ quotes }: Props) {
           </div>
           <div className="builder-actions">
             <div className="alloc-total">
-              已配置：<span>{Math.round(allocTotal)}</span>%{' '}
+              Allocated: <span>{Math.round(allocTotal)}</span>%{' '}
               {Math.round(allocTotal) !== 100 && (
-                <span className="alloc-warn">需配置 100%</span>
+                <span className="alloc-warn">Must sum to 100%</span>
               )}
             </div>
             <button
@@ -381,7 +382,7 @@ export default function BacktestTab({ quotes }: Props) {
               onClick={runBacktest}
               disabled={btLoading || Math.round(allocTotal) !== 100}
             >
-              {btLoading ? '計算中…' : '▶ 執行回測'}
+              {btLoading ? 'Computing…' : '▶ Run Backtest'}
             </button>
           </div>
         </div>
@@ -391,12 +392,12 @@ export default function BacktestTab({ quotes }: Props) {
             <div className="stats-row">
               {[
                 {
-                  label: '總報酬率',
+                  label: 'Total Return',
                   val: fmtPct(btData.stats.total_return),
                   pos: btData.stats.total_return >= 0,
                 },
                 {
-                  label: '年化報酬 CAGR',
+                  label: 'CAGR',
                   val: fmtPct(btData.stats.cagr),
                   pos: btData.stats.cagr >= 0,
                 },
@@ -406,17 +407,17 @@ export default function BacktestTab({ quotes }: Props) {
                   pos: btData.stats.sharpe >= 1,
                 },
                 {
-                  label: '最大回撤',
+                  label: 'Max Drawdown',
                   val: `-${btData.stats.max_drawdown.toFixed(2)}%`,
                   pos: false,
                 },
                 {
-                  label: 'SPY 報酬',
+                  label: 'SPY Return',
                   val: fmtPct(btData.stats.spy_return),
                   pos: btData.stats.spy_return >= 0,
                 },
                 {
-                  label: '超額報酬',
+                  label: 'Excess Return',
                   val: fmtPct(
                     btData.stats.total_return - btData.stats.spy_return,
                   ),
@@ -441,7 +442,7 @@ export default function BacktestTab({ quotes }: Props) {
                   labels: btData.portfolio.map(p => p.date),
                   datasets: [
                     {
-                      label: '我的組合',
+                      label: 'My Portfolio',
                       data: btData.portfolio.map(p => p.value),
                       borderColor: '#4a90e2',
                       backgroundColor: '#4a90e222',
@@ -451,7 +452,7 @@ export default function BacktestTab({ quotes }: Props) {
                       tension: 0.3,
                     },
                     {
-                      label: 'SPY (標普500)',
+                      label: 'SPY (S&P 500)',
                       data: btData.benchmark.map(b => b.value),
                       borderColor: '#94a3b8',
                       backgroundColor: 'transparent',
@@ -473,7 +474,7 @@ export default function BacktestTab({ quotes }: Props) {
                   marginBottom: '0.75rem',
                 }}
               >
-                組合配置
+                Portfolio Weights
               </h3>
               <div className="comp-grid">
                 {allSyms
