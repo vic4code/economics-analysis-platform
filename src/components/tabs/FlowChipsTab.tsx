@@ -88,13 +88,6 @@ export default function FlowChipsTab({ quotes, period }: Props) {
       axisLabel: { color: th.textColor },
       splitLine: { lineStyle: { color: th.gridColor } },
     },
-    markLine: {
-      silent: true,
-      data: [
-        { xAxis: (n + 1) / 2, lineStyle: { color: 'rgba(139,148,158,0.3)', type: 'dashed' } },
-        { yAxis: 1, lineStyle: { color: 'rgba(139,148,158,0.3)', type: 'dashed' } },
-      ],
-    },
     series: [{
       type: 'scatter',
       data: flowData.sectors.map((sec, i) => [
@@ -125,6 +118,14 @@ export default function FlowChipsTab({ quotes, period }: Props) {
         fontSize: 9,
         color: '#e2e8f0',
         position: 'inside',
+      },
+      markLine: {
+        silent: true,
+        symbol: 'none',
+        data: [
+          { xAxis: (n + 1) / 2, lineStyle: { color: 'rgba(139,148,158,0.3)', type: 'dashed' as const } },
+          { yAxis: 1, lineStyle: { color: 'rgba(139,148,158,0.3)', type: 'dashed' as const } },
+        ],
       },
     }],
   };
