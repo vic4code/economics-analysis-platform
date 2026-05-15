@@ -1023,3 +1023,146 @@ body {
   .chart-wrap.medium { height: 200px; }
   .name-cell    { display: none; }
 }
+
+/* ── Sankey Chart ────────────────────────────────────────────────── */
+.sankey-legend {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  padding: 0 0.25rem;
+}
+.sankey-legend-item { font-weight: 600; }
+.sankey-legend-out  { color: #f87171; }
+.sankey-legend-in   { color: #4ade80; }
+.sankey-legend-center {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+
+.sankey-tooltip {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  z-index: 1000;
+  white-space: nowrap;
+}
+
+/* ── Rotation Clock ──────────────────────────────────────────────── */
+.rotation-clock-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.clock-layout {
+  display: grid;
+  grid-template-columns: 500px 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.clock-sidebar {
+  padding-top: 0.5rem;
+}
+.clock-sidebar-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.clock-rank-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 44px;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+.clock-rank-sector {
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.clock-rank-bar-track {
+  height: 6px;
+  background: var(--surface2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.clock-rank-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.clock-rank-pct {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: right;
+  font-family: 'JetBrains Mono', 'Courier New', Consolas, monospace;
+}
+
+.clock-phase-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.clock-phase-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  transition: border-color 0.2s, background 0.2s;
+}
+.clock-phase-card.active {
+  background: rgba(255,255,255,0.03);
+}
+
+.clock-phase-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+.clock-phase-desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+.clock-phase-sectors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.clock-sector-tag {
+  font-size: 0.68rem;
+  padding: 1px 6px;
+  border: 1px solid;
+  border-radius: 10px;
+}
+
+@media (max-width: 900px) {
+  .clock-layout       { grid-template-columns: 1fr; }
+  .clock-phase-cards  { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .clock-phase-cards  { grid-template-columns: 1fr; }
+  .sankey-legend-center { display: none; }
+}

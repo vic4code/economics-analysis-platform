@@ -1,27 +1,25 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { changeColor, changeTextColor, fmtPct, SECTOR_COLORS } from '@/lib/utils/colors';
+import { RotationClock } from '@/components/charts';
 import type { MockEvent, CycleRow } from '@/types';
+import { useRef, useEffect } from 'react';
 
 const EVENT_COLORS: Record<string, string> = {
-  fed: '#4a90e2',
-  macro: '#27ae60',
-  earnings: '#f7931a',
+  fed:          '#4a90e2',
+  macro:        '#27ae60',
+  earnings:     '#f7931a',
   geopolitical: '#e74c3c',
 };
 const EVENT_ICONS: Record<string, string> = {
-  fed: '🏦',
-  macro: '📊',
-  earnings: '📈',
+  fed:          '🏦',
+  macro:        '📊',
+  earnings:     '📈',
   geopolitical: '🌐',
 };
 
 // ── Cycle Heatmap Canvas ─────────────────────────────────────────
-interface HeatmapTooltip {
-  text: string;
-  x: number;
-  y: number;
-}
+interface HeatmapTooltip { text: string; x: number; y: number }
 
 function CycleHeatmapCanvas({ cycleData }: { cycleData: CycleRow[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -31,47 +29,41 @@ function CycleHeatmapCanvas({ cycleData }: { cycleData: CycleRow[] }) {
     const canvas = canvasRef.current;
     if (!canvas || !cycleData.length) return;
     const wrapper = canvas.parentElement!;
-    const allMonths = [
-      ...new Set(cycleData.flatMap(d => Object.keys(d.monthly_returns))),
-    ].sort();
-    const sectors = cycleData.map(d => d.sector);
-    const LABEL_W = 110;
-    const CELL_H = 30;
-    const CELL_W = Math.max(
-      34,
-      Math.floor((wrapper.clientWidth - LABEL_W - 16) / allMonths.length),
-    );
-    const TOP_H = 36;
-    canvas.width = LABEL_W + allMonths.length * CELL_W + 4;
+    const allMonths = [...new Set(cycleData.flatMap(d => Object.keys(d.monthly_returns)))].sort();
+    const sectors   = cycleData.map(d => d.sector);
+    const LABEL_W   = 110;
+    const CELL_H    = 30;
+    const CELL_W    = Math.max(34, Math.floor((wrapper.clientWidth - LABEL_W - 16) / allMonths.length));
+    const TOP_H     = 36;
+    canvas.width  = LABEL_W + allMonths.length * CELL_W + 4;
     canvas.height = TOP_H + sectors.length * CELL_H + 4;
-    canvas.style.width = canvas.width + 'px';
+    canvas.style.width  = canvas.width + 'px';
     canvas.style.height = canvas.height + 'px';
     const ctx = canvas.getContext('2d')!;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = '#8b949e';
-    ctx.font = '10px Inter,sans-serif';
-    ctx.textAlign = 'center';
+    ctx.fillStyle   = '#8b949e';
+    ctx.font        = '10px Inter,sans-serif';
+    ctx.textAlign   = 'center';
     allMonths.forEach((m, j) => {
       ctx.fillText(m.slice(2), LABEL_W + j * CELL_W + CELL_W / 2, TOP_H - 8);
     });
 
     sectors.forEach((sec, i) => {
       const row = cycleData[i];
-      const y = TOP_H + i * CELL_H;
-      ctx.fillStyle = '#cdd9e5';
-      ctx.font = '11px Inter,sans-serif';
-      ctx.textAlign = 'right';
+      const y   = TOP_H + i * CELL_H;
+      ctx.fillStyle   = '#cdd9e5';
+      ctx.font        = '11px Inter,sans-serif';
+      ctx.textAlign   = 'right';
       ctx.fillText(sec, LABEL_W - 6, y + CELL_H / 2 + 4);
       allMonths.forEach((m, j) => {
         const val = row.monthly_returns[m];
-        const x = LABEL_W + j * CELL_W;
-        ctx.fillStyle =
-          val === undefined ? '#1c2333' : changeColor(val * 0.5, 0.85);
+        const x   = LABEL_W + j * CELL_W;
+        ctx.fillStyle = val === undefined ? '#1c2333' : changeColor(val * 0.5, 0.85);
         ctx.fillRect(x + 1, y + 1, CELL_W - 2, CELL_H - 2);
         if (val !== undefined && CELL_W > 38) {
           ctx.fillStyle = Math.abs(val) > 2 ? '#fff' : '#cdd9e5';
-          ctx.font = '9px Inter,sans-serif';
+          ctx.font      = '9px Inter,sans-serif';
           ctx.textAlign = 'center';
           ctx.fillText(fmtPct(val, false), x + CELL_W / 2, y + CELL_H / 2 + 3);
         }
@@ -80,19 +72,16 @@ function CycleHeatmapCanvas({ cycleData }: { cycleData: CycleRow[] }) {
 
     canvas.onmousemove = (ev: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
-      const mx = ev.clientX - rect.left;
-      const my = ev.clientY - rect.top;
-      const j = Math.floor((mx - LABEL_W) / CELL_W);
-      const i = Math.floor((my - TOP_H) / CELL_H);
+      const mx   = ev.clientX - rect.left;
+      const my   = ev.clientY - rect.top;
+      const j    = Math.floor((mx - LABEL_W) / CELL_W);
+      const i    = Math.floor((my - TOP_H) / CELL_H);
       if (i < 0 || i >= sectors.length || j < 0 || j >= allMonths.length) {
         setTooltip(null);
         return;
       }
       const val = cycleData[i].monthly_returns[allMonths[j]];
-      if (val === undefined) {
-        setTooltip(null);
-        return;
-      }
+      if (val === undefined) { setTooltip(null); return; }
       setTooltip({
         text: `${sectors[i]} · ${allMonths[j]} → ${fmtPct(val)}`,
         x: ev.clientX + 12,
@@ -137,7 +126,48 @@ export default function CycleTab({ eventsData, cycleData }: Props) {
 
   return (
     <main className="tab-panel active">
-      {/* Event Timeline */}
+      {/* Economic Cycle Rotation Clock ─────────────────────────── */}
+      <section className="panel">
+        <div className="panel-header">
+          <h2>經濟週期定位儀</h2>
+          <span className="panel-hint">
+            根據各板塊 52 週百分位排名推估當前市場所處的經濟週期階段
+          </span>
+        </div>
+        {cycleData && cycleData.length > 0 ? (
+          <div className="clock-layout">
+            <RotationClock cycleData={cycleData} />
+            <div className="clock-sidebar">
+              <div className="clock-sidebar-title">板塊強弱排名</div>
+              {sortedCycle.slice(0, 8).map(d => {
+                const clr = d.percentile_rank >= 70 ? '#4ade80'
+                          : d.percentile_rank >= 40 ? '#fbbf24'
+                          : '#f87171';
+                return (
+                  <div key={d.sector} className="clock-rank-row">
+                    <span className="clock-rank-sector" style={{ color: d.color }}>
+                      {d.sector}
+                    </span>
+                    <div className="clock-rank-bar-track">
+                      <div
+                        className="clock-rank-bar-fill"
+                        style={{ width: `${d.percentile_rank}%`, background: clr }}
+                      />
+                    </div>
+                    <span className="clock-rank-pct" style={{ color: clr }}>
+                      {d.percentile_rank}%
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <p style={{ color: '#64748b' }}>載入中…</p>
+        )}
+      </section>
+
+      {/* Event Timeline ─────────────────────────────────────────── */}
       <section className="panel">
         <div className="panel-header">
           <h2>重大市場事件時間軸</h2>
@@ -166,30 +196,14 @@ export default function CycleTab({ eventsData, cycleData }: Props) {
           {filteredEvents.map((ev, idx) => (
             <div
               key={idx}
-              className={`ev-card ${
-                ev.magnitude > 0
-                  ? 'ev-pos'
-                  : ev.magnitude < 0
-                    ? 'ev-neg'
-                    : 'ev-neu'
-              }`}
+              className={`ev-card ${ev.magnitude > 0 ? 'ev-pos' : ev.magnitude < 0 ? 'ev-neg' : 'ev-neu'}`}
             >
-              <div
-                className="ev-stripe"
-                style={{ background: EVENT_COLORS[ev.type] ?? '#58a6ff' }}
-              />
+              <div className="ev-stripe" style={{ background: EVENT_COLORS[ev.type] ?? '#58a6ff' }} />
               <div className="ev-body">
                 <div className="ev-top">
-                  <span className="ev-icon">
-                    {EVENT_ICONS[ev.type] ?? '📌'}
-                  </span>
+                  <span className="ev-icon">{EVENT_ICONS[ev.type] ?? '📌'}</span>
                   <span className="ev-date">{ev.date}</span>
-                  <span
-                    className="ev-badge"
-                    style={{
-                      background: EVENT_COLORS[ev.type] ?? '#58a6ff',
-                    }}
-                  >
+                  <span className="ev-badge" style={{ background: EVENT_COLORS[ev.type] ?? '#58a6ff' }}>
                     {ev.type}
                   </span>
                   <span className="ev-mag">
@@ -204,10 +218,7 @@ export default function CycleTab({ eventsData, cycleData }: Props) {
                     <span
                       key={s}
                       className="ev-sec-tag"
-                      style={{
-                        borderColor: SECTOR_COLORS[s] ?? '#444',
-                        color: SECTOR_COLORS[s] ?? '#ccc',
-                      }}
+                      style={{ borderColor: SECTOR_COLORS[s] ?? '#444', color: SECTOR_COLORS[s] ?? '#ccc' }}
                     >
                       {s}
                     </span>
@@ -219,7 +230,7 @@ export default function CycleTab({ eventsData, cycleData }: Props) {
         </div>
       </section>
 
-      {/* Cycle Heatmap */}
+      {/* Cycle Heatmap ──────────────────────────────────────────── */}
       <section className="panel">
         <div className="panel-header">
           <h2>板塊歷史月份熱力圖</h2>
@@ -230,7 +241,7 @@ export default function CycleTab({ eventsData, cycleData }: Props) {
         {cycleData && <CycleHeatmapCanvas cycleData={cycleData} />}
       </section>
 
-      {/* Percentile Ranks */}
+      {/* Percentile Ranks ───────────────────────────────────────── */}
       <section className="panel">
         <div className="panel-header">
           <h2>52 週百分位排名</h2>
@@ -240,39 +251,22 @@ export default function CycleTab({ eventsData, cycleData }: Props) {
         </div>
         <div className="percentile-grid">
           {sortedCycle.map(d => {
-            const clr =
-              d.percentile_rank >= 70
-                ? '#4ade80'
-                : d.percentile_rank >= 40
-                  ? '#fbbf24'
-                  : '#f87171';
+            const clr = d.percentile_rank >= 70 ? '#4ade80'
+                      : d.percentile_rank >= 40 ? '#fbbf24'
+                      : '#f87171';
             return (
               <div key={d.sector} className="perc-row">
-                <div className="perc-sector" style={{ color: d.color }}>
-                  {d.sector}
-                </div>
+                <div className="perc-sector" style={{ color: d.color }}>{d.sector}</div>
                 <div className="perc-bar-track">
-                  <div
-                    className="perc-bar-fill"
-                    style={{ width: `${d.percentile_rank}%`, background: clr }}
-                  />
+                  <div className="perc-bar-fill" style={{ width: `${d.percentile_rank}%`, background: clr }} />
                 </div>
-                <div className="perc-rank" style={{ color: clr }}>
-                  {d.percentile_rank}%
-                </div>
+                <div className="perc-rank" style={{ color: clr }}>{d.percentile_rank}%</div>
                 <div className="perc-meta">
-                  <span
-                    title="1Y Return"
-                    style={{ color: changeTextColor(d.current_1y) }}
-                  >
+                  <span title="1Y Return" style={{ color: changeTextColor(d.current_1y) }}>
                     {fmtPct(d.current_1y)} 1Y
                   </span>
-                  <span className="perc-best">
-                    ↑ {d.best_months.join('/')}
-                  </span>
-                  <span className="perc-worst">
-                    ↓ {d.worst_months.join('/')}
-                  </span>
+                  <span className="perc-best">↑ {d.best_months.join('/')}</span>
+                  <span className="perc-worst">↓ {d.worst_months.join('/')}</span>
                 </div>
               </div>
             );
