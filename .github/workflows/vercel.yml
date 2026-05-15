@@ -78,6 +78,32 @@ jobs:
           echo "org_id=$ORG_ID"         >> $GITHUB_OUTPUT
           echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
 
+      # ── Disable deployment protection (make previews publicly accessible) ──
+      - name: Disable deployment protection
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PROJECT_ID: ${{ steps.vercel_ids.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          echo "Disabling deployment protection on project $PROJECT_ID..."
+          RESULT=$(curl -sf -X PATCH \
+            "https://api.vercel.com/v9/projects/$PROJECT_ID" \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "passwordProtection": null,
+              "ssoProtection": null,
+              "vercelAuthentication": null
+            }')
+          echo "$RESULT" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+print('passwordProtection:', d.get('passwordProtection'))
+print('ssoProtection:',      d.get('ssoProtection'))
+print('vercelAuth:',         d.get('vercelAuthentication'))
+print('✅ Protection disabled — previews are publicly accessible')
+"
+
       # ── Production deploy (merge to main) ─────────────────────
       - name: Deploy to Production
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
