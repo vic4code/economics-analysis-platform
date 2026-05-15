@@ -1,5 +1,9 @@
 # Fund Flow Dashboard — Project Guide
 
+## Contributing rules
+
+- **All PR titles, bodies, and commit messages must be written in English.** No Chinese in any GitHub-facing text (titles, descriptions, review comments). Chinese is only allowed in code comments and chat.
+
 ## Overview
 
 A single-page global capital flow analysis platform with 6 tabs: Macro Flow, Overview, Trend Analysis, Backtest, Flow & Chips, Events & Cycles. All market data is simulated (mock) using a deterministic seeded PRNG so results are reproducible within a trading day.
