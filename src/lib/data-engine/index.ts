@@ -34,3 +34,5 @@ export { getChipsData, getFlowMatrix } from './chips';
 
 export type { CycleRow } from './cycle';
 export { getCycleData } from './cycle';
+
+export { getCrisisData } from './crisis';

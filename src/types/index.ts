@@ -46,6 +46,30 @@ export interface DailySeries {
 
 export type Period = '1d' | '5d' | '1m' | '3m' | '6m' | '1y' | 'ytd';
 
+export interface CrisisPricePoint {
+  day: number;   // relative day (0 = event date)
+  price: number; // normalised (100 = pre-crisis baseline)
+}
+
+export interface CrisisEvent {
+  id: string;
+  date: string;
+  bottomDate: string;
+  recoveryDate: string;
+  title: string;
+  type: string;
+  sectors: string[];
+  magnitude: number;
+  detail: string;
+  maxDrawdown: number;      // negative %, e.g. -34.2
+  drawdownDays: number;     // days from event to trough
+  recoveryDays: number;     // days from trough back to baseline
+  buySignalDay: number;     // day offset from bottom when signal triggers
+  buySignalGain: number;    // % gain from signal to recovery
+  sectorDrawdowns: Record<string, number>; // per-sector estimated max drawdown
+  priceTrack: CrisisPricePoint[];          // normalised 120-day price curve
+}
+
 export const TEMPLATES: Record<string, Record<string, number>> = {
   aggressive: {QQQ:25, SMH:20, IBIT:15, XLE:10, XLF:10, XLY:10, EEM:10},
   balanced:   {QQQ:20, GLD:10, AGG:15, VNQ:15, EEM:10, XLE:10, XLV:10, TLT:10},

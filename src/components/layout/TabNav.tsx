@@ -11,6 +11,7 @@ const TABS = [
   { id: 'backtest', label: '🔬 Backtest' },
   { id: 'flow',     label: '📡 Flow & Chips' },
   { id: 'cycle',    label: '📅 Events & Cycles' },
+  { id: 'crisis',   label: '🚨 Crisis Atlas' },
 ];
 
 export default function TabNav({ activeTab, onTabChange }: Props) {

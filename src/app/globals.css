@@ -1184,3 +1184,228 @@ body {
   .clock-phase-cards  { grid-template-columns: 1fr; }
   .sankey-legend-center { display: none; }
 }
+
+/* ── Crisis Atlas ──────────────────────────────────────────────── */
+.crisis-wrap {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.crisis-timeline-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem 0.75rem;
+}
+
+.crisis-timeline-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+
+.crisis-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1rem;
+}
+
+.crisis-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.125rem;
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+}
+.crisis-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.crisis-card.crisis-card-active {
+  border-color: var(--accent);
+  background: rgba(88, 166, 255, 0.06);
+}
+
+.crisis-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.crisis-card-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.crisis-card-sev {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #e74c3c;
+  white-space: nowrap;
+  padding-top: 0.1rem;
+}
+
+.crisis-card-date {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  font-family: 'JetBrains Mono', 'Courier New', Consolas, monospace;
+}
+
+.crisis-type-badge {
+  display: inline-block;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: #fff;
+  margin-right: 0.4rem;
+}
+
+.crisis-sec-tag {
+  display: inline-block;
+  font-size: 0.66rem;
+  padding: 1px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  margin: 2px;
+}
+
+.crisis-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.crisis-metric {
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.5rem;
+  text-align: center;
+}
+
+.crisis-metric-label {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.2rem;
+}
+
+.crisis-metric-val {
+  font-size: 0.88rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', 'Courier New', Consolas, monospace;
+}
+
+.crisis-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.crisis-detail-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+}
+
+.crisis-detail-stat h4 {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 0.75rem;
+}
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.comparison-chart-wrap {
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+}
+
+.comparison-chart-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.crisis-signal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.crisis-signal-table th {
+  text-align: left;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.crisis-signal-table td {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.crisis-signal-table tr:last-child td {
+  border-bottom: none;
+}
+
+.crisis-signal-table tr:hover td {
+  background: var(--surface2);
+}
+
+.crisis-buy-gain {
+  font-weight: 700;
+  color: #27ae60;
+  font-family: 'JetBrains Mono', 'Courier New', Consolas, monospace;
+}
+
+.crisis-drawdown-val {
+  font-weight: 700;
+  color: #e74c3c;
+  font-family: 'JetBrains Mono', 'Courier New', Consolas, monospace;
+}
+
+@media (max-width: 900px) {
+  .crisis-detail-grid  { grid-template-columns: 1fr; }
+  .comparison-grid     { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .crisis-cards-grid   { grid-template-columns: 1fr; }
+  .crisis-metrics      { grid-template-columns: repeat(2, 1fr); }
+}
