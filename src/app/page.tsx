@@ -4,6 +4,8 @@ import dynamic from 'next/dynamic';
 import TopBar from '@/components/layout/TopBar';
 import TabNav from '@/components/layout/TabNav';
 import Loader from '@/components/layout/Loader';
+import MarketTickerBar from '@/components/layout/MarketTickerBar';
+import QuickSearch from '@/components/layout/QuickSearch';
 import type { Quote, MacroNode, MockEvent, CycleRow, CrisisEvent, CorrelationMatrix, Period } from '@/types';
 
 // Dynamic imports to avoid SSR for canvas/chart components
@@ -118,7 +120,13 @@ export default function DashboardPage() {
         onPeriodChange={setPeriod}
         updateTime={updateTime}
       />
+      <MarketTickerBar
+        quotes={quotes}
+        period={period}
+        onSelectSymbol={handleSelectSymbolForTrend}
+      />
       <TabNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <QuickSearch quotes={quotes} onSelect={handleSelectSymbolForTrend} />
       <Loader show={loading} />
       {activeTab === 'macro' && (
         <MacroTab macroData={macroData} period={period} />
