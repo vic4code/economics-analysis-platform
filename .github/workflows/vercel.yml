@@ -146,7 +146,7 @@ jobs:
               body: [
                 '## 🚀 Preview Deployment Ready',
                 '',
-                `**URL:** ${previewUrl}`,
+                `**URL:** [${previewUrl}](${previewUrl})`,
                 '',
                 `**Branch:** \`${context.payload.pull_request.head.ref}\``,
                 `**Commit:** ${context.payload.pull_request.head.sha.slice(0, 7)}`,
