@@ -12,7 +12,6 @@ export interface CycleRow {
   color: string;
 }
 
-// Sector colour map that mirrors data.js SECTOR_COLORS_MAP as fallback.
 const SECTOR_COLORS_MAP: Record<string, string> = {
   Crypto:         '#f7931a',
   Technology:     '#4a90e2',
@@ -29,14 +28,14 @@ const SECTOR_COLORS_MAP: Record<string, string> = {
   International:  '#ff9800',
 };
 
-export function getCycleData(): CycleRow[] {
-  const quotes = getAllQuotes();
+export async function getCycleData(): Promise<CycleRow[]> {
+  const quotes = await getAllQuotes();
   const qmap: Record<string, Quote> = {};
   for (const q of quotes) qmap[q.symbol] = q;
 
-  const today   = new Date();
-  const curYr   = today.getUTCFullYear();
-  const curMon  = today.getUTCMonth() + 1;
+  const today  = new Date();
+  const curYr  = today.getUTCFullYear();
+  const curMon = today.getUTCMonth() + 1;
 
   const result: CycleRow[] = [];
 
@@ -44,7 +43,7 @@ export function getCycleData(): CycleRow[] {
     const validEtfs = etfs.filter(e => qmap[e]).slice(0, 2);
     if (!validEtfs.length) continue;
 
-    const seriesList = validEtfs.map(e => generateSeries(e, 800));
+    const seriesList = await Promise.all(validEtfs.map(e => generateSeries(e, 800)));
     const monthly: Record<string, number> = {};
 
     for (let yOff = 0; yOff < 3; yOff++) {
@@ -80,8 +79,6 @@ export function getCycleData(): CycleRow[] {
     const worstMonths = avgByMonth.slice(0, 2).map(([m]) => MONTH_NAMES[m - 1]);
     const bestMonths  = avgByMonth.slice(-2).map(([m])  => MONTH_NAMES[m - 1]);
 
-    // Colour: prefer MACRO_TREE node that lists this sector's first ETF,
-    // then fall back to the sector colour map.
     const macroColor = MACRO_TREE.find(
       n => n.etfs?.length && n.etfs.includes(validEtfs[0]),
     )?.color;

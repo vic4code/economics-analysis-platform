@@ -28,5 +28,5 @@ export async function GET(request: Request) {
     normalised[sym] = w / total;
   }
 
-  return NextResponse.json(runBacktest(normalised, period));
+  return NextResponse.json(await runBacktest(normalised, period));
 }

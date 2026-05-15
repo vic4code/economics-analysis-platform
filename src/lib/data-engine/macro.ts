@@ -33,7 +33,6 @@ function nodeChange(
   }
 
   // No mapped ETFs — derive a stable random change from the node id + day.
-  // Matches data.js nodeChange exactly: seed = (base + daily) >>> 0.
   let hexStr = '';
   for (let i = 0; i < node.id.length; i++) {
     hexStr += node.id.charCodeAt(i).toString(16).padStart(2, '0');
@@ -45,8 +44,8 @@ function nodeChange(
   return Math.round(rng.gauss(0, node.vol * 100 * scale) * 100) / 100;
 }
 
-export function getMacroData(period: string): MacroNode {
-  const quotes = getAllQuotes();
+export async function getMacroData(period: string): Promise<MacroNode> {
+  const quotes = await getAllQuotes();
   const qmap: Record<string, Quote> = {};
   for (const q of quotes) qmap[q.symbol] = q;
 

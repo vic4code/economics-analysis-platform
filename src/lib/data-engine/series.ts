@@ -1,5 +1,6 @@
 import { ETF_UNIVERSE, SECTOR_DRIFT } from './constants';
 import { SeededRandom, seedFor } from './prng';
+import { fetchYahooSeries } from './yahoo';
 
 export interface DailySeries {
   date: string;
@@ -14,7 +15,7 @@ function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function generateSeries(symbol: string, days: number): DailySeries[] {
+function generateSeriesMock(symbol: string, days: number): DailySeries[] {
   const info = ETF_UNIVERSE[symbol];
   if (!info) return [];
 
@@ -31,7 +32,7 @@ export function generateSeries(symbol: string, days: number): DailySeries[] {
   for (let i = 0; i < raw.length; i++) raw[i] *= scale;
 
   const series: DailySeries[] = [];
-  const today  = new Date();
+  const today   = new Date();
   const todayMs = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
 
   for (let i = 0; i <= days; i++) {
@@ -55,4 +56,17 @@ export function generateSeries(symbol: string, days: number): DailySeries[] {
   }
 
   return series;
+}
+
+export async function generateSeries(symbol: string, days: number): Promise<DailySeries[]> {
+  const info = ETF_UNIVERSE[symbol];
+  if (!info) return [];
+
+  try {
+    const data = await fetchYahooSeries(symbol, days);
+    if (data.length >= Math.min(days, 20)) return data;
+  } catch {
+    // fall through to mock
+  }
+  return generateSeriesMock(symbol, days);
 }

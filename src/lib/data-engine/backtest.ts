@@ -1,5 +1,5 @@
 import { THEME_ETF } from './constants';
-import { generateSeries } from './series';
+import { generateSeries, DailySeries } from './series';
 import { computeStats, IndexedPoint, StatsResult } from './stats';
 
 export interface BacktestResult {
@@ -22,21 +22,24 @@ export interface StrategyResult {
 
 const BACKTEST_PERIOD_DAYS: Record<string, number> = { '1y': 365, '3y': 1095, '5y': 1825 };
 
-export function runBacktest(
+export async function runBacktest(
   weights: Record<string, number>,
   period: string,
-): BacktestResult {
+): Promise<BacktestResult> {
   const periodDays = BACKTEST_PERIOD_DAYS[period] ?? 365;
 
-  const seriesMap: Record<string, ReturnType<typeof generateSeries>> = {};
-  for (const sym of Object.keys(weights)) {
-    seriesMap[sym] = generateSeries(sym, periodDays + 30);
-  }
-  const spySeries = generateSeries('SPY', periodDays + 30);
+  const syms = Object.keys(weights);
+  const [seriesResults, spySeries] = await Promise.all([
+    Promise.all(syms.map(sym => generateSeries(sym, periodDays + 30))),
+    generateSeries('SPY', periodDays + 30),
+  ]);
+
+  const seriesMap: Record<string, DailySeries[]> = {};
+  for (let i = 0; i < syms.length; i++) seriesMap[syms[i]] = seriesResults[i];
 
   const allDates = Array.from(new Set(spySeries.map(b => b.date))).sort().slice(-periodDays);
 
-  const makeIndex = (series: ReturnType<typeof generateSeries>) => {
+  const makeIndex = (series: DailySeries[]) => {
     const m: Record<string, number> = {};
     for (const b of series) m[b.date] = b.close;
     return m;
@@ -64,7 +67,7 @@ export function runBacktest(
 
   if (portfolio.length < 2) return { portfolio: [], benchmark: [], stats: {} };
 
-  const spyRet   = bench.length ? bench[bench.length - 1].value / 100 - 1 : 0;
+  const spyRet    = bench.length ? bench[bench.length - 1].value / 100 - 1 : 0;
   const baseStats = computeStats(portfolio);
   if (!('total_return' in baseStats)) return { portfolio: [], benchmark: [], stats: {} };
 
@@ -76,13 +79,17 @@ export function runBacktest(
   return { portfolio, benchmark: bench, stats };
 }
 
-export function runStrategyBacktest(period: string, topN = 3): StrategyResult {
+export async function runStrategyBacktest(period: string, topN = 3): Promise<StrategyResult> {
   const periodDays = BACKTEST_PERIOD_DAYS[period] ?? 365;
   const themeSyms  = Object.values(THEME_ETF);
 
-  const seriesMap: Record<string, ReturnType<typeof generateSeries>> = {};
-  for (const sym of themeSyms) seriesMap[sym] = generateSeries(sym, periodDays + 30);
-  const spySeries = generateSeries('SPY', periodDays + 30);
+  const [seriesResults, spySeries] = await Promise.all([
+    Promise.all(themeSyms.map(sym => generateSeries(sym, periodDays + 30))),
+    generateSeries('SPY', periodDays + 30),
+  ]);
+
+  const seriesMap: Record<string, DailySeries[]> = {};
+  for (let i = 0; i < themeSyms.length; i++) seriesMap[themeSyms[i]] = seriesResults[i];
 
   const allDates = Array.from(new Set(
     themeSyms.flatMap(s => seriesMap[s].map(b => b.date)),

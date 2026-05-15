@@ -1,5 +1,6 @@
 import { ETF_UNIVERSE } from './constants';
 import { generateSeries } from './series';
+import { fetchYahooSnapshots } from './yahoo';
 
 export interface Quote {
   symbol: string;
@@ -21,20 +22,33 @@ export class QuoteCache {
   private static readonly TTL = 60_000;
   private _data: Quote[] | null = null;
   private _ts = 0;
+  private _inFlight: Promise<Quote[]> | null = null;
 
-  get(): Quote[] {
+  async get(): Promise<Quote[]> {
     if (this._data && Date.now() - this._ts < QuoteCache.TTL) {
       return this._data;
     }
-    return this._refresh();
+    // Deduplicate concurrent refreshes
+    if (this._inFlight) return this._inFlight;
+    this._inFlight = this._refresh().finally(() => { this._inFlight = null; });
+    return this._inFlight;
   }
 
-  private _refresh(): Quote[] {
+  private async _refresh(): Promise<Quote[]> {
     const yearStart = new Date().getUTCFullYear() + '-01-01';
+    const symbols   = Object.keys(ETF_UNIVERSE);
+
+    // Fetch all series in parallel + snapshot quotes for intraday accuracy
+    const [seriesResults, snapshots] = await Promise.all([
+      Promise.all(symbols.map(sym => generateSeries(sym, 380).catch(() => []))),
+      fetchYahooSnapshots().catch(() => new Map()),
+    ]);
+
     const result: Quote[] = [];
 
-    for (const sym of Object.keys(ETF_UNIVERSE)) {
-      const series = generateSeries(sym, 380);
+    for (let i = 0; i < symbols.length; i++) {
+      const sym    = symbols[i];
+      const series = seriesResults[i];
       if (series.length < 30) continue;
 
       const n   = series.length;
@@ -46,22 +60,25 @@ export class QuoteCache {
       const ytdI = series.findIndex(b => b.date >= yearStart);
       const cYtd = ytdI >= 0 ? series[ytdI].close : series[0].close;
 
-      const pct = (a: number, b: number) => Math.round((a / b - 1) * 10000) / 100;
+      const snap = snapshots.get(sym);
+      // Use snapshot price as base so all period returns reflect today's intraday price
+      const basePrice = snap?.price ?? Math.round(cur * 100) / 100;
+      const pct = (past: number) => Math.round((basePrice / past - 1) * 10000) / 100;
 
       result.push({
         symbol:     sym,
         name:       ETF_UNIVERSE[sym].name,
         sector:     ETF_UNIVERSE[sym].sector,
-        mcap:       ETF_UNIVERSE[sym].mcap,
-        price:      Math.round(cur * 100) / 100,
-        change_1d:  pct(cur, p(n - 2)),
-        change_5d:  pct(cur, p(n - 6)),
-        change_1m:  pct(cur, p(n - 22)),
-        change_3m:  pct(cur, p(n - 66)),
-        change_6m:  pct(cur, p(n - 130)),
-        change_1y:  pct(cur, series[0].close),
-        change_ytd: pct(cur, cYtd),
-        volume:     series[n - 1].volume,
+        mcap:       snap?.mcap      ?? ETF_UNIVERSE[sym].mcap,
+        price:      basePrice,
+        change_1d:  snap?.change_1d ?? pct(p(n - 2)),
+        change_5d:  pct(p(n - 6)),
+        change_1m:  pct(p(n - 22)),
+        change_3m:  pct(p(n - 66)),
+        change_6m:  pct(p(n - 130)),
+        change_1y:  pct(series[0].close),
+        change_ytd: pct(cYtd),
+        volume:     snap?.volume    ?? series[n - 1].volume,
       });
     }
 
@@ -73,6 +90,6 @@ export class QuoteCache {
 
 const _quoteCache = new QuoteCache();
 
-export function getAllQuotes(): Quote[] {
+export async function getAllQuotes(): Promise<Quote[]> {
   return _quoteCache.get();
 }

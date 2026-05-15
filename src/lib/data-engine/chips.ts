@@ -29,9 +29,9 @@ function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function getChipsData(period: string): ChipRow[] {
+export async function getChipsData(period: string): Promise<ChipRow[]> {
   const days   = CHIP_DAYS[period] ?? 22;
-  const quotes = getAllQuotes();
+  const quotes = await getAllQuotes();
   const qmap: Record<string, Quote> = {};
   for (const q of quotes) qmap[q.symbol] = q;
 
@@ -51,7 +51,7 @@ export function getChipsData(period: string): ChipRow[] {
     const rngS = new SeededRandom(seedFor(sector + '_smart'));
     const rngR = new SeededRandom(seedFor(sector + '_retail'));
 
-    const dates: string[]        = [];
+    const dates: string[]         = [];
     const institutional: number[] = [];
     const smart_money: number[]   = [];
     const retail: number[]        = [];
@@ -85,30 +85,28 @@ export function getChipsData(period: string): ChipRow[] {
   return result;
 }
 
-export function getFlowMatrix(period: string): FlowMatrix {
-  const chips      = getChipsData(period);
+export async function getFlowMatrix(period: string): Promise<FlowMatrix> {
+  const chips      = await getChipsData(period);
   const sectors    = chips.map(c => c.sector);
   const flowScores = chips.map(c => c.flow_score);
   const mcaps      = sectors.map(s =>
     (SECTOR_ETFS[s] ?? []).reduce((sum, e) => sum + (ETF_UNIVERSE[e]?.mcap ?? 0), 0),
   );
 
-  const quotes = getAllQuotes();
+  const quotes = await getAllQuotes();
   const qmap: Record<string, Quote> = {};
   for (const q of quotes) qmap[q.symbol] = q;
 
-  // Volume ratio: current quote volume vs 22-day average from a fresh series slice.
-  // Only the first ETF in the sector is used for the base (matches data.js behaviour).
-  const volumeRatios = sectors.map(s => {
+  const volumeRatios = await Promise.all(sectors.map(async s => {
     const etfs = (SECTOR_ETFS[s] ?? []).slice(0, 2);
     if (!etfs.length) return 1;
     const curVol = etfs.reduce((sum, e) => sum + (qmap[e]?.volume ?? 0), 0) / etfs.length;
-    const series = generateSeries(etfs[0], 35);
+    const series = await generateSeries(etfs[0], 35);
     const baseVol = series.length > 22
       ? series.slice(-22).reduce((s, b) => s + b.volume, 0) / 22
       : curVol;
     return Math.round((curVol / (baseVol || curVol)) * 100) / 100;
-  });
+  }));
 
   const n = sectors.length;
   const rotationMatrix: number[][] = Array.from({ length: n }, (_, i) =>
