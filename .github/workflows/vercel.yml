@@ -1,0 +1,174 @@
+name: Vercel Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to Vercel
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check VERCEL_TOKEN
+        run: |
+          if [ -z "${{ secrets.VERCEL_TOKEN }}" ]; then
+            echo "::error::VERCEL_TOKEN secret is missing."
+            echo "::error::Go to: Settings → Secrets and variables → Actions → New repository secret"
+            echo "::error::Name: VERCEL_TOKEN  |  Value: your token from vercel.com/account/tokens"
+            exit 1
+          fi
+          echo "✅ VERCEL_TOKEN is set"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build check
+        run: npm run build
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      # ── Resolve Vercel org + project IDs via REST API ─────────
+      - name: Resolve Vercel org and project
+        id: vercel_ids
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          echo "=== GET /v2/user ==="
+          USER_JSON=$(curl -sf "https://api.vercel.com/v2/user" \
+            -H "Authorization: Bearer $VERCEL_TOKEN")
+          echo "$USER_JSON" | python3 -c "import json,sys; u=json.load(sys.stdin)['user']; print(f'Account: {u[\"username\"]}  id={u[\"id\"]}')"
+          ORG_ID=$(echo "$USER_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['user']['id'])")
+
+          echo "=== GET /v9/projects/fund-flow-dashboard ==="
+          PROJECT_JSON=$(curl -s "https://api.vercel.com/v9/projects/fund-flow-dashboard" \
+            -H "Authorization: Bearer $VERCEL_TOKEN")
+          echo "$PROJECT_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print('status:', d.get('error',{}).get('code','ok'), 'id:', d.get('id','—'))"
+
+          if echo "$PROJECT_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); exit(0 if 'id' in d else 1)" 2>/dev/null; then
+            PROJECT_ID=$(echo "$PROJECT_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
+            echo "✅ Found project: $PROJECT_ID"
+          else
+            echo "Project not found — creating..."
+            CREATE_JSON=$(curl -sf -X POST "https://api.vercel.com/v9/projects" \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d '{"name":"fund-flow-dashboard","framework":"nextjs"}')
+            echo "$CREATE_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print('Created:', d.get('id','ERROR'), d.get('error',''))"
+            PROJECT_ID=$(echo "$CREATE_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['id'])")
+          fi
+
+          echo "org_id=$ORG_ID"         >> $GITHUB_OUTPUT
+          echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
+
+      # ── Disable deployment protection (make previews publicly accessible) ──
+      - name: Disable deployment protection
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PROJECT_ID: ${{ steps.vercel_ids.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          echo "Disabling deployment protection on project $PROJECT_ID..."
+          RESULT=$(curl -s -X PATCH \
+            "https://api.vercel.com/v9/projects/$PROJECT_ID" \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"passwordProtection":null,"ssoProtection":null,"vercelAuthentication":{"deploymentType":"none"}}')
+          echo "API response (first 400 chars): ${RESULT:0:400}"
+          if echo "$RESULT" | grep -q '"error"'; then
+            echo "⚠️ API returned an error (may be a plan limitation) — continuing"
+          else
+            echo "✅ Protection settings updated"
+          fi
+
+      # ── Production deploy (merge to main) ─────────────────────
+      - name: Deploy to Production
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ steps.vercel_ids.outputs.org_id }}
+          VERCEL_PROJECT_ID: ${{ steps.vercel_ids.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          vercel deploy --prod --token="$VERCEL_TOKEN" 2>&1 | tee /tmp/deploy.log
+          DEPLOY_URL=$(grep -oE 'https://[a-zA-Z0-9-]+\.vercel\.app' /tmp/deploy.log | tail -1)
+          echo "✅ Production: $DEPLOY_URL"
+
+      # ── Preview deploy (every PR) ──────────────────────────────
+      - name: Deploy Preview
+        if: github.event_name == 'pull_request'
+        id: preview
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ steps.vercel_ids.outputs.org_id }}
+          VERCEL_PROJECT_ID: ${{ steps.vercel_ids.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          vercel deploy --token="$VERCEL_TOKEN" 2>&1 | tee /tmp/deploy.log
+          PREVIEW_URL=$(grep -oE 'https://[a-zA-Z0-9-]+\.vercel\.app' /tmp/deploy.log | tail -1)
+          echo "preview_url=$PREVIEW_URL" >> $GITHUB_OUTPUT
+          echo "🔍 Preview: $PREVIEW_URL"
+
+      - name: Write failure summary
+        if: failure()
+        run: |
+          {
+            echo "## ❌ Vercel Deploy Failed"
+            echo ""
+            echo "**Step summary** (last 100 lines of deploy log):"
+            echo '```'
+            tail -100 /tmp/deploy.log 2>/dev/null || echo "(deploy log not found — failure was in an earlier step)"
+            echo '```'
+          } >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment failure on PR
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let log = '(deploy log not found — failure was in an earlier step)';
+            try { log = fs.readFileSync('/tmp/deploy.log', 'utf8').slice(-3000); } catch(e) {}
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ❌ Deploy failed — debug log\n\`\`\`\n${log}\n\`\`\``
+            });
+
+      - name: Comment Preview URL on PR
+        if: github.event_name == 'pull_request' && steps.preview.outputs.preview_url != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const previewUrl = '${{ steps.preview.outputs.preview_url }}';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: [
+                '## 🚀 Preview Deployment Ready',
+                '',
+                `**URL:** [${previewUrl}](${previewUrl})`,
+                '',
+                `**Branch:** \`${context.payload.pull_request.head.ref}\``,
+                `**Commit:** ${context.payload.pull_request.head.sha.slice(0, 7)}`,
+              ].join('\n')
+            });
