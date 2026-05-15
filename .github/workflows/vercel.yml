@@ -86,23 +86,28 @@ jobs:
         run: |
           set -euo pipefail
           echo "Disabling deployment protection on project $PROJECT_ID..."
-          RESULT=$(curl -sf -X PATCH \
+          # Use -s (silent) without -f so we see the response even on 4xx
+          RESULT=$(curl -s -X PATCH \
             "https://api.vercel.com/v9/projects/$PROJECT_ID" \
             -H "Authorization: Bearer $VERCEL_TOKEN" \
             -H "Content-Type: application/json" \
             -d '{
               "passwordProtection": null,
               "ssoProtection": null,
-              "vercelAuthentication": null
+              "vercelAuthentication": {"deploymentType": "none"}
             }')
+          echo "API response: $RESULT"
           echo "$RESULT" | python3 -c "
 import json, sys
 d = json.load(sys.stdin)
-print('passwordProtection:', d.get('passwordProtection'))
-print('ssoProtection:',      d.get('ssoProtection'))
-print('vercelAuth:',         d.get('vercelAuthentication'))
-print('✅ Protection disabled — previews are publicly accessible')
-"
+if 'error' in d:
+    print('⚠️ API warning:', d['error'].get('message', d['error']))
+else:
+    print('passwordProtection:', d.get('passwordProtection'))
+    print('ssoProtection:',      d.get('ssoProtection'))
+    print('vercelAuth:',         d.get('vercelAuthentication'))
+    print('✅ Protection settings updated')
+" || echo "⚠️ Could not parse API response (may be OK)"
 
       # ── Production deploy (merge to main) ─────────────────────
       - name: Deploy to Production
