@@ -1,15 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Doughnut, Bar } from 'react-chartjs-2';
-import {
-  Chart as ChartJS, ArcElement, BarElement, CategoryScale, LinearScale,
-  Tooltip, Legend, type TooltipItem,
-} from 'chart.js';
-import { changeColor, changeTextColor, fmtPct } from '@/lib/utils/colors';
-import { getChartTheme } from '@/lib/utils/chartTheme';
+import ReactECharts from 'echarts-for-react/lib/core';
+import { echarts, getEChartsTheme } from '@/lib/utils/echarts';
+import { changeTextColor, fmtPct } from '@/lib/utils/colors';
 import type { MacroNode, Period } from '@/types';
-
-ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 function findNode(tree: MacroNode, id: string): MacroNode | null {
   if (tree.id === id) return tree;
@@ -33,7 +27,6 @@ export default function MacroTab({ macroData, period }: Props) {
 
   if (!macroData) return <div className="panel"><p style={{color:'var(--text-muted)'}}>Loading…</p></div>;
 
-  const ct = getChartTheme();
   const currentId = macroPath[macroPath.length - 1];
   const current = findNode(macroData, currentId) ?? macroData;
   const totalAum = current.children?.length
@@ -50,58 +43,89 @@ export default function MacroTab({ macroData, period }: Props) {
     if (idx >= 0) setMacroPath(macroPath.slice(0, idx + 1));
   }
 
-  // Donut chart data
-  const donutData = {
-    labels: children.map(c => c.name),
-    datasets: [{
-      data: children.map(c => c.aum),
-      backgroundColor: children.map(c => c.color + 'cc'),
-      borderColor: children.map(c => c.color),
-      borderWidth: 2,
-    }],
-  };
-  const donutOptions = {
-    responsive: true, maintainAspectRatio: true, cutout: '65%',
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: (ctx: TooltipItem<'doughnut'>) =>
-            ` ${ctx.label}: ${(ctx.raw as number) >= 1 ? (ctx.raw as number).toFixed(1)+'T' : ((ctx.raw as number)*1000).toFixed(0)+'B'} USD`,
-        },
+  const theme = getEChartsTheme();
+
+  // Pie (donut) option
+  const pieOption = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: theme.tooltipBg,
+      borderColor: theme.tooltipBorder,
+      textStyle: { color: theme.tooltipText },
+      formatter: (params: unknown) => {
+        const p = params as { name: string; value: number };
+        return `${p.name}: ${p.value >= 1 ? p.value.toFixed(1) + 'T' : (p.value * 1000).toFixed(0) + 'B'} USD`;
       },
     },
+    series: [{
+      type: 'pie',
+      radius: ['55%', '78%'],
+      center: ['50%', '50%'],
+      data: children.map(c => ({
+        name: c.name,
+        value: c.aum,
+        itemStyle: { color: c.color + 'cc', borderColor: c.color, borderWidth: 2 },
+      })),
+      label: { show: false },
+      emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.5)' } },
+    }],
+    graphic: [{
+      type: 'text',
+      left: 'center',
+      top: 'middle',
+      style: {
+        text: `${totalAum.toFixed(1)}T\nGlobal AUM`,
+        textAlign: 'center',
+        fill: theme.textColor,
+        fontSize: 14,
+        fontWeight: 'bold',
+        lineHeight: 22,
+      },
+    }],
   };
 
-  // Bar chart data (sorted by change)
+  // Bar chart (sorted by change)
   const sorted = [...children].sort((a, b) => b.change - a.change);
-  const barData = {
-    labels: sorted.map(c => c.name),
-    datasets: [{
-      label: 'Return %',
-      data: sorted.map(c => c.change),
-      backgroundColor: sorted.map(c => changeColor(c.change, 0.85)),
-      borderColor: sorted.map(c => changeColor(c.change, 1)),
-      borderWidth: 1, borderRadius: 4,
-    }],
-  };
-  const barOptions = {
-    indexAxis: 'y' as const,
-    responsive: true, maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: { callbacks: { label: (ctx: { raw: unknown }) => ` ${fmtPct(ctx.raw as number)}` } }
-    },
-    scales: {
-      x: {
-        grid: { color: ct.grid },
-        ticks: { color: ct.tick, callback: (v: string | number) => fmtPct(v as number) }
+  const barOption = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: theme.tooltipBg,
+      borderColor: theme.tooltipBorder,
+      textStyle: { color: theme.tooltipText },
+      formatter: (params: unknown) => {
+        const p = params as Array<{ name: string; value: number }>;
+        return `${p[0].name}: ${p[0].value >= 0 ? '+' : ''}${p[0].value.toFixed(2)}%`;
       },
-      y: {
-        grid: { display: false },
-        ticks: { color: ct.text, font: { size: 11 } }
-      }
-    }
+    },
+    grid: { left: 8, right: 16, top: 8, bottom: 8, containLabel: true },
+    xAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: theme.gridColor } },
+      axisLabel: { color: theme.textColor, formatter: (v: number) => `${v.toFixed(1)}%` },
+    },
+    yAxis: {
+      type: 'category',
+      data: sorted.map(c => c.name),
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: theme.textColor, fontSize: 11 },
+    },
+    series: [{
+      type: 'bar',
+      data: sorted.map(c => ({
+        value: c.change,
+        itemStyle: {
+          color: c.change >= 0 ? 'rgba(34,197,94,0.75)' : 'rgba(239,68,68,0.75)',
+          borderRadius: [0, 4, 4, 0],
+        },
+      })),
+      barMaxWidth: 28,
+    }],
   };
 
   const etfs = current.etf_quotes ?? [];
@@ -142,19 +166,25 @@ export default function MacroTab({ macroData, period }: Props) {
 
         <div className="macro-charts">
           <div className="macro-donut-wrap">
-            <Doughnut data={donutData} options={donutOptions} />
-            <div className="donut-center">
-              <div className="donut-label">Global AUM</div>
-              <div className="donut-value">{totalAum.toFixed(1)} T</div>
-            </div>
+            <ReactECharts
+              echarts={echarts}
+              option={pieOption}
+              style={{ height: '260px', width: '260px' }}
+              notMerge
+            />
           </div>
           <div className="macro-bar-wrap">
             <div className="panel-header" style={{marginBottom:'0.5rem'}}>
               <h2>{current.name} — Sub-category Returns</h2>
               <span className="panel-hint">Sorted by return</span>
             </div>
-            <div className="chart-wrap" style={{height:'300px'}}>
-              <Bar data={barData} options={barOptions} />
+            <div style={{ height: '300px' }}>
+              <ReactECharts
+                echarts={echarts}
+                option={barOption}
+                style={{ height: '100%' }}
+                notMerge
+              />
             </div>
           </div>
         </div>
@@ -179,7 +209,7 @@ export default function MacroTab({ macroData, period }: Props) {
                   {hasChildren && <div className="macro-card-arrow">›</div>}
                 </div>
                 <div className="macro-card-bar">
-                  <div style={{width:`${Math.min(100,pct*3)}%`, background:changeColor(c.change,0.8), height:'100%', borderRadius:'2px'}} />
+                  <div style={{width:`${Math.min(100,pct*3)}%`, background: c.change >= 0 ? 'rgba(34,197,94,0.8)' : 'rgba(239,68,68,0.8)', height:'100%', borderRadius:'2px'}} />
                 </div>
               </div>
             );

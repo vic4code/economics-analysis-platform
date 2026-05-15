@@ -1,12 +1,9 @@
 'use client';
 import { useRef, useEffect, useState } from 'react';
-import { Bar } from 'react-chartjs-2';
-import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
+import ReactECharts from 'echarts-for-react/lib/core';
+import { echarts, getEChartsTheme } from '@/lib/utils/echarts';
 import { SECTOR_COLORS, changeColor, changeTextColor, fmtPct } from '@/lib/utils/colors';
-import { getChartTheme } from '@/lib/utils/chartTheme';
 import type { Quote, Period } from '@/types';
-
-ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 // ── Squarify ────────────────────────────────────────────────────
 interface RectItem {
@@ -236,35 +233,7 @@ export default function OverviewTab({ quotes, period, onSelectSymbolForTrend }: 
     .map(([sec, d]) => ({ sector: sec, change: d.tw ? d.sum / d.tw : 0 }))
     .sort((a, b) => b.change - a.change);
 
-  const barData = {
-    labels: secData.map(d => d.sector),
-    datasets: [{
-      label: 'Return %',
-      data: secData.map(d => +d.change.toFixed(2)),
-      backgroundColor: secData.map(d => changeColor(d.change, 0.85)),
-      borderColor: secData.map(d => changeColor(d.change, 1)),
-      borderWidth: 1, borderRadius: 4,
-    }],
-  };
-  const ct = getChartTheme();
-  const barOptions = {
-    indexAxis: 'y' as const,
-    responsive: true, maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: { callbacks: { label: (c: { raw: unknown }) => ` ${fmtPct(c.raw as number)}` } },
-    },
-    scales: {
-      x: {
-        grid: { color: ct.grid },
-        ticks: { color: ct.tick, callback: (v: string | number) => fmtPct(v as number) },
-      },
-      y: {
-        grid: { display: false },
-        ticks: { color: ct.text, font: { size: 11 } },
-      },
-    },
-  };
+  const theme = getEChartsTheme();
 
   // ETF ranking table
   const etfSorted = [...nonSpy].sort((a, b) =>
@@ -354,7 +323,50 @@ export default function OverviewTab({ quotes, period, onSelectSymbolForTrend }: 
           <span className="panel-hint">Market-cap weighted avg. return per sector</span>
         </div>
         <div className="chart-wrap medium">
-          <Bar data={barData} options={barOptions} />
+          <ReactECharts
+            echarts={echarts}
+            option={{
+              backgroundColor: 'transparent',
+              tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' },
+                backgroundColor: theme.tooltipBg,
+                borderColor: theme.tooltipBorder,
+                textStyle: { color: theme.tooltipText },
+                formatter: (params: unknown) => {
+                  const p = params as Array<{ name: string; value: number }>;
+                  return `${p[0].name}: ${p[0].value >= 0 ? '+' : ''}${p[0].value.toFixed(2)}%`;
+                },
+              },
+              grid: { left: 8, right: 16, top: 4, bottom: 4, containLabel: true },
+              xAxis: {
+                type: 'value',
+                axisLine: { show: false },
+                splitLine: { lineStyle: { color: theme.gridColor } },
+                axisLabel: { color: theme.textColor, formatter: (v: number) => `${v.toFixed(1)}%` },
+              },
+              yAxis: {
+                type: 'category',
+                data: secData.map(d => d.sector),
+                axisLine: { show: false },
+                axisTick: { show: false },
+                axisLabel: { color: theme.textColor, fontSize: 11 },
+              },
+              series: [{
+                type: 'bar',
+                data: secData.map(d => ({
+                  value: +d.change.toFixed(2),
+                  itemStyle: {
+                    color: d.change >= 0 ? 'rgba(34,197,94,0.75)' : 'rgba(239,68,68,0.75)',
+                    borderRadius: [0, 4, 4, 0],
+                  },
+                })),
+                barMaxWidth: 24,
+              }],
+            }}
+            style={{ height: '100%' }}
+            notMerge
+          />
         </div>
       </section>
 

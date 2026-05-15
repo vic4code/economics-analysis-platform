@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import TopBar from '@/components/layout/TopBar';
 import TabNav from '@/components/layout/TabNav';
@@ -7,6 +7,7 @@ import Loader from '@/components/layout/Loader';
 import MarketTickerBar from '@/components/layout/MarketTickerBar';
 import QuickSearch from '@/components/layout/QuickSearch';
 import type { Quote, MacroNode, MockEvent, CycleRow, CrisisEvent, CorrelationMatrix, Period } from '@/types';
+import { getMarketStatus, getPollInterval, type MarketStatus } from '@/lib/utils/marketHours';
 
 // Dynamic imports to avoid SSR for canvas/chart components
 const MacroTab = dynamic(() => import('@/components/tabs/MacroTab'), {
@@ -45,6 +46,9 @@ export default function DashboardPage() {
   const [crisisData, setCrisisData] = useState<CrisisEvent[] | null>(null);
   const [correlationData, setCorrelationData] = useState<CorrelationMatrix | null>(null);
   const [updateTime, setUpdateTime] = useState('—');
+  const [marketStatus, setMarketStatus] = useState<MarketStatus>('closed');
+  const [flashMap, setFlashMap] = useState<Record<string, 'up' | 'down' | null>>({});
+  const prevPricesRef = useRef<Record<string, number>>({});
   // Trend tab selected symbols
   const [selected, setSelected] = useState<string[]>([
     'QQQ',
@@ -93,16 +97,37 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period]);
 
-  // 60s auto-refresh of quotes
+  // Adaptive quote refresh based on market hours
   useEffect(() => {
-    const id = setInterval(async () => {
-      const q = (await fetch('/api/quotes').then(r =>
-        r.json(),
-      )) as Quote[];
+    const prevPrices = prevPricesRef.current;
+    let timerId: ReturnType<typeof setTimeout>;
+
+    async function refresh() {
+      const q = (await fetch('/api/quotes').then(r => r.json())) as Quote[];
       setQuotes(q);
       setUpdateTime('Updated ' + new Date().toLocaleTimeString('en-US'));
-    }, 60_000);
-    return () => clearInterval(id);
+
+      // Detect price changes for flash animation
+      const newFlash: Record<string, 'up' | 'down' | null> = {};
+      q.forEach(quote => {
+        const prev = prevPrices[quote.symbol];
+        if (prev !== undefined && prev !== quote.price) {
+          newFlash[quote.symbol] = quote.price > prev ? 'up' : 'down';
+        }
+        prevPrices[quote.symbol] = quote.price;
+      });
+      setFlashMap(newFlash);
+      setTimeout(() => setFlashMap({}), 800);
+
+      const status = getMarketStatus();
+      setMarketStatus(status);
+      timerId = setTimeout(refresh, getPollInterval(status));
+    }
+
+    const status = getMarketStatus();
+    setMarketStatus(status);
+    timerId = setTimeout(refresh, getPollInterval(status));
+    return () => clearTimeout(timerId);
   }, []);
 
   function handleSelectSymbolForTrend(sym: string) {
@@ -119,11 +144,13 @@ export default function DashboardPage() {
         period={period}
         onPeriodChange={setPeriod}
         updateTime={updateTime}
+        marketStatus={marketStatus}
       />
       <MarketTickerBar
         quotes={quotes}
         period={period}
         onSelectSymbol={handleSelectSymbolForTrend}
+        flashMap={flashMap}
       />
       <TabNav activeTab={activeTab} onTabChange={setActiveTab} />
       <QuickSearch quotes={quotes} onSelect={handleSelectSymbolForTrend} />

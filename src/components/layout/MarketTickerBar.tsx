@@ -9,9 +9,10 @@ interface Props {
   quotes: Quote[];
   period: string;
   onSelectSymbol: (sym: string) => void;
+  flashMap?: Record<string, 'up' | 'down' | null>;
 }
 
-export default function MarketTickerBar({ quotes, period, onSelectSymbol }: Props) {
+export default function MarketTickerBar({ quotes, period, onSelectSymbol, flashMap }: Props) {
   const tickers = useMemo(() => {
     const map = new Map(quotes.map(q => [q.symbol, q]));
     return TICKER_SYMBOLS.map(sym => map.get(sym)).filter(Boolean) as Quote[];
@@ -39,7 +40,7 @@ export default function MarketTickerBar({ quotes, period, onSelectSymbol }: Prop
           return (
             <button
               key={q.symbol}
-              className="ticker-item"
+              className={`ticker-item${flashMap?.[q.symbol] === 'up' ? ' flash-pos' : flashMap?.[q.symbol] === 'down' ? ' flash-neg' : ''}`}
               onClick={() => onSelectSymbol(q.symbol)}
               title={q.name}
             >

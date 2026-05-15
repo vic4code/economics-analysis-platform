@@ -1,18 +1,22 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS, LineElement, PointElement, CategoryScale, LinearScale,
-  Tooltip, Legend, Filler,
-} from 'chart.js';
-import { SECTOR_COLORS, TREND_PALETTE, fmtPct } from '@/lib/utils/colors';
-import { getChartTheme } from '@/lib/utils/chartTheme';
+import { useState, useEffect, useRef } from 'react';
+import { createChart, ColorType, CrosshairMode, LineStyle, AreaSeries, type IChartApi, type ISeriesApi } from 'lightweight-charts';
+import { SECTOR_COLORS, TREND_PALETTE } from '@/lib/utils/colors';
 import type { Quote, MockEvent, Period, DailySeries } from '@/types';
 
-ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend, Filler);
-
-// fmtPct is imported but used indirectly through the correlation table values
-void fmtPct;
+function computeCorr(a: (number | null)[], b: (number | null)[]): number {
+  const pairs = a
+    .map((v, i) => [v, b[i]] as [number | null, number | null])
+    .filter(([x, y]) => x !== null && y !== null) as [number, number][];
+  if (pairs.length < 5) return 0;
+  const n = pairs.length;
+  const ma = pairs.reduce((s, [x]) => s + x, 0) / n;
+  const mb = pairs.reduce((s, [, y]) => s + y, 0) / n;
+  const num = pairs.reduce((s, [x, y]) => s + (x - ma) * (y - mb), 0);
+  const da = Math.sqrt(pairs.reduce((s, [x]) => s + (x - ma) ** 2, 0));
+  const db = Math.sqrt(pairs.reduce((s, [, y]) => s + (y - mb) ** 2, 0));
+  return da * db === 0 ? 0 : +(num / (da * db)).toFixed(2);
+}
 
 const EVENT_COLORS: Record<string, string> = {
   fed: '#4a90e2',
@@ -29,20 +33,6 @@ interface Props {
   onSelectedChange: (sel: string[]) => void;
 }
 
-function computeCorr(a: (number | null)[], b: (number | null)[]): number {
-  const pairs = a
-    .map((v, i) => [v, b[i]] as [number | null, number | null])
-    .filter(([x, y]) => x !== null && y !== null) as [number, number][];
-  if (pairs.length < 5) return 0;
-  const n = pairs.length;
-  const ma = pairs.reduce((s, [x]) => s + x, 0) / n;
-  const mb = pairs.reduce((s, [, y]) => s + y, 0) / n;
-  const num = pairs.reduce((s, [x, y]) => s + (x - ma) * (y - mb), 0);
-  const da = Math.sqrt(pairs.reduce((s, [x]) => s + (x - ma) ** 2, 0));
-  const db = Math.sqrt(pairs.reduce((s, [, y]) => s + (y - mb) ** 2, 0));
-  return da * db === 0 ? 0 : +(num / (da * db)).toFixed(2);
-}
-
 export default function TrendTab({
   quotes,
   eventsData,
@@ -52,6 +42,8 @@ export default function TrendTab({
 }: Props) {
   const [seriesCache, setSeriesCache] = useState<Record<string, DailySeries[]>>({});
   const [loading, setLoading] = useState(false);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
 
   const effectivePeriod = period === '1d' ? '5d' : period;
 
@@ -72,27 +64,14 @@ export default function TrendTab({
     ).then(results => {
       setSeriesCache(prev => {
         const next = { ...prev };
-        results.forEach(({ sym, series }) => {
-          next[sym + effectivePeriod] = series;
-        });
+        results.forEach(({ sym, series }) => { next[sym + effectivePeriod] = series; });
         return next;
       });
       setLoading(false);
     });
   }, [selected, effectivePeriod]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function toggleSymbol(sym: string) {
-    if (selected.includes(sym)) {
-      if (selected.length <= 1) return;
-      onSelectedChange(selected.filter(s => s !== sym));
-    } else {
-      const next =
-        selected.length >= 6 ? [...selected.slice(1), sym] : [...selected, sym];
-      onSelectedChange(next);
-    }
-  }
-
-  // Build chart data
+  // Build allSeries and dates
   const allSeries: Record<string, DailySeries[]> = {};
   selected.forEach(sym => {
     if (seriesCache[sym + effectivePeriod]) {
@@ -109,88 +88,124 @@ export default function TrendTab({
   ) ?? new Set<string>();
   const dates = [...allDatesSet].sort();
 
-  const eventsPlugin = {
-    id: 'eventAnnotations',
-    afterDraw(chart: ChartJS) {
-      if (!eventsData?.length) return;
-      const { ctx, chartArea, scales } = chart as unknown as {
-        ctx: CanvasRenderingContext2D;
-        chartArea: { left: number; right: number; top: number; bottom: number };
-        scales: { x: { getPixelForValue: (v: string) => number } };
-      };
-      eventsData.forEach(ev => {
-        const xPx = scales.x.getPixelForValue(ev.date);
-        if (!xPx || xPx < chartArea.left || xPx > chartArea.right) return;
-        ctx.save();
-        ctx.globalAlpha = 0.55;
-        ctx.strokeStyle = EVENT_COLORS[ev.type] ?? '#58a6ff';
-        ctx.lineWidth = 1.2;
-        ctx.setLineDash([4, 3]);
-        ctx.beginPath();
-        ctx.moveTo(xPx, chartArea.top);
-        ctx.lineTo(xPx, chartArea.bottom);
-        ctx.stroke();
-        ctx.globalAlpha = 0.9;
-        ctx.fillStyle = EVENT_COLORS[ev.type] ?? '#58a6ff';
-        ctx.font = '10px Inter,sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(
-          ev.magnitude > 0 ? '▲' : ev.magnitude < 0 ? '▼' : '●',
-          xPx,
-          chartArea.top + 8,
-        );
-        ctx.restore();
+  // Create/update lightweight-charts
+  useEffect(() => {
+    const container = chartContainerRef.current;
+    if (!container || dates.length === 0 || loading) return;
+
+    // Destroy old chart
+    if (chartRef.current) {
+      chartRef.current.remove();
+      chartRef.current = null;
+    }
+
+    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+    const gridColor = 'rgba(99,179,237,0.06)';
+    const textColor = isDark ? '#94a3b8' : '#5a6e8a';
+
+    const chart = createChart(container, {
+      width: container.clientWidth,
+      height: 360,
+      layout: {
+        background: { type: ColorType.Solid, color: 'transparent' },
+        textColor,
+        fontSize: 12,
+      },
+      grid: {
+        vertLines: { color: gridColor },
+        horzLines: { color: gridColor },
+      },
+      crosshair: { mode: CrosshairMode.Normal },
+      rightPriceScale: {
+        borderColor: 'rgba(99,179,237,0.15)',
+        scaleMargins: { top: 0.08, bottom: 0.05 },
+      },
+      timeScale: {
+        borderColor: 'rgba(99,179,237,0.15)',
+        timeVisible: true,
+        secondsVisible: false,
+        fixLeftEdge: true,
+        fixRightEdge: true,
+      },
+      handleScroll: true,
+      handleScale: true,
+    });
+    chartRef.current = chart;
+
+    // Add series for each selected symbol
+    selected.forEach((sym, i) => {
+      const s = allSeries[sym];
+      if (!s || s.length === 0) return;
+      const color = TREND_PALETTE[i % TREND_PALETTE.length];
+      const series: ISeriesApi<'Area'> = chart.addSeries(AreaSeries, {
+        lineColor: color,
+        topColor: color + '30',
+        bottomColor: color + '04',
+        lineWidth: 2,
+        title: sym,
+        priceLineVisible: false,
+        lastValueVisible: true,
+        crosshairMarkerVisible: true,
+        crosshairMarkerRadius: 4,
       });
-    },
-  };
 
-  const datasets = selected.map((sym, i) => {
-    const s = allSeries[sym] ?? [];
-    const byDate = Object.fromEntries(s.map(b => [b.date, b.close]));
-    const values = dates.map(d => byDate[d] ?? null);
-    const base = values.find(v => v !== null) ?? 1;
-    return {
-      label: sym,
-      data: values.map(v => (v === null ? null : +(v / base * 100).toFixed(3))),
-      borderColor: TREND_PALETTE[i % TREND_PALETTE.length],
-      backgroundColor: TREND_PALETTE[i % TREND_PALETTE.length] + '22',
-      borderWidth: 2,
-      pointRadius: 0,
-      tension: 0.3,
-      fill: false,
-      spanGaps: true,
+      const byDate = Object.fromEntries(s.map(b => [b.date, b.close]));
+      const vals = dates.map(d => byDate[d] ?? null);
+      const base = vals.find(v => v !== null) ?? 1;
+      const data = dates
+        .map((d, idx) => {
+          const v = vals[idx];
+          return v !== null ? { time: d as `${number}-${number}-${number}`, value: +(v / base * 100) } : null;
+        })
+        .filter((p): p is { time: `${number}-${number}-${number}`; value: number } => p !== null);
+      series.setData(data);
+
+      // Add event annotations as price lines (only on first series to avoid duplicates)
+      if (eventsData && i === 0) {
+        eventsData.forEach(ev => {
+          if (dates.includes(ev.date)) {
+            series.createPriceLine({
+              price: (base / base) * 100,
+              color: EVENT_COLORS[ev.type] ?? '#58a6ff',
+              lineWidth: 1,
+              lineStyle: LineStyle.Dashed,
+              axisLabelVisible: false,
+              title: ev.magnitude > 0 ? '▲' : ev.magnitude < 0 ? '▼' : '●',
+            });
+          }
+        });
+      }
+    });
+
+    chart.timeScale().fitContent();
+
+    // Handle resize
+    const ro = new ResizeObserver(entries => {
+      const entry = entries[0];
+      if (entry && chartRef.current) {
+        chartRef.current.applyOptions({ width: entry.contentRect.width });
+      }
+    });
+    ro.observe(container);
+
+    return () => {
+      ro.disconnect();
+      if (chartRef.current) {
+        chartRef.current.remove();
+        chartRef.current = null;
+      }
     };
-  });
+  }, [dates, selected, loading, eventsData]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const chartData = { labels: dates, datasets };
-  const ct = getChartTheme();
-  const chartOptions: Record<string, unknown> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: { labels: { color: ct.text, font: { size: 12 } } },
-      tooltip: {
-        callbacks: {
-          label: (ctx: { dataset: { label: string }; raw: number | null }) =>
-            ` ${ctx.dataset.label}: ${ctx.raw?.toFixed(2) ?? '—'}`,
-        },
-      },
-    },
-    scales: {
-      x: {
-        ticks: { color: ct.tick, maxTicksLimit: 10, maxRotation: 0 },
-        grid: { color: ct.grid },
-      },
-      y: {
-        ticks: {
-          color: ct.tick,
-          callback: (v: unknown) => (v as number).toFixed(0),
-        },
-        grid: { color: ct.grid },
-      },
-    },
-  };
+  function toggleSymbol(sym: string) {
+    if (selected.includes(sym)) {
+      if (selected.length <= 1) return;
+      onSelectedChange(selected.filter(s => s !== sym));
+    } else {
+      const next = selected.length >= 6 ? [...selected.slice(1), sym] : [...selected, sym];
+      onSelectedChange(next);
+    }
+  }
 
   // Correlation matrix
   const syms = selected.filter(s => allSeries[s]);
@@ -209,9 +224,7 @@ export default function TrendTab({
       <section className="panel">
         <div className="panel-header">
           <h2>Multi-asset Trend Comparison</h2>
-          <span className="panel-hint">
-            Select up to 6 assets to compare (indexed to 100)
-          </span>
+          <span className="panel-hint">Select up to 6 assets to compare (indexed to 100)</span>
         </div>
         <div className="symbol-picker">
           {quotes
@@ -221,25 +234,19 @@ export default function TrendTab({
                 key={q.symbol}
                 className={`sym-btn${selected.includes(q.symbol) ? ' active' : ''}`}
                 title={q.name}
-                style={
-                  { '--sc': SECTOR_COLORS[q.sector] ?? '#888' } as React.CSSProperties
-                }
+                style={{ '--sc': SECTOR_COLORS[q.sector] ?? '#888' } as React.CSSProperties}
                 onClick={() => toggleSymbol(q.symbol)}
               >
                 {q.symbol}
               </button>
             ))}
         </div>
-        <div className="chart-wrap tall">
+        <div style={{ position: 'relative', minHeight: '360px' }}>
           {loading && (
-            <p style={{ color: '#64748b', textAlign: 'center' }}>Loading…</p>
+            <p style={{ color: '#64748b', textAlign: 'center', paddingTop: '2rem' }}>Loading…</p>
           )}
-          {!loading && dates.length > 0 && (
-            <Line
-              data={chartData}
-              options={chartOptions}
-              plugins={[eventsPlugin as unknown as import('chart.js').Plugin]}
-            />
+          {!loading && (
+            <div ref={chartContainerRef} style={{ width: '100%', height: '360px' }} />
           )}
         </div>
 
@@ -256,9 +263,7 @@ export default function TrendTab({
               <thead>
                 <tr>
                   <th></th>
-                  {syms.map(s => (
-                    <th key={s}>{s}</th>
-                  ))}
+                  {syms.map(s => <th key={s}>{s}</th>)}
                 </tr>
               </thead>
               <tbody>
@@ -267,10 +272,9 @@ export default function TrendTab({
                     <th>{sa}</th>
                     {syms.map(sb => {
                       const c = computeCorr(returns[sa] ?? [], returns[sb] ?? []);
-                      const bg =
-                        c >= 0
-                          ? `rgba(74,144,226,${Math.abs(c) * 0.7})`
-                          : `rgba(248,113,113,${Math.abs(c) * 0.7})`;
+                      const bg = c >= 0
+                        ? `rgba(74,144,226,${Math.abs(c) * 0.7})`
+                        : `rgba(248,113,113,${Math.abs(c) * 0.7})`;
                       return (
                         <td key={sb} style={{ background: bg, color: '#e2e8f0' }}>
                           {c.toFixed(2)}
