@@ -24,28 +24,28 @@ interface Phase {
 
 const PHASES: Phase[] = [
   {
-    name: 'Expansion',   nameZh: '擴張期',
+    name: 'Expansion',   nameZh: 'Expansion',
     startAngle: 0,
     color: '#4a90e2',
-    description: '科技/工業/加密領漲，成長加速',
+    description: 'Tech / Industrials / Crypto lead; growth accelerates',
   },
   {
-    name: 'Slowdown',    nameZh: '放緩期',
+    name: 'Slowdown',    nameZh: 'Slowdown',
     startAngle: Math.PI / 2,
     color: '#f7931a',
-    description: '能源/原物料強勢，通膨升溫',
+    description: 'Energy / Commodities strong; inflation rising',
   },
   {
-    name: 'Contraction', nameZh: '收縮期',
+    name: 'Contraction', nameZh: 'Contraction',
     startAngle: Math.PI,
     color: '#e74c3c',
-    description: '防禦板塊：醫療/債券/公用事業',
+    description: 'Defensive sectors: Healthcare / Bonds / Utilities',
   },
   {
-    name: 'Recovery',    nameZh: '復甦期',
+    name: 'Recovery',    nameZh: 'Recovery',
     startAngle: (3 * Math.PI) / 2,
     color: '#27ae60',
-    description: '金融/房地產/消費性股票復甦',
+    description: 'Financials / Real Estate / Consumer recovering',
   },
 ];
 

@@ -6,6 +6,7 @@ import {
   Tooltip, Legend, Filler,
 } from 'chart.js';
 import { SECTOR_COLORS, TREND_PALETTE, fmtPct } from '@/lib/utils/colors';
+import { getChartTheme } from '@/lib/utils/chartTheme';
 import type { Quote, MockEvent, Period, DailySeries } from '@/types';
 
 ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend, Filler);
@@ -162,12 +163,13 @@ export default function TrendTab({
   });
 
   const chartData = { labels: dates, datasets };
+  const ct = getChartTheme();
   const chartOptions: Record<string, unknown> = {
     responsive: true,
     maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: { labels: { color: '#e2e8f0', font: { size: 12 } } },
+      legend: { labels: { color: ct.text, font: { size: 12 } } },
       tooltip: {
         callbacks: {
           label: (ctx: { dataset: { label: string }; raw: number | null }) =>
@@ -177,15 +179,15 @@ export default function TrendTab({
     },
     scales: {
       x: {
-        ticks: { color: '#64748b', maxTicksLimit: 10, maxRotation: 0 },
-        grid: { color: 'rgba(255,255,255,0.04)' },
+        ticks: { color: ct.tick, maxTicksLimit: 10, maxRotation: 0 },
+        grid: { color: ct.grid },
       },
       y: {
         ticks: {
-          color: '#94a3b8',
+          color: ct.tick,
           callback: (v: unknown) => (v as number).toFixed(0),
         },
-        grid: { color: 'rgba(255,255,255,0.06)' },
+        grid: { color: ct.grid },
       },
     },
   };
@@ -206,9 +208,9 @@ export default function TrendTab({
     <main className="tab-panel active">
       <section className="panel">
         <div className="panel-header">
-          <h2>多標的趨勢比較</h2>
+          <h2>Multi-asset Trend Comparison</h2>
           <span className="panel-hint">
-            選擇最多 6 個標的進行比較（基準化 = 起點 100）
+            Select up to 6 assets to compare (indexed to 100)
           </span>
         </div>
         <div className="symbol-picker">
@@ -230,7 +232,7 @@ export default function TrendTab({
         </div>
         <div className="chart-wrap tall">
           {loading && (
-            <p style={{ color: '#64748b', textAlign: 'center' }}>載入中…</p>
+            <p style={{ color: '#64748b', textAlign: 'center' }}>Loading…</p>
           )}
           {!loading && dates.length > 0 && (
             <Line
@@ -243,12 +245,12 @@ export default function TrendTab({
 
         {/* Correlation matrix */}
         <div className="panel-header" style={{ marginTop: '2rem' }}>
-          <h2>相關性矩陣</h2>
-          <span className="panel-hint">所選標的間的收益率相關係數</span>
+          <h2>Correlation Matrix</h2>
+          <span className="panel-hint">Return correlation among selected assets</span>
         </div>
         <div className="corr-wrap">
           {syms.length < 2 ? (
-            <p style={{ color: '#64748b' }}>選 2+ 個標的</p>
+            <p style={{ color: '#64748b' }}>Select 2+ assets</p>
           ) : (
             <table className="corr-table">
               <thead>

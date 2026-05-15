@@ -15,6 +15,7 @@ import {
   Filler,
 } from 'chart.js';
 import { SECTOR_COLORS, changeColor } from '@/lib/utils/colors';
+import { getChartTheme } from '@/lib/utils/chartTheme';
 import { SankeyChart } from '@/components/charts';
 import type { Quote, ChipRow, FlowMatrix } from '@/types';
 
@@ -69,11 +70,13 @@ export default function FlowChipsTab({ quotes, period }: Props) {
     return (
       <main className="tab-panel active">
         <div className="panel">
-          <p style={{ color: '#64748b' }}>載入中…</p>
+          <p style={{ color: '#64748b' }}>Loading…</p>
         </div>
       </main>
     );
   }
+
+  const ct = getChartTheme();
 
   const n = flowData.sectors.length;
 
@@ -145,8 +148,8 @@ export default function FlowChipsTab({ quotes, period }: Props) {
       },
     },
     scales: {
-      x: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' } },
-      y: { ticks: { color: '#cdd9e5', font: { size: 11 } }, grid: { color: '#21262d' } },
+      x: { ticks: { color: ct.tick }, grid: { color: ct.grid } },
+      y: { ticks: { color: ct.text, font: { size: 11 } }, grid: { color: ct.grid } },
     },
     animation: { duration: 300 },
   };
@@ -155,7 +158,7 @@ export default function FlowChipsTab({ quotes, period }: Props) {
   const chipRow = chipsData?.find(c => c.sector === chipSector) ?? chipsData?.[0] ?? null;
   const sectors = [...new Set((chipsData ?? []).map(c => c.sector))].sort();
   const isTW = chipMode === 'tw';
-  const chipLabels = isTW ? ['外資', '投信', '自營商'] : ['機構法人', '聰明錢', '散戶'];
+  const chipLabels = isTW ? ['外資', '投信', '自營商'] : ['Institutional', 'Smart Money', 'Retail'];
   const secEtf = quotes.find(q => q.sector === chipRow?.sector && q.symbol !== 'SPY');
 
   return (
@@ -163,9 +166,9 @@ export default function FlowChipsTab({ quotes, period }: Props) {
       {/* Sankey: Capital Rotation Flow ─────────────────────────── */}
       <section className="panel">
         <div className="panel-header">
-          <h2>板塊資金輪動 Sankey</h2>
+          <h2>Sector Rotation Sankey</h2>
           <span className="panel-hint">
-            左側：資金流出板塊 → 右側：資金流入板塊　節點高度 = AUM × 動能強度
+            Left = outflow sectors · Right = inflow sectors · Node height ∝ AUM × momentum
           </span>
         </div>
         <SankeyChart data={flowData} />
@@ -174,14 +177,14 @@ export default function FlowChipsTab({ quotes, period }: Props) {
       {/* Flow Direction ─────────────────────────────────────────── */}
       <section className="panel">
         <div className="panel-header">
-          <h2>資金流向分析</h2>
+          <h2>Capital Flow Analysis</h2>
           <span className="panel-hint">
-            代理指標：動能 × 成交量異常 推估各板塊資金流向
+            Proxy: momentum × volume anomaly — estimated sector capital flows
           </span>
         </div>
         <div className="flow-top-grid">
           <div>
-            <div className="chart-sublabel">板塊輪動象限圖</div>
+            <div className="chart-sublabel">Rotation Quadrant</div>
             <div className="chart-wrap" style={{ height: '340px' }}>
               <Bubble
                 data={{ datasets: bubbleDatasets }}
@@ -196,22 +199,22 @@ export default function FlowChipsTab({ quotes, period }: Props) {
                           const d = ctx.raw as { x: number; y: number; r: number };
                           const sec = ctx.dataset.label ?? '';
                           const score = flowData.flow_scores[flowData.sectors.indexOf(sec)];
-                          return `${sec} | 動能排名:${d.x} | 成交量比:${d.y.toFixed(2)}x | 流向:${score > 0 ? '+' : ''}${score}`;
+                          return `${sec} | Momentum rank:${d.x} | Volume ratio:${d.y.toFixed(2)}x | Flow Score:${score > 0 ? '+' : ''}${score}`;
                         },
                       },
                     },
                   },
                   scales: {
                     x: {
-                      title: { display: true, text: '動能排名 →（右=資金流入）', color: '#8b949e' },
-                      ticks: { color: '#8b949e' },
-                      grid: { color: '#21262d' },
+                      title: { display: true, text: 'Momentum Rank → (right = inflow)', color: ct.tick },
+                      ticks: { color: ct.tick },
+                      grid: { color: ct.grid },
                       min: 0, max: n + 1,
                     },
                     y: {
-                      title: { display: true, text: '成交量比率（vs 30日均）', color: '#8b949e' },
-                      ticks: { color: '#8b949e' },
-                      grid: { color: '#21262d' },
+                      title: { display: true, text: 'Volume Ratio (vs 30d avg)', color: ct.tick },
+                      ticks: { color: ct.tick },
+                      grid: { color: ct.grid },
                     },
                   },
                   animation: { duration: 400 },
@@ -220,14 +223,14 @@ export default function FlowChipsTab({ quotes, period }: Props) {
               />
             </div>
             <div className="quadrant-legend">
-              <span className="ql ql-tr">↗ 強勢流入</span>
-              <span className="ql ql-tl">↖ 高量洗盤</span>
-              <span className="ql ql-br">↘ 整理蓄勢</span>
-              <span className="ql ql-bl">↙ 弱勢流出</span>
+              <span className="ql ql-tr">↗ Strong Inflow</span>
+              <span className="ql ql-tl">↖ High-vol Washout</span>
+              <span className="ql ql-br">↘ Consolidation</span>
+              <span className="ql ql-bl">↙ Weak Outflow</span>
             </div>
           </div>
           <div>
-            <div className="chart-sublabel">板塊資金流向強度</div>
+            <div className="chart-sublabel">Sector Flow Score</div>
             <div className="chart-wrap" style={{ height: '340px' }}>
               <Bar data={scoreBarData} options={barOpts} />
             </div>
@@ -238,13 +241,13 @@ export default function FlowChipsTab({ quotes, period }: Props) {
       {/* Institutional Chips ────────────────────────────────────── */}
       <section className="panel">
         <div className="panel-header">
-          <h2>法人籌碼</h2>
+          <h2>Institutional Chips</h2>
           <span className="panel-hint">
-            模擬三大法人每日淨買超，單位：百萬美元
+            Simulated daily net institutional buy, unit: $M
           </span>
         </div>
         <div className="chip-controls">
-          <label className="field-label">板塊：</label>
+          <label className="field-label">Sector:</label>
           <select
             className="chip-select"
             value={chipSector}
@@ -283,7 +286,7 @@ export default function FlowChipsTab({ quotes, period }: Props) {
         {chipRow && (
           <div className="chip-charts-grid">
             <div>
-              <div className="chart-sublabel">每日淨買超（$M）</div>
+              <div className="chart-sublabel">Daily Net Buy ($M)</div>
               <div className="chart-wrap" style={{ height: '260px' }}>
                 <Bar
                   data={{
@@ -313,11 +316,11 @@ export default function FlowChipsTab({ quotes, period }: Props) {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                      legend: { labels: { color: '#8b949e', boxWidth: 12 } },
+                      legend: { labels: { color: ct.tick, boxWidth: 12 } },
                     },
                     scales: {
-                      x: { ticks: { color: '#8b949e', maxTicksLimit: 8, maxRotation: 30 }, grid: { color: '#21262d' }, stacked: true },
-                      y: { ticks: { color: '#8b949e' }, grid: { color: '#21262d' }, stacked: true, title: { display: true, text: '$M', color: '#8b949e' } },
+                      x: { ticks: { color: ct.tick, maxTicksLimit: 8, maxRotation: 30 }, grid: { color: ct.grid }, stacked: true },
+                      y: { ticks: { color: ct.tick }, grid: { color: ct.grid }, stacked: true, title: { display: true, text: '$M', color: ct.tick } },
                     },
                     animation: { duration: 300 },
                   } as Record<string, unknown>}
@@ -325,14 +328,14 @@ export default function FlowChipsTab({ quotes, period }: Props) {
               </div>
             </div>
             <div>
-              <div className="chart-sublabel">累積機構籌碼 vs ETF 價格</div>
+              <div className="chart-sublabel">Cumulative Institutional vs ETF Price</div>
               <div className="chart-wrap" style={{ height: '260px' }}>
                 <Line
                   data={{
                     labels: chipRow.dates,
                     datasets: [
                       {
-                        label: isTW ? '累積外資買超' : '累積機構買超',
+                        label: isTW ? 'Cumulative Foreign Buy' : 'Cumulative Institutional Buy',
                         data: chipRow.cumulative,
                         borderColor: '#4a90e2',
                         backgroundColor: 'rgba(74,144,226,0.12)',
@@ -357,12 +360,12 @@ export default function FlowChipsTab({ quotes, period }: Props) {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                      legend: { labels: { color: '#8b949e', boxWidth: 12 } },
+                      legend: { labels: { color: ct.tick, boxWidth: 12 } },
                     },
                     scales: {
-                      x: { ticks: { color: '#8b949e', maxTicksLimit: 8, maxRotation: 30 }, grid: { color: '#21262d' } },
-                      y: { ticks: { color: '#4a90e2' }, grid: { color: '#21262d' }, position: 'left', title: { display: true, text: '累積 $M', color: '#4a90e2' } },
-                      y2: { ticks: { color: '#f7931a' }, grid: { display: false }, position: 'right', title: { display: true, text: 'ETF 價格', color: '#f7931a' } },
+                      x: { ticks: { color: ct.tick, maxTicksLimit: 8, maxRotation: 30 }, grid: { color: ct.grid } },
+                      y: { ticks: { color: '#4a90e2' }, grid: { color: ct.grid }, position: 'left', title: { display: true, text: 'Cumul. $M', color: '#4a90e2' } },
+                      y2: { ticks: { color: '#f7931a' }, grid: { display: false }, position: 'right', title: { display: true, text: 'ETF Price', color: '#f7931a' } },
                     },
                     animation: { duration: 300 },
                   } as Record<string, unknown>}

@@ -64,7 +64,7 @@ export default function DashboardPage() {
         setEventsData(e);
         setCycleData(c);
         setUpdateTime(
-          '更新於 ' + new Date().toLocaleTimeString('zh-TW'),
+          'Updated ' + new Date().toLocaleTimeString('en-US'),
         );
       })
       .finally(() => setLoading(false));
@@ -86,7 +86,7 @@ export default function DashboardPage() {
         r.json(),
       )) as Quote[];
       setQuotes(q);
-      setUpdateTime('更新於 ' + new Date().toLocaleTimeString('zh-TW'));
+      setUpdateTime('Updated ' + new Date().toLocaleTimeString('en-US'));
     }, 60_000);
     return () => clearInterval(id);
   }, []);
