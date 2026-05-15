@@ -130,11 +130,18 @@ export default function DashboardPage() {
     return () => clearTimeout(timerId);
   }, []);
 
+  // Add to multi-symbol comparison in Trends tab
   function handleSelectSymbolForTrend(sym: string) {
     setSelected(prev => {
       if (prev.includes(sym)) return prev;
       return prev.length >= 6 ? [...prev.slice(1), sym] : [...prev, sym];
     });
+    setActiveTab('trends');
+  }
+
+  // Navigate to Trends tab with only this single symbol (solo chart view)
+  function handleViewChart(sym: string) {
+    setSelected([sym]);
     setActiveTab('trends');
   }
 
@@ -149,7 +156,7 @@ export default function DashboardPage() {
       <MarketTickerBar
         quotes={quotes}
         period={period}
-        onSelectSymbol={handleSelectSymbolForTrend}
+        onSelectSymbol={handleViewChart}
         flashMap={flashMap}
       />
       <TabNav activeTab={activeTab} onTabChange={setActiveTab} />

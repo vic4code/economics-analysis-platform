@@ -1667,6 +1667,13 @@ body {
   flex-shrink: 0;
 }
 
+/* Major market index items — subtle blue accent */
+.ticker-item.ticker-index { border-right-color: rgba(99,179,237,0.20); }
+.ticker-sym-index { color: #93c5fd; font-size: 0.78rem; }
+
+/* Separator after the last index item */
+.ticker-item.ticker-index:nth-child(5) { border-right: 2px solid rgba(99,179,237,0.35); }
+
 /* ── Tab Nav — grouped ─────────────────────────────────────────── */
 .tab-nav {
   display: flex;
