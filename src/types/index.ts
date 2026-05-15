@@ -70,6 +70,17 @@ export interface CrisisEvent {
   priceTrack: CrisisPricePoint[];          // normalised 120-day price curve
 }
 
+export interface CorrelationMatrix {
+  symbols: string[];
+  names: string[];
+  sectors: string[];
+  matrix: number[][];
+  rolling: {
+    symbols: [string, string];
+    values: number[];
+  }[];
+}
+
 export const TEMPLATES: Record<string, Record<string, number>> = {
   aggressive: {QQQ:25, SMH:20, IBIT:15, XLE:10, XLF:10, XLY:10, EEM:10},
   balanced:   {QQQ:20, GLD:10, AGG:15, VNQ:15, EEM:10, XLE:10, XLV:10, TLT:10},

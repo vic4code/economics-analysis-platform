@@ -4,7 +4,7 @@ import dynamic from 'next/dynamic';
 import TopBar from '@/components/layout/TopBar';
 import TabNav from '@/components/layout/TabNav';
 import Loader from '@/components/layout/Loader';
-import type { Quote, MacroNode, MockEvent, CycleRow, CrisisEvent, Period } from '@/types';
+import type { Quote, MacroNode, MockEvent, CycleRow, CrisisEvent, CorrelationMatrix, Period } from '@/types';
 
 // Dynamic imports to avoid SSR for canvas/chart components
 const MacroTab = dynamic(() => import('@/components/tabs/MacroTab'), {
@@ -28,6 +28,9 @@ const CycleTab = dynamic(() => import('@/components/tabs/CycleTab'), {
 const CrisisTab = dynamic(() => import('@/components/tabs/CrisisTab'), {
   ssr: false,
 });
+const CorrelationTab = dynamic(() => import('@/components/tabs/CorrelationTab'), {
+  ssr: false,
+});
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -38,6 +41,7 @@ export default function DashboardPage() {
   const [eventsData, setEventsData] = useState<MockEvent[] | null>(null);
   const [cycleData, setCycleData] = useState<CycleRow[] | null>(null);
   const [crisisData, setCrisisData] = useState<CrisisEvent[] | null>(null);
+  const [correlationData, setCorrelationData] = useState<CorrelationMatrix | null>(null);
   const [updateTime, setUpdateTime] = useState('—');
   // Trend tab selected symbols
   const [selected, setSelected] = useState<string[]>([
@@ -62,13 +66,15 @@ export default function DashboardPage() {
       fetch('/api/events').then(r => r.json()) as Promise<MockEvent[]>,
       fetch('/api/cycle').then(r => r.json()) as Promise<CycleRow[]>,
       fetch('/api/crisis').then(r => r.json()) as Promise<CrisisEvent[]>,
+      fetch('/api/correlation').then(r => r.json()) as Promise<CorrelationMatrix>,
     ])
-      .then(([q, m, e, c, cr]) => {
+      .then(([q, m, e, c, cr, corr]) => {
         setQuotes(q);
         setMacroData(m);
         setEventsData(e);
         setCycleData(c);
         setCrisisData(cr);
+        setCorrelationData(corr);
         setUpdateTime(
           'Updated ' + new Date().toLocaleTimeString('en-US'),
         );
@@ -142,6 +148,9 @@ export default function DashboardPage() {
       )}
       {activeTab === 'crisis' && (
         <CrisisTab crisisData={crisisData} allEvents={eventsData} />
+      )}
+      {activeTab === 'correlation' && (
+        <CorrelationTab correlationData={correlationData} />
       )}
     </>
   );

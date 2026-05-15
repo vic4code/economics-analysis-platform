@@ -36,3 +36,5 @@ export type { CycleRow } from './cycle';
 export { getCycleData } from './cycle';
 
 export { getCrisisData } from './crisis';
+
+export { getCorrelationData } from './correlation';
