@@ -159,8 +159,6 @@ export default function DashboardPage() {
   return (
     <>
       <TopBar
-        period={period}
-        onPeriodChange={setPeriod}
         updateTime={updateTime}
         marketStatus={marketStatus}
       />
@@ -170,7 +168,12 @@ export default function DashboardPage() {
         onSelectSymbol={handleViewChart}
         flashMap={flashMap}
       />
-      <TabNav activeTab={activeTab} onTabChange={changeTab} />
+      <TabNav
+        activeTab={activeTab}
+        onTabChange={changeTab}
+        period={period}
+        onPeriodChange={setPeriod}
+      />
       <QuickSearch
         quotes={quotes}
         onSelect={handleSelectSymbolForTrend}
