@@ -7,6 +7,8 @@ import Loader from '@/components/layout/Loader';
 import MarketTickerBar from '@/components/layout/MarketTickerBar';
 import QuickSearch from '@/components/layout/QuickSearch';
 import type { Quote, MacroNode, MockEvent, CycleRow, CrisisEvent, CorrelationMatrix, Period } from '@/types';
+
+const TAB_ORDER = ['macro', 'overview', 'trends', 'backtest', 'flow', 'cycle', 'crisis', 'correlation'];
 import { getMarketStatus, getPollInterval, type MarketStatus } from '@/lib/utils/marketHours';
 
 // Dynamic imports to avoid SSR for canvas/chart components
@@ -38,6 +40,7 @@ const CorrelationTab = dynamic(() => import('@/components/tabs/CorrelationTab'),
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('macro');
+  const [tabDir, setTabDir] = useState<'left' | 'right'>('right');
   const [period, setPeriod] = useState<Period>('1d');
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [macroData, setMacroData] = useState<MacroNode | null>(null);
@@ -131,19 +134,26 @@ export default function DashboardPage() {
     return () => clearTimeout(timerId);
   }, []);
 
+  function changeTab(newTab: string) {
+    const oldIdx = TAB_ORDER.indexOf(activeTab);
+    const newIdx = TAB_ORDER.indexOf(newTab);
+    setTabDir(newIdx >= oldIdx ? 'right' : 'left');
+    setActiveTab(newTab);
+  }
+
   // Add to multi-symbol comparison in Trends tab
   function handleSelectSymbolForTrend(sym: string) {
     setSelected(prev => {
       if (prev.includes(sym)) return prev;
       return prev.length >= 6 ? [...prev.slice(1), sym] : [...prev, sym];
     });
-    setActiveTab('trends');
+    changeTab('trends');
   }
 
   // Navigate to Trends tab with only this single symbol (solo chart view)
   function handleViewChart(sym: string) {
     setSelected([sym]);
-    setActiveTab('trends');
+    changeTab('trends');
   }
 
   return (
@@ -160,9 +170,17 @@ export default function DashboardPage() {
         onSelectSymbol={handleViewChart}
         flashMap={flashMap}
       />
-      <TabNav activeTab={activeTab} onTabChange={setActiveTab} />
-      <QuickSearch quotes={quotes} onSelect={handleSelectSymbolForTrend} />
+      <TabNav activeTab={activeTab} onTabChange={changeTab} />
+      <QuickSearch
+        quotes={quotes}
+        onSelect={handleSelectSymbolForTrend}
+        onTabChange={changeTab}
+        onPeriodChange={setPeriod}
+        activeTab={activeTab}
+        period={period}
+      />
       <Loader show={loading} />
+      <div className={`tab-dir-${tabDir}`}>
       {activeTab === 'macro' && (
         <MacroTab macroData={macroData} period={period} />
       )}
@@ -195,6 +213,7 @@ export default function DashboardPage() {
       {activeTab === 'correlation' && (
         <CorrelationTab correlationData={correlationData} />
       )}
+      </div>
     </>
   );
 }
