@@ -63,10 +63,10 @@ export async function getMacroData(period: string): Promise<MacroNode> {
       const totalAum = kids.reduce((s, k) => s + k.aum, 0);
       const wChange  = kids.reduce((s, k) => s + k.aum * k.change, 0) / (totalAum || 1);
       return {
-        id: 'global', name: '全球資金',
+        id: 'global', name: 'Global Capital',
         aum: Math.round(totalAum * 10) / 10,
         change: Math.round(wChange * 100) / 100,
-        color: '#58a6ff',
+        color: '#BFA06A',
         etfs: [], etf_quotes: [],
         children: kids,
       };

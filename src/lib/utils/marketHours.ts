@@ -20,8 +20,8 @@ export function getPollInterval(status: MarketStatus): number {
 }
 
 export const MARKET_STATUS_LABEL: Record<MarketStatus, string> = {
-  open:   'OPEN · 15s',
-  pre:    'PRE-MARKET',
-  post:   'AFTER-HOURS',
-  closed: 'MARKET CLOSED',
+  open:   'Live',
+  pre:    'Pre',
+  post:   'After',
+  closed: 'Closed',
 };

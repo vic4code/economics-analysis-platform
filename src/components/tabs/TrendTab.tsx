@@ -193,8 +193,8 @@ export default function TrendTab({ quotes, eventsData, period, selected, onSelec
           color, lineWidth: 1 as const, title,
           priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, lineType: 0 as const,
         });
-        if (ma5.length)  { const sl = chart.addSeries(LineSeries, maOpts('#f59e0b', 'MA5'));  sl.setData(ma5); }
-        if (ma20.length) { const sl = chart.addSeries(LineSeries, maOpts('#a78bfa', 'MA20')); sl.setData(ma20); }
+        if (ma5.length)  { const sl = chart.addSeries(LineSeries, maOpts('#C47F17', 'MA5'));  sl.setData(ma5); }
+        if (ma20.length) { const sl = chart.addSeries(LineSeries, maOpts('#BFA06A', 'MA20')); sl.setData(ma20); }
       }
 
       // ── Bollinger Bands ─────────────────────────────────────────
@@ -370,11 +370,11 @@ export default function TrendTab({ quotes, eventsData, period, selected, onSelec
             <span className="legend-candle-up">▲ Bullish</span>
             {showMA && (
               <>
-                <span style={{ color: '#f59e0b' }}>— MA5</span>
-                <span style={{ color: '#a78bfa' }}>— MA20</span>
+                <span style={{ color: '#C47F17' }}>— MA5</span>
+                <span style={{ color: '#BFA06A' }}>— MA20</span>
               </>
             )}
-            {showBB && <span style={{ color: 'rgba(99,179,237,0.85)', fontStyle: 'italic' }}>- - Bollinger ±2σ</span>}
+            {showBB && <span style={{ color: 'rgba(91,163,201,0.85)', fontStyle: 'italic' }}>- - Bollinger ±2σ</span>}
             <span className="legend-candle-down">▼ Bearish</span>
           </div>
         )}

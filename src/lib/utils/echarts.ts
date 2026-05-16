@@ -26,10 +26,10 @@ export function getEChartsTheme() {
   return {
     isDark,
     bg: 'transparent',
-    textColor: isDark ? '#94a3b8' : '#5a6e8a',
-    gridColor: isDark ? 'rgba(99,179,237,0.06)' : 'rgba(59,130,246,0.08)',
-    tooltipBg: isDark ? '#0d1627' : '#ffffff',
-    tooltipBorder: 'rgba(99,179,237,0.2)',
-    tooltipText: isDark ? '#e2e8f0' : '#1e2a3a',
+    textColor: isDark ? '#6E7A8A' : '#5B6573',
+    gridColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)',
+    tooltipBg: isDark ? '#141B28' : '#ffffff',
+    tooltipBorder: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+    tooltipText: isDark ? '#E8EBF0' : '#14181F',
   };
 }

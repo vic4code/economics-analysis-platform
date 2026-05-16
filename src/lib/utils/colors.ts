@@ -31,9 +31,9 @@ export function changeColor(pct: number, alpha = 1): string {
 }
 
 export function changeTextColor(pct: number): string {
-  if (pct > 0.1)  return "#4ade80";
-  if (pct < -0.1) return "#f87171";
-  return "#94a3b8";
+  if (pct > 0.1)  return "#2EA043";
+  if (pct < -0.1) return "#E5534B";
+  return "#6E7A8A";
 }
 
 export function fmtPct(v: number, alwaysSign = true): string {

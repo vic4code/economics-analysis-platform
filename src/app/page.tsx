@@ -11,6 +11,17 @@ import type { Quote, MacroNode, MockEvent, CycleRow, CrisisEvent, CorrelationMat
 const TAB_ORDER = ['macro', 'overview', 'trends', 'backtest', 'flow', 'cycle', 'crisis', 'correlation'];
 import { getMarketStatus, getPollInterval, type MarketStatus } from '@/lib/utils/marketHours';
 
+const MONTH_ABBR = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+function formatUpdateTime(d: Date): string {
+  // Display in NY time so the badge reads as a market timestamp.
+  const ny = new Date(d.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const day = String(ny.getDate()).padStart(2, '0');
+  const mon = MONTH_ABBR[ny.getMonth()];
+  const hh  = String(ny.getHours()).padStart(2, '0');
+  const mm  = String(ny.getMinutes()).padStart(2, '0');
+  return `${day} ${mon} · ${hh}:${mm} EST`;
+}
+
 // Dynamic imports to avoid SSR for canvas/chart components
 const MacroTab = dynamic(() => import('@/components/tabs/MacroTab'), {
   ssr: false,
@@ -85,7 +96,7 @@ export default function DashboardPage() {
         setCrisisData(cr);
         setCorrelationData(corr);
         setUpdateTime(
-          'Updated ' + new Date().toLocaleTimeString('en-US'),
+          formatUpdateTime(new Date()),
         );
       })
       .finally(() => setLoading(false));
@@ -109,7 +120,7 @@ export default function DashboardPage() {
     async function refresh() {
       const q = (await fetch('/api/quotes').then(r => r.json())) as Quote[];
       setQuotes(q);
-      setUpdateTime('Updated ' + new Date().toLocaleTimeString('en-US'));
+      setUpdateTime(formatUpdateTime(new Date()));
 
       // Detect price changes for flash animation
       const newFlash: Record<string, 'up' | 'down' | null> = {};
