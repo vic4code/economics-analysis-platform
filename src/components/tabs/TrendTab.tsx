@@ -1,8 +1,15 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { createChart, ColorType, CrosshairMode, LineStyle, LineSeries, type IChartApi, type ISeriesApi } from 'lightweight-charts';
+import {
+  createChart, ColorType, CrosshairMode, LineStyle,
+  LineSeries, CandlestickSeries, HistogramSeries,
+  type IChartApi,
+} from 'lightweight-charts';
 import { SECTOR_COLORS, TREND_PALETTE } from '@/lib/utils/colors';
 import type { Quote, MockEvent, Period, DailySeries } from '@/types';
+
+type TimeStr = `${number}-${number}-${number}`;
+type ChartMode = 'line' | 'candle';
 
 function computeCorr(a: (number | null)[], b: (number | null)[]): number {
   const pairs = a
@@ -18,11 +25,34 @@ function computeCorr(a: (number | null)[], b: (number | null)[]): number {
   return da * db === 0 ? 0 : +(num / (da * db)).toFixed(2);
 }
 
+function calcMA(series: DailySeries[], period: number): { time: TimeStr; value: number }[] {
+  const out: { time: TimeStr; value: number }[] = [];
+  for (let i = period - 1; i < series.length; i++) {
+    const sum = series.slice(i - period + 1, i + 1).reduce((s, x) => s + x.close, 0);
+    out.push({ time: series[i].date as TimeStr, value: +(sum / period).toFixed(2) });
+  }
+  return out;
+}
+
+interface BBPoint { time: TimeStr; upper: number; middle: number; lower: number }
+function calcBB(series: DailySeries[], period = 20, mult = 2): BBPoint[] {
+  const out: BBPoint[] = [];
+  for (let i = period - 1; i < series.length; i++) {
+    const closes = series.slice(i - period + 1, i + 1).map(x => x.close);
+    const mean = closes.reduce((s, v) => s + v, 0) / period;
+    const std = Math.sqrt(closes.reduce((s, v) => s + (v - mean) ** 2, 0) / period);
+    out.push({
+      time: series[i].date as TimeStr,
+      upper: +(mean + mult * std).toFixed(2),
+      middle: +mean.toFixed(2),
+      lower: +(mean - mult * std).toFixed(2),
+    });
+  }
+  return out;
+}
+
 const EVENT_COLORS: Record<string, string> = {
-  fed: '#4a90e2',
-  macro: '#27ae60',
-  earnings: '#f7931a',
-  geopolitical: '#e74c3c',
+  fed: '#4a90e2', macro: '#27ae60', earnings: '#f7931a', geopolitical: '#e74c3c',
 };
 
 interface Props {
@@ -33,19 +63,22 @@ interface Props {
   onSelectedChange: (sel: string[]) => void;
 }
 
-export default function TrendTab({
-  quotes,
-  eventsData,
-  period,
-  selected,
-  onSelectedChange,
-}: Props) {
+export default function TrendTab({ quotes, eventsData, period, selected, onSelectedChange }: Props) {
   const [seriesCache, setSeriesCache] = useState<Record<string, DailySeries[]>>({});
   const [loading, setLoading] = useState(false);
+  const [chartMode, setChartMode] = useState<ChartMode>('candle');
+  const [showVolume, setShowVolume] = useState(true);
+  const [showMA, setShowMA] = useState(true);
+  const [showBB, setShowBB] = useState(false);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
 
+  const isSingle = selected.length === 1;
   const effectivePeriod = period === '1d' ? '5d' : period;
+
+  useEffect(() => {
+    if (!isSingle) setChartMode('line');
+  }, [isSingle]);
 
   useEffect(() => {
     const missing = selected.filter(sym => !seriesCache[sym + effectivePeriod]);
@@ -71,12 +104,9 @@ export default function TrendTab({
     });
   }, [selected, effectivePeriod]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Build allSeries and dates
   const allSeries: Record<string, DailySeries[]> = {};
   selected.forEach(sym => {
-    if (seriesCache[sym + effectivePeriod]) {
-      allSeries[sym] = seriesCache[sym + effectivePeriod];
-    }
+    if (seriesCache[sym + effectivePeriod]) allSeries[sym] = seriesCache[sym + effectivePeriod];
   });
 
   const allDatesSet = Object.values(allSeries).reduce<Set<string> | null>(
@@ -88,113 +118,175 @@ export default function TrendTab({
   ) ?? new Set<string>();
   const dates = [...allDatesSet].sort();
 
-  // Create/update lightweight-charts
   useEffect(() => {
     const container = chartContainerRef.current;
-    if (!container || dates.length === 0 || loading) return;
+    if (!container || loading) return;
 
-    // Destroy old chart
-    if (chartRef.current) {
-      chartRef.current.remove();
-      chartRef.current = null;
-    }
+    const sym = selected[0];
+    const s = isSingle ? allSeries[sym] : null;
+    if (isSingle && (!s || s.length === 0)) return;
+    if (!isSingle && dates.length === 0) return;
+
+    if (chartRef.current) { chartRef.current.remove(); chartRef.current = null; }
 
     const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-    const gridColor = 'rgba(99,179,237,0.06)';
+    const gridColor = isDark ? 'rgba(99,179,237,0.06)' : 'rgba(59,130,246,0.08)';
     const textColor = isDark ? '#94a3b8' : '#5a6e8a';
+    const borderColor = isDark ? 'rgba(99,179,237,0.15)' : 'rgba(59,130,246,0.15)';
+    const withVol = isSingle && showVolume;
+    const chartH = withVol ? 500 : 380;
 
     const chart = createChart(container, {
       width: container.clientWidth,
-      height: 360,
+      height: chartH,
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
         textColor,
         fontSize: 12,
       },
-      grid: {
-        vertLines: { color: gridColor },
-        horzLines: { color: gridColor },
-      },
+      grid: { vertLines: { color: gridColor }, horzLines: { color: gridColor } },
       crosshair: { mode: CrosshairMode.Normal },
       rightPriceScale: {
-        borderColor: 'rgba(99,179,237,0.15)',
-        scaleMargins: { top: 0.08, bottom: 0.05 },
+        borderColor,
+        scaleMargins: withVol ? { top: 0.06, bottom: 0.26 } : { top: 0.06, bottom: 0.05 },
       },
-      timeScale: {
-        borderColor: 'rgba(99,179,237,0.15)',
-        timeVisible: true,
-        secondsVisible: false,
-        fixLeftEdge: true,
-        fixRightEdge: true,
-      },
+      timeScale: { borderColor, timeVisible: true, secondsVisible: false, fixLeftEdge: true, fixRightEdge: true },
       handleScroll: true,
       handleScale: true,
     });
     chartRef.current = chart;
 
-    // Add series for each selected symbol
-    selected.forEach((sym, i) => {
-      const s = allSeries[sym];
-      if (!s || s.length === 0) return;
-      const color = TREND_PALETTE[i % TREND_PALETTE.length];
-      const series: ISeriesApi<'Line'> = chart.addSeries(LineSeries, {
-        color,
-        lineWidth: selected.length === 1 ? 2 : 1,
-        title: sym,
-        priceLineVisible: false,
-        lastValueVisible: true,
-        crosshairMarkerVisible: true,
-        crosshairMarkerRadius: 4,
-        lineType: 0,
-      });
-
-      const byDate = Object.fromEntries(s.map(b => [b.date, b.close]));
-      const vals = dates.map(d => byDate[d] ?? null);
-      const base = vals.find(v => v !== null) ?? 1;
-      const data = dates
-        .map((d, idx) => {
-          const v = vals[idx];
-          return v !== null ? { time: d as `${number}-${number}-${number}`, value: +(v / base * 100) } : null;
-        })
-        .filter((p): p is { time: `${number}-${number}-${number}`; value: number } => p !== null);
-      series.setData(data);
-
-      // Add event annotations as price lines (only on first series to avoid duplicates)
-      if (eventsData && i === 0) {
-        eventsData.forEach(ev => {
-          if (dates.includes(ev.date)) {
-            series.createPriceLine({
-              price: (base / base) * 100,
-              color: EVENT_COLORS[ev.type] ?? '#58a6ff',
-              lineWidth: 1,
-              lineStyle: LineStyle.Dashed,
-              axisLabelVisible: false,
-              title: ev.magnitude > 0 ? '▲' : ev.magnitude < 0 ? '▼' : '●',
-            });
-          }
+    if (isSingle && s) {
+      if (chartMode === 'candle') {
+        // ── Candlestick ─────────────────────────────────────────────
+        const cs = chart.addSeries(CandlestickSeries, {
+          upColor:      '#22c55e',
+          downColor:    '#ef4444',
+          borderVisible: false,
+          wickUpColor:  '#22c55e',
+          wickDownColor:'#ef4444',
         });
+        cs.setData(s.map(d => ({
+          time: d.date as TimeStr,
+          open: d.open, high: d.high, low: d.low, close: d.close,
+        })));
+      } else {
+        // ── Single line ──────────────────────────────────────────────
+        const ls = chart.addSeries(LineSeries, {
+          color: TREND_PALETTE[0],
+          lineWidth: 2,
+          title: sym,
+          priceLineVisible: false,
+          lastValueVisible: true,
+          crosshairMarkerVisible: true,
+          crosshairMarkerRadius: 4,
+          lineType: 0,
+        });
+        ls.setData(s.map(d => ({ time: d.date as TimeStr, value: d.close })));
       }
-    });
+
+      // ── MA5 / MA20 ──────────────────────────────────────────────
+      if (showMA) {
+        const ma5  = calcMA(s, 5);
+        const ma20 = calcMA(s, 20);
+        const maOpts = (color: string, title: string) => ({
+          color, lineWidth: 1 as const, title,
+          priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, lineType: 0 as const,
+        });
+        if (ma5.length)  { const sl = chart.addSeries(LineSeries, maOpts('#f59e0b', 'MA5'));  sl.setData(ma5); }
+        if (ma20.length) { const sl = chart.addSeries(LineSeries, maOpts('#a78bfa', 'MA20')); sl.setData(ma20); }
+      }
+
+      // ── Bollinger Bands ─────────────────────────────────────────
+      if (showBB) {
+        const bb = calcBB(s);
+        if (bb.length) {
+          const bbOpts = (color: string, title: string) => ({
+            color, lineWidth: 1 as const, title,
+            lineStyle: LineStyle.Dashed,
+            priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, lineType: 0 as const,
+          });
+          const upper = chart.addSeries(LineSeries, bbOpts('rgba(99,179,237,0.7)', 'BB+'));
+          const mid   = chart.addSeries(LineSeries, bbOpts('rgba(99,179,237,0.35)', 'BB'));
+          const lower = chart.addSeries(LineSeries, bbOpts('rgba(99,179,237,0.7)', 'BB-'));
+          upper.setData(bb.map(d => ({ time: d.time, value: d.upper })));
+          mid.setData(bb.map(d => ({ time: d.time, value: d.middle })));
+          lower.setData(bb.map(d => ({ time: d.time, value: d.lower })));
+        }
+      }
+
+      // ── Volume ─────────────────────────────────────────────────
+      if (showVolume) {
+        chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.78, bottom: 0 } });
+        const vol = chart.addSeries(HistogramSeries, {
+          color: '#26a69a',
+          priceFormat: { type: 'volume' },
+          priceScaleId: 'volume',
+        });
+        vol.setData(s.map(d => ({
+          time:  d.date as TimeStr,
+          value: d.volume,
+          color: d.close >= d.open ? 'rgba(34,197,94,0.55)' : 'rgba(239,68,68,0.55)',
+        })));
+      }
+
+    } else {
+      // ── Multi-symbol comparison (indexed to 100) ─────────────────
+      selected.forEach((sym, i) => {
+        const s = allSeries[sym];
+        if (!s || s.length === 0) return;
+        const color = TREND_PALETTE[i % TREND_PALETTE.length];
+        const series = chart.addSeries(LineSeries, {
+          color,
+          lineWidth: selected.length === 1 ? 2 : 1,
+          title: sym,
+          priceLineVisible: false,
+          lastValueVisible: true,
+          crosshairMarkerVisible: true,
+          crosshairMarkerRadius: 4,
+          lineType: 0,
+        });
+        const byDate = Object.fromEntries(s.map(b => [b.date, b.close]));
+        const vals = dates.map(d => byDate[d] ?? null);
+        const base = vals.find(v => v !== null) ?? 1;
+        const data = dates
+          .map((d, idx) => {
+            const v = vals[idx];
+            return v !== null ? { time: d as TimeStr, value: +(v / base * 100) } : null;
+          })
+          .filter((p): p is { time: TimeStr; value: number } => p !== null);
+        series.setData(data);
+
+        if (eventsData && i === 0) {
+          eventsData.forEach(ev => {
+            if (dates.includes(ev.date)) {
+              series.createPriceLine({
+                price: 100,
+                color: EVENT_COLORS[ev.type] ?? '#58a6ff',
+                lineWidth: 1,
+                lineStyle: LineStyle.Dashed,
+                axisLabelVisible: false,
+                title: ev.magnitude > 0 ? '▲' : ev.magnitude < 0 ? '▼' : '●',
+              });
+            }
+          });
+        }
+      });
+    }
 
     chart.timeScale().fitContent();
 
-    // Handle resize
     const ro = new ResizeObserver(entries => {
       const entry = entries[0];
-      if (entry && chartRef.current) {
-        chartRef.current.applyOptions({ width: entry.contentRect.width });
-      }
+      if (entry && chartRef.current) chartRef.current.applyOptions({ width: entry.contentRect.width });
     });
     ro.observe(container);
 
     return () => {
       ro.disconnect();
-      if (chartRef.current) {
-        chartRef.current.remove();
-        chartRef.current = null;
-      }
+      if (chartRef.current) { chartRef.current.remove(); chartRef.current = null; }
     };
-  }, [dates, selected, loading, eventsData]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dates, selected, loading, eventsData, chartMode, showVolume, showMA, showBB]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggleSymbol(sym: string) {
     if (selected.includes(sym)) {
@@ -206,7 +298,6 @@ export default function TrendTab({
     }
   }
 
-  // Correlation matrix
   const syms = selected.filter(s => allSeries[s]);
   const returns: Record<string, (number | null)[]> = {};
   syms.forEach(sym => {
@@ -218,13 +309,19 @@ export default function TrendTab({
     );
   });
 
+  const withVol = isSingle && showVolume;
+  const chartH = withVol ? 500 : 380;
+
   return (
     <main className="tab-panel active">
       <section className="panel">
         <div className="panel-header">
-          <h2>Multi-asset Trend Comparison</h2>
-          <span className="panel-hint">Select up to 6 assets to compare (indexed to 100)</span>
+          <h2>{isSingle ? `${selected[0]}` : 'Multi-asset Trend Comparison'}</h2>
+          <span className="panel-hint">
+            {isSingle ? 'Click another symbol to compare' : 'Up to 6 assets · indexed to 100'}
+          </span>
         </div>
+
         <div className="symbol-picker">
           {quotes
             .filter(q => q.symbol !== 'SPY')
@@ -240,53 +337,86 @@ export default function TrendTab({
               </button>
             ))}
         </div>
-        <div style={{ position: 'relative', minHeight: '360px' }}>
+
+        {isSingle && (
+          <div className="chart-controls">
+            <div className="chart-mode-btns">
+              <button className={`chart-mode-btn${chartMode === 'candle' ? ' active' : ''}`} onClick={() => setChartMode('candle')}>Candle</button>
+              <button className={`chart-mode-btn${chartMode === 'line' ? ' active' : ''}`}   onClick={() => setChartMode('line')}>Line</button>
+            </div>
+            <div className="chart-indicator-btns">
+              <button className={`chart-ind-btn${showMA ? ' active' : ''}`}     onClick={() => setShowMA(v => !v)}>MA5/20</button>
+              <button className={`chart-ind-btn${showBB ? ' active' : ''}`}     onClick={() => setShowBB(v => !v)}>Bollinger</button>
+              <button className={`chart-ind-btn${showVolume ? ' active' : ''}`} onClick={() => setShowVolume(v => !v)}>Volume</button>
+            </div>
+          </div>
+        )}
+
+        <div style={{ position: 'relative', minHeight: `${chartH}px` }}>
           {loading && (
             <p style={{ color: '#64748b', textAlign: 'center', paddingTop: '2rem' }}>Loading…</p>
           )}
-          {!loading && (
-            <div ref={chartContainerRef} style={{ width: '100%', height: '360px' }} />
-          )}
+          <div
+            ref={chartContainerRef}
+            style={{ width: '100%', height: `${chartH}px`, display: loading ? 'none' : 'block' }}
+          />
         </div>
 
-        {/* Correlation matrix */}
-        <div className="panel-header" style={{ marginTop: '2rem' }}>
-          <h2>Correlation Matrix</h2>
-          <span className="panel-hint">Return correlation among selected assets</span>
-        </div>
-        <div className="corr-wrap">
-          {syms.length < 2 ? (
-            <p style={{ color: '#64748b' }}>Select 2+ assets</p>
-          ) : (
-            <table className="corr-table">
-              <thead>
-                <tr>
-                  <th></th>
-                  {syms.map(s => <th key={s}>{s}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {syms.map(sa => (
-                  <tr key={sa}>
-                    <th>{sa}</th>
-                    {syms.map(sb => {
-                      const c = computeCorr(returns[sa] ?? [], returns[sb] ?? []);
-                      const bg = c >= 0
-                        ? `rgba(74,144,226,${Math.abs(c) * 0.7})`
-                        : `rgba(248,113,113,${Math.abs(c) * 0.7})`;
-                      return (
-                        <td key={sb} style={{ background: bg, color: '#e2e8f0' }}>
-                          {c.toFixed(2)}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+        {isSingle && chartMode === 'candle' && (
+          <div className="candle-legend">
+            <span className="legend-candle-up">▲ Bullish</span>
+            {showMA && (
+              <>
+                <span style={{ color: '#f59e0b' }}>— MA5</span>
+                <span style={{ color: '#a78bfa' }}>— MA20</span>
+              </>
+            )}
+            {showBB && <span style={{ color: 'rgba(99,179,237,0.85)', fontStyle: 'italic' }}>- - Bollinger ±2σ</span>}
+            <span className="legend-candle-down">▼ Bearish</span>
+          </div>
+        )}
       </section>
+
+      {!isSingle && (
+        <section className="panel">
+          <div className="panel-header">
+            <h2>Correlation Matrix</h2>
+            <span className="panel-hint">Return correlation among selected assets</span>
+          </div>
+          <div className="corr-wrap">
+            {syms.length < 2 ? (
+              <p style={{ color: '#64748b' }}>Select 2+ assets</p>
+            ) : (
+              <table className="corr-table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    {syms.map(s => <th key={s}>{s}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {syms.map(sa => (
+                    <tr key={sa}>
+                      <th>{sa}</th>
+                      {syms.map(sb => {
+                        const c = computeCorr(returns[sa] ?? [], returns[sb] ?? []);
+                        const bg = c >= 0
+                          ? `rgba(74,144,226,${Math.abs(c) * 0.7})`
+                          : `rgba(248,113,113,${Math.abs(c) * 0.7})`;
+                        return (
+                          <td key={sb} style={{ background: bg, color: '#e2e8f0' }}>
+                            {c.toFixed(2)}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </section>
+      )}
     </main>
   );
 }
