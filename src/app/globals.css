@@ -55,6 +55,12 @@
   --topbar-start: #dce8fb;
 }
 
+[data-theme="light"] .topbar {
+  background: #ffffff;
+  border-bottom: none;
+  box-shadow: 0 1px 0 rgba(59,130,246,0.14), 0 3px 12px rgba(59,130,246,0.07);
+}
+
 html { scroll-behavior: smooth; }
 
 body {
