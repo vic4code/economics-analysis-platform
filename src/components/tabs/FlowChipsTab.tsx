@@ -1,36 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Bubble, Bar, Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  ArcElement,
-  BarElement,
-  BubbleController,
-  LineElement,
-  PointElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  Legend,
-  Filler,
-} from 'chart.js';
-import { SECTOR_COLORS, changeColor } from '@/lib/utils/colors';
-import { getChartTheme } from '@/lib/utils/chartTheme';
+import ReactECharts from 'echarts-for-react/lib/core';
+import { echarts, getEChartsTheme } from '@/lib/utils/echarts';
+import { changeColor } from '@/lib/utils/colors';
 import { SankeyChart } from '@/components/charts';
 import type { Quote, ChipRow, FlowMatrix } from '@/types';
-
-ChartJS.register(
-  ArcElement,
-  BarElement,
-  BubbleController,
-  LineElement,
-  PointElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  Legend,
-  Filler,
-);
 
 interface Props {
   quotes: Quote[];
@@ -76,82 +50,129 @@ export default function FlowChipsTab({ quotes, period }: Props) {
     );
   }
 
-  const ct = getChartTheme();
+  const th = getEChartsTheme();
 
   const n = flowData.sectors.length;
 
-  const bubbleDatasets = flowData.sectors.map((sec, i) => ({
-    label: sec,
-    data: [
-      {
-        x: n - i,
-        y: flowData.volume_ratios[i],
-        r: Math.max(6, Math.sqrt(flowData.mcaps[i] || 1) * 1.8),
+  // ECharts scatter replaces the Bubble chart
+  const scatterOption = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: th.tooltipBg,
+      borderColor: th.tooltipBorder,
+      textStyle: { color: th.tooltipText },
+      formatter: (params: unknown) => {
+        const p = params as { data: [number, number, number, string, number] };
+        const [x, y, , sec, score] = p.data;
+        return `${sec}<br/>Momentum rank: ${x}<br/>Volume ratio: ${y.toFixed(2)}x<br/>Flow Score: ${score > 0 ? '+' : ''}${score}`;
       },
-    ],
-    backgroundColor: changeColor(flowData.flow_scores[i], 0.7),
-    borderColor:     changeColor(flowData.flow_scores[i], 1),
-    borderWidth: 1.5,
-  }));
-
-  const quadrantPlugin = {
-    id: 'quadrantLines',
-    afterDraw(chart: ChartJS) {
-      const c = chart as unknown as {
-        ctx: CanvasRenderingContext2D;
-        chartArea: { left: number; right: number; top: number; bottom: number };
-        scales: {
-          x: { getPixelForValue: (v: number) => number };
-          y: { getPixelForValue: (v: number) => number };
-        };
-      };
-      const { ctx, chartArea: { left, right, top, bottom }, scales: { x, y } } = c;
-      const mx = x.getPixelForValue((n + 1) / 2);
-      const my = y.getPixelForValue(1);
-      ctx.save();
-      ctx.strokeStyle = 'rgba(139,148,158,0.25)';
-      ctx.setLineDash([5, 4]);
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(mx, top);   ctx.lineTo(mx, bottom); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(left, my);  ctx.lineTo(right, my);  ctx.stroke();
-      ctx.restore();
     },
+    grid: { left: 8, right: 8, top: 24, bottom: 32, containLabel: true },
+    xAxis: {
+      type: 'value',
+      name: 'Momentum Rank →',
+      nameTextStyle: { color: th.textColor, fontSize: 10 },
+      min: 0, max: n + 1,
+      axisLabel: { color: th.textColor },
+      splitLine: { lineStyle: { color: th.gridColor } },
+      axisLine: {
+        onZero: false,
+        lineStyle: { color: 'rgba(139,148,158,0.25)', type: 'dashed' as const },
+      },
+    },
+    yAxis: {
+      type: 'value',
+      name: 'Volume Ratio',
+      nameTextStyle: { color: th.textColor, fontSize: 10 },
+      axisLabel: { color: th.textColor },
+      splitLine: { lineStyle: { color: th.gridColor } },
+    },
+    series: [{
+      type: 'scatter',
+      data: flowData.sectors.map((sec, i) => [
+        n - i,
+        flowData.volume_ratios[i],
+        Math.max(10, Math.sqrt(flowData.mcaps[i] || 1) * 1.8),
+        sec,
+        flowData.flow_scores[i],
+      ]),
+      symbolSize: (val: unknown) => (val as number[])[2],
+      itemStyle: {
+        color: (params: unknown) => {
+          const p = params as { data: number[] };
+          return changeColor(p.data[4], 0.7);
+        },
+        borderColor: (params: unknown) => {
+          const p = params as { data: number[] };
+          return changeColor(p.data[4], 1);
+        },
+        borderWidth: 1.5,
+      },
+      label: {
+        show: true,
+        formatter: (params: unknown) => {
+          const p = params as { data: [number, number, number, string] };
+          return p.data[3].substring(0, 4);
+        },
+        fontSize: 9,
+        color: '#e2e8f0',
+        position: 'inside',
+      },
+      markLine: {
+        silent: true,
+        symbol: 'none',
+        data: [
+          { xAxis: (n + 1) / 2, lineStyle: { color: 'rgba(139,148,158,0.3)', type: 'dashed' as const } },
+          { yAxis: 1, lineStyle: { color: 'rgba(139,148,158,0.3)', type: 'dashed' as const } },
+        ],
+      },
+    }],
   };
 
   const flowSorted = flowData.sectors
     .map((s, i) => ({ s, v: flowData.flow_scores[i] }))
     .sort((a, b) => a.v - b.v);
 
-  const scoreBarData = {
-    labels: flowSorted.map(d => d.s),
-    datasets: [
-      {
-        data:            flowSorted.map(d => d.v),
-        backgroundColor: flowSorted.map(d => changeColor(d.v, 0.75)),
-        borderColor:     flowSorted.map(d => changeColor(d.v, 1)),
-        borderWidth: 1,
+  // Flow Score bar option (ECharts horizontal bar)
+  const flowBarOption = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: th.tooltipBg,
+      borderColor: th.tooltipBorder,
+      textStyle: { color: th.tooltipText },
+      formatter: (params: unknown) => {
+        const p = params as Array<{ name: string; value: number }>;
+        return `${p[0].name}: Flow Score: ${p[0].value > 0 ? '+' : ''}${p[0].value}`;
       },
-    ],
-  };
-
-  const barOpts: Record<string, unknown> = {
-    indexAxis: 'y',
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: (c: { raw: number }) =>
-            ` Flow Score: ${c.raw > 0 ? '+' : ''}${c.raw}`,
+    },
+    grid: { left: 8, right: 16, top: 8, bottom: 8, containLabel: true },
+    xAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { color: th.gridColor } },
+      axisLabel: { color: th.textColor },
+    },
+    yAxis: {
+      type: 'category',
+      data: flowSorted.map(d => d.s),
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: th.textColor, fontSize: 11 },
+    },
+    series: [{
+      type: 'bar',
+      data: flowSorted.map(d => ({
+        value: d.v,
+        itemStyle: {
+          color: changeColor(d.v, 0.75),
         },
-      },
-    },
-    scales: {
-      x: { ticks: { color: ct.tick }, grid: { color: ct.grid } },
-      y: { ticks: { color: ct.text, font: { size: 11 } }, grid: { color: ct.grid } },
-    },
-    animation: { duration: 300 },
+      })),
+      barMaxWidth: 28,
+    }],
   };
 
   // Chip chart data
@@ -160,6 +181,128 @@ export default function FlowChipsTab({ quotes, period }: Props) {
   const isTW = chipMode === 'tw';
   const chipLabels = isTW ? ['外資', '投信', '自營商'] : ['Institutional', 'Smart Money', 'Retail'];
   const secEtf = quotes.find(q => q.sector === chipRow?.sector && q.symbol !== 'SPY');
+
+  // Stacked bar option for daily net buy
+  const stackedBarOption = chipRow ? {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: th.tooltipBg,
+      borderColor: th.tooltipBorder,
+      textStyle: { color: th.tooltipText },
+    },
+    legend: {
+      data: chipLabels,
+      textStyle: { color: th.textColor },
+      top: 0,
+    },
+    grid: { left: 8, right: 8, top: 28, bottom: 8, containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: chipRow.dates,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: th.textColor, interval: Math.floor(chipRow.dates.length / 8), rotate: 30 },
+    },
+    yAxis: {
+      type: 'value',
+      name: '$M',
+      nameTextStyle: { color: th.textColor },
+      axisLabel: { color: th.textColor },
+      splitLine: { lineStyle: { color: th.gridColor } },
+    },
+    series: [
+      {
+        name: chipLabels[0],
+        type: 'bar',
+        stack: 's',
+        data: chipRow.institutional,
+        itemStyle: { color: 'rgba(74,144,226,0.75)' },
+      },
+      {
+        name: chipLabels[1],
+        type: 'bar',
+        stack: 's',
+        data: chipRow.smart_money,
+        itemStyle: { color: 'rgba(142,68,173,0.65)' },
+      },
+      {
+        name: chipLabels[2],
+        type: 'bar',
+        stack: 's',
+        data: chipRow.retail,
+        itemStyle: { color: 'rgba(231,76,60,0.55)' },
+      },
+    ],
+  } : null;
+
+  // Cumulative line option
+  const cumulativeLineOption = chipRow ? {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: th.tooltipBg,
+      borderColor: th.tooltipBorder,
+      textStyle: { color: th.tooltipText },
+    },
+    legend: {
+      data: [
+        isTW ? 'Cumulative Foreign Buy' : 'Cumulative Institutional Buy',
+        ...(secEtf ? [`${secEtf.symbol} 現價`] : []),
+      ],
+      textStyle: { color: th.textColor },
+      top: 0,
+    },
+    grid: { left: 8, right: 60, top: 28, bottom: 8, containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: chipRow.dates,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: th.textColor, interval: Math.floor(chipRow.dates.length / 8), rotate: 30 },
+    },
+    yAxis: [
+      {
+        type: 'value',
+        name: 'Cumul. $M',
+        nameTextStyle: { color: '#4a90e2' },
+        axisLabel: { color: '#4a90e2' },
+        splitLine: { lineStyle: { color: th.gridColor } },
+        position: 'left',
+      },
+      ...(secEtf ? [{
+        type: 'value',
+        name: 'ETF Price',
+        nameTextStyle: { color: '#f7931a' },
+        axisLabel: { color: '#f7931a' },
+        splitLine: { show: false },
+        position: 'right',
+      }] : []),
+    ],
+    series: [
+      {
+        name: isTW ? 'Cumulative Foreign Buy' : 'Cumulative Institutional Buy',
+        type: 'line',
+        data: chipRow.cumulative,
+        lineStyle: { color: '#4a90e2', width: 2 },
+        itemStyle: { color: '#4a90e2' },
+        areaStyle: { color: 'rgba(74,144,226,0.12)' },
+        symbol: 'none',
+        smooth: true,
+        yAxisIndex: 0,
+      },
+      ...(secEtf ? [{
+        name: `${secEtf.symbol} 現價`,
+        type: 'line',
+        data: chipRow.dates.map(() => secEtf.price),
+        lineStyle: { color: '#f7931a', width: 1.5, type: 'dashed' as const },
+        itemStyle: { color: '#f7931a' },
+        symbol: 'none',
+        yAxisIndex: 1,
+      }] : []),
+    ],
+  } : null;
 
   return (
     <main className="tab-panel active">
@@ -185,41 +328,12 @@ export default function FlowChipsTab({ quotes, period }: Props) {
         <div className="flow-top-grid">
           <div>
             <div className="chart-sublabel">Rotation Quadrant</div>
-            <div className="chart-wrap" style={{ height: '340px' }}>
-              <Bubble
-                data={{ datasets: bubbleDatasets }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                      callbacks: {
-                        label: (ctx: import('chart.js').TooltipItem<'bubble'>) => {
-                          const d = ctx.raw as { x: number; y: number; r: number };
-                          const sec = ctx.dataset.label ?? '';
-                          const score = flowData.flow_scores[flowData.sectors.indexOf(sec)];
-                          return `${sec} | Momentum rank:${d.x} | Volume ratio:${d.y.toFixed(2)}x | Flow Score:${score > 0 ? '+' : ''}${score}`;
-                        },
-                      },
-                    },
-                  },
-                  scales: {
-                    x: {
-                      title: { display: true, text: 'Momentum Rank → (right = inflow)', color: ct.tick },
-                      ticks: { color: ct.tick },
-                      grid: { color: ct.grid },
-                      min: 0, max: n + 1,
-                    },
-                    y: {
-                      title: { display: true, text: 'Volume Ratio (vs 30d avg)', color: ct.tick },
-                      ticks: { color: ct.tick },
-                      grid: { color: ct.grid },
-                    },
-                  },
-                  animation: { duration: 400 },
-                }}
-                plugins={[quadrantPlugin as unknown as import('chart.js').Plugin]}
+            <div style={{ height: '340px' }}>
+              <ReactECharts
+                echarts={echarts}
+                option={scatterOption}
+                style={{ height: '100%' }}
+                notMerge
               />
             </div>
             <div className="quadrant-legend">
@@ -232,7 +346,12 @@ export default function FlowChipsTab({ quotes, period }: Props) {
           <div>
             <div className="chart-sublabel">Sector Flow Score</div>
             <div className="chart-wrap" style={{ height: '340px' }}>
-              <Bar data={scoreBarData} options={barOpts} />
+              <ReactECharts
+                echarts={echarts}
+                option={flowBarOption}
+                style={{ height: '100%' }}
+                notMerge
+              />
             </div>
           </div>
         </div>
@@ -283,92 +402,27 @@ export default function FlowChipsTab({ quotes, period }: Props) {
           </div>
         </div>
 
-        {chipRow && (
+        {chipRow && stackedBarOption && cumulativeLineOption && (
           <div className="chip-charts-grid">
             <div>
               <div className="chart-sublabel">Daily Net Buy ($M)</div>
               <div className="chart-wrap" style={{ height: '260px' }}>
-                <Bar
-                  data={{
-                    labels: chipRow.dates,
-                    datasets: [
-                      {
-                        label: chipLabels[0],
-                        data: chipRow.institutional,
-                        backgroundColor: 'rgba(74,144,226,0.75)',
-                        stack: 's',
-                      },
-                      {
-                        label: chipLabels[1],
-                        data: chipRow.smart_money,
-                        backgroundColor: 'rgba(142,68,173,0.65)',
-                        stack: 's',
-                      },
-                      {
-                        label: chipLabels[2],
-                        data: chipRow.retail,
-                        backgroundColor: 'rgba(231,76,60,0.55)',
-                        stack: 's',
-                      },
-                    ],
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: { labels: { color: ct.tick, boxWidth: 12 } },
-                    },
-                    scales: {
-                      x: { ticks: { color: ct.tick, maxTicksLimit: 8, maxRotation: 30 }, grid: { color: ct.grid }, stacked: true },
-                      y: { ticks: { color: ct.tick }, grid: { color: ct.grid }, stacked: true, title: { display: true, text: '$M', color: ct.tick } },
-                    },
-                    animation: { duration: 300 },
-                  } as Record<string, unknown>}
+                <ReactECharts
+                  echarts={echarts}
+                  option={stackedBarOption}
+                  style={{ height: '100%' }}
+                  notMerge
                 />
               </div>
             </div>
             <div>
               <div className="chart-sublabel">Cumulative Institutional vs ETF Price</div>
               <div className="chart-wrap" style={{ height: '260px' }}>
-                <Line
-                  data={{
-                    labels: chipRow.dates,
-                    datasets: [
-                      {
-                        label: isTW ? 'Cumulative Foreign Buy' : 'Cumulative Institutional Buy',
-                        data: chipRow.cumulative,
-                        borderColor: '#4a90e2',
-                        backgroundColor: 'rgba(74,144,226,0.12)',
-                        fill: true,
-                        tension: 0.3,
-                        yAxisID: 'y',
-                        pointRadius: 0,
-                      },
-                      ...(secEtf ? [{
-                        label: `${secEtf.symbol} 現價`,
-                        data: chipRow.dates.map(() => secEtf.price),
-                        borderColor: '#f7931a',
-                        borderDash: [4, 3],
-                        pointRadius: 0,
-                        yAxisID: 'y2',
-                        backgroundColor: 'transparent',
-                        tension: 0.3,
-                      }] : []),
-                    ],
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: { labels: { color: ct.tick, boxWidth: 12 } },
-                    },
-                    scales: {
-                      x: { ticks: { color: ct.tick, maxTicksLimit: 8, maxRotation: 30 }, grid: { color: ct.grid } },
-                      y: { ticks: { color: '#4a90e2' }, grid: { color: ct.grid }, position: 'left', title: { display: true, text: 'Cumul. $M', color: '#4a90e2' } },
-                      y2: { ticks: { color: '#f7931a' }, grid: { display: false }, position: 'right', title: { display: true, text: 'ETF Price', color: '#f7931a' } },
-                    },
-                    animation: { duration: 300 },
-                  } as Record<string, unknown>}
+                <ReactECharts
+                  echarts={echarts}
+                  option={cumulativeLineOption}
+                  style={{ height: '100%' }}
+                  notMerge
                 />
               </div>
             </div>

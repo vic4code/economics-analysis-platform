@@ -1,30 +1,10 @@
 'use client';
 import { useState } from 'react';
-import { Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  LineElement,
-  PointElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  Legend,
-  Filler,
-} from 'chart.js';
+import ReactECharts from 'echarts-for-react/lib/core';
+import { echarts, getEChartsTheme } from '@/lib/utils/echarts';
 import { SECTOR_COLORS, fmtPct } from '@/lib/utils/colors';
-import { getChartTheme } from '@/lib/utils/chartTheme';
 import { TEMPLATES } from '@/types';
 import type { Quote } from '@/types';
-
-ChartJS.register(
-  LineElement,
-  PointElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip,
-  Legend,
-  Filler,
-);
 
 interface IndexedPoint {
   date: string;
@@ -122,40 +102,6 @@ export default function BacktestTab({ quotes }: Props) {
       setBtLoading(false);
     }
   }
-
-  const ct = getChartTheme();
-  const lineOpts: Record<string, unknown> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: { labels: { color: ct.text, font: { size: 12 } } },
-      tooltip: {
-        callbacks: {
-          label: (ctx: { dataset: { label: string }; raw: number | null }) =>
-            ` ${ctx.dataset.label}: ${ctx.raw?.toFixed(2)}`,
-        },
-      },
-    },
-    scales: {
-      x: {
-        ticks: { color: ct.tick, maxTicksLimit: 12, maxRotation: 0 },
-        grid: { color: ct.grid },
-      },
-      y: {
-        ticks: {
-          color: ct.tick,
-          callback: (v: unknown) => (v as number).toFixed(0),
-        },
-        grid: { color: ct.grid },
-        title: {
-          display: true,
-          text: 'Indexed Return (base = 100)',
-          color: ct.tick,
-        },
-      },
-    },
-  };
 
   const STRATS = [
     { key: 'momentum' as const, label: `Momentum Rotation (Top${topN})`, color: '#4ade80' },
@@ -263,24 +209,55 @@ export default function BacktestTab({ quotes }: Props) {
                 </div>
               ))}
             </div>
-            <div className="chart-wrap tall" style={{ marginTop: '1.25rem' }}>
-              <Line
-                data={{
-                  labels: stratData.spy.map(p => p.date),
-                  datasets: STRATS.map(s => ({
-                    label: s.label,
-                    data: stratData[s.key].map(p => p.value),
-                    borderColor: s.color,
-                    backgroundColor: s.color + '18',
-                    borderWidth: s.key === 'spy' ? 1.5 : 2.5,
-                    borderDash: s.key === 'spy' ? [5, 5] : [],
-                    fill: s.key === 'momentum',
-                    pointRadius: 0,
-                    tension: 0.3,
-                    spanGaps: true,
-                  })),
-                }}
-                options={lineOpts}
+            <div style={{ marginTop: '1.25rem' }}>
+              <ReactECharts
+                echarts={echarts}
+                option={(() => {
+                  const th = getEChartsTheme();
+                  return {
+                    backgroundColor: 'transparent',
+                    tooltip: {
+                      trigger: 'axis',
+                      backgroundColor: th.tooltipBg,
+                      borderColor: th.tooltipBorder,
+                      textStyle: { color: th.tooltipText },
+                    },
+                    legend: {
+                      data: STRATS.map(s => s.label),
+                      textStyle: { color: th.textColor },
+                      top: 0,
+                    },
+                    grid: { left: 8, right: 8, top: 32, bottom: 8, containLabel: true },
+                    xAxis: {
+                      type: 'category',
+                      data: stratData.spy.map(p => p.date),
+                      axisLine: { lineStyle: { color: th.gridColor } },
+                      axisTick: { show: false },
+                      axisLabel: { color: th.textColor, interval: Math.floor(stratData.spy.length / 10) },
+                    },
+                    yAxis: {
+                      type: 'value',
+                      axisLabel: { color: th.textColor },
+                      splitLine: { lineStyle: { color: th.gridColor } },
+                    },
+                    series: STRATS.map(s => ({
+                      name: s.label,
+                      type: 'line',
+                      data: stratData[s.key].map(p => p.value),
+                      lineStyle: {
+                        color: s.color,
+                        width: s.key === 'spy' ? 1.5 : 2.5,
+                        type: s.key === 'spy' ? 'dashed' : 'solid',
+                      },
+                      itemStyle: { color: s.color },
+                      areaStyle: s.key === 'momentum' ? { color: s.color + '18' } : undefined,
+                      symbol: 'none',
+                      smooth: true,
+                    })),
+                  };
+                })()}
+                style={{ height: '360px' }}
+                notMerge
               />
             </div>
             <div className="strat-note">
@@ -436,34 +413,61 @@ export default function BacktestTab({ quotes }: Props) {
                 </div>
               ))}
             </div>
-            <div className="chart-wrap tall" style={{ marginTop: '1.5rem' }}>
-              <Line
-                data={{
-                  labels: btData.portfolio.map(p => p.date),
-                  datasets: [
-                    {
-                      label: 'My Portfolio',
-                      data: btData.portfolio.map(p => p.value),
-                      borderColor: '#4a90e2',
-                      backgroundColor: '#4a90e222',
-                      borderWidth: 2.5,
-                      fill: true,
-                      pointRadius: 0,
-                      tension: 0.3,
+            <div style={{ marginTop: '1.5rem' }}>
+              <ReactECharts
+                echarts={echarts}
+                option={(() => {
+                  const th = getEChartsTheme();
+                  return {
+                    backgroundColor: 'transparent',
+                    tooltip: {
+                      trigger: 'axis',
+                      backgroundColor: th.tooltipBg,
+                      borderColor: th.tooltipBorder,
+                      textStyle: { color: th.tooltipText },
                     },
-                    {
-                      label: 'SPY (S&P 500)',
-                      data: btData.benchmark.map(b => b.value),
-                      borderColor: '#94a3b8',
-                      backgroundColor: 'transparent',
-                      borderWidth: 1.5,
-                      borderDash: [5, 5],
-                      pointRadius: 0,
-                      tension: 0.3,
+                    legend: {
+                      data: ['My Portfolio', 'SPY (S&P 500)'],
+                      textStyle: { color: th.textColor },
+                      top: 0,
                     },
-                  ],
-                }}
-                options={lineOpts}
+                    grid: { left: 8, right: 8, top: 32, bottom: 8, containLabel: true },
+                    xAxis: {
+                      type: 'category',
+                      data: btData!.portfolio.map(p => p.date),
+                      axisLine: { lineStyle: { color: th.gridColor } },
+                      axisTick: { show: false },
+                      axisLabel: { color: th.textColor, interval: Math.floor(btData!.portfolio.length / 10) },
+                    },
+                    yAxis: {
+                      type: 'value',
+                      axisLabel: { color: th.textColor },
+                      splitLine: { lineStyle: { color: th.gridColor } },
+                    },
+                    series: [
+                      {
+                        name: 'My Portfolio',
+                        type: 'line',
+                        data: btData!.portfolio.map(p => p.value),
+                        lineStyle: { color: '#4a90e2', width: 2.5 },
+                        itemStyle: { color: '#4a90e2' },
+                        areaStyle: { color: '#4a90e222' },
+                        symbol: 'none',
+                        smooth: true,
+                      },
+                      {
+                        name: 'SPY (S&P 500)',
+                        type: 'line',
+                        data: btData!.benchmark.map(b => b.value),
+                        lineStyle: { color: '#94a3b8', width: 1.5, type: 'dashed' },
+                        itemStyle: { color: '#94a3b8' },
+                        symbol: 'none',
+                      },
+                    ],
+                  };
+                })()}
+                style={{ height: '360px' }}
+                notMerge
               />
             </div>
             <div className="bt-composition">

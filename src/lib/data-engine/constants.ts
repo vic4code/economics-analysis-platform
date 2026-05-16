@@ -57,6 +57,9 @@ export const ETF_UNIVERSE: Record<string, EtfInfo> = {
   EWJ:  { name: 'iShares Japan',            sector: 'International', base: 69.80,  vol: 0.013, mcap: 10  },
   FXI:  { name: 'iShares China Large-Cap',  sector: 'International', base: 32.80,  vol: 0.020, mcap: 5   },
   SPY:  { name: 'S&P 500 SPDR',             sector: 'Broad Market',  base: 578.50, vol: 0.012, mcap: 550 },
+  VOO:  { name: 'Vanguard S&P 500 ETF',    sector: 'Broad Market',  base: 530.00, vol: 0.012, mcap: 560 },
+  DIA:  { name: 'Dow Jones SPDR',          sector: 'Broad Market',  base: 425.00, vol: 0.011, mcap: 36  },
+  IWM:  { name: 'Russell 2000 ETF',        sector: 'Broad Market',  base: 215.00, vol: 0.016, mcap: 66  },
 };
 
 export const SECTOR_DRIFT: Record<string, number> = {
@@ -92,7 +95,9 @@ export const MACRO_TREE: MacroTreeNode[] = [
   { id: 'commodities',     name: '大宗商品',      parent: 'global',      aum:   0.8, vol: 0.018, color: '#ffc107', etfs: [] },
   { id: 'cash_mm',         name: '現金/貨幣市場', parent: 'global',      aum:   6.5, vol: 0.001, color: '#607d8b', etfs: [] },
   { id: 'us_equities',     name: '美國股市',      parent: 'equities',    aum: 46.0,  vol: 0.013, color: '#5ba3f5',
-    etfs: ['QQQ','XLK','SMH','XLF','XLV','XLE','XLI','XLY','XLP','XLB','XLU'] },
+    etfs: ['SPY','VOO','QQQ','DIA','IWM','XLK','SMH','XLF','XLV','XLE','XLI','XLY','XLP','XLB','XLU'] },
+  { id: 'broad_indices',   name: '大盤指數',      parent: 'us_equities', aum: 6.0,   vol: 0.012, color: '#9e9e9e',
+    etfs: ['SPY','VOO','QQQ','DIA','IWM'] },
   { id: 'dev_equities',    name: '已開發市場',    parent: 'equities',    aum: 40.0,  vol: 0.011, color: '#7cbcf7', etfs: ['VEA','EWJ'] },
   { id: 'em_equities',     name: '新興市場',      parent: 'equities',    aum: 23.0,  vol: 0.014, color: '#a0d0fa', etfs: ['EEM','FXI'] },
   { id: 'us_treasury',     name: '美國國債',      parent: 'bonds',       aum: 30.0,  vol: 0.009, color: '#5c6bc0', etfs: ['TLT'] },
@@ -146,10 +151,12 @@ export const MOCK_EVENTS: MockEvent[] = [
   { date: '2025-05-07', title: 'Fed 維持利率不變',               type: 'fed',          sectors: ['Bonds','Real Estate'],                              magnitude: 0,  detail: 'Fed 會後聲明維持謹慎立場，等待更多通膨數據明朗化。' },
 ];
 
+export const BROAD_MARKET_SYMBOLS = new Set(['SPY', 'VOO', 'DIA', 'IWM']);
+
 export const SECTOR_ETFS: Record<string, string[]> = (() => {
   const map: Record<string, string[]> = {};
   for (const [sym, info] of Object.entries(ETF_UNIVERSE)) {
-    if (sym === 'SPY') continue;
+    if (BROAD_MARKET_SYMBOLS.has(sym)) continue;
     if (!map[info.sector]) map[info.sector] = [];
     map[info.sector].push(sym);
   }

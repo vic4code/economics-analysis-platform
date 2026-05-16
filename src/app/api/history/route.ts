@@ -11,6 +11,6 @@ export async function GET(request: Request) {
   }
 
   const days = PERIOD_DAYS[period as keyof typeof PERIOD_DAYS] ?? 380;
-  const series = generateSeries(symbol, days);
+  const series = await generateSeries(symbol, days);
   return NextResponse.json({ symbol, period, series });
 }

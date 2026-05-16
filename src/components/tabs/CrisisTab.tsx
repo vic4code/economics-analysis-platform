@@ -1,14 +1,9 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { Bar } from 'react-chartjs-2';
-import {
-  Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend,
-} from 'chart.js';
+import ReactECharts from 'echarts-for-react/lib/core';
+import { echarts, getEChartsTheme } from '@/lib/utils/echarts';
 import { SECTOR_COLORS } from '@/lib/utils/colors';
-import { getChartTheme } from '@/lib/utils/chartTheme';
 import type { CrisisEvent, CrisisPricePoint } from '@/types';
-
-ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 const TYPE_COLORS: Record<string, string> = {
   fed:          '#4a90e2',
@@ -267,54 +262,56 @@ function CrisisCard({
 
 // ── Sector Drawdown Comparison bar chart ──────────────────────────
 function SectorDrawdownChart({ crisis }: { crisis: CrisisEvent }) {
-  const ct = getChartTheme();
-  const entries = Object.entries(crisis.sectorDrawdowns)
-    .sort((a, b) => a[1] - b[1]);
+  const th = getEChartsTheme();
+  const entries = Object.entries(crisis.sectorDrawdowns).sort((a, b) => a[1] - b[1]);
   const labels = entries.map(([s]) => s);
   const values = entries.map(([, v]) => v);
-  const colors = labels.map(s => (SECTOR_COLORS[s] ?? '#58a6ff') + 'cc');
+
+  const option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: th.tooltipBg,
+      borderColor: th.tooltipBorder,
+      textStyle: { color: th.tooltipText },
+      formatter: (params: unknown) => {
+        const p = params as Array<{ name: string; value: number }>;
+        return `${p[0].name}: ${p[0].value.toFixed(1)}%`;
+      },
+    },
+    grid: { left: 8, right: 16, top: 4, bottom: 4, containLabel: true },
+    xAxis: {
+      type: 'value',
+      axisLabel: { color: th.textColor, formatter: (v: number) => `${v}%` },
+      splitLine: { lineStyle: { color: th.gridColor } },
+      axisLine: { show: false },
+    },
+    yAxis: {
+      type: 'category',
+      data: labels,
+      axisLabel: { color: th.textColor, fontSize: 10 },
+      axisLine: { show: false },
+      axisTick: { show: false },
+    },
+    series: [{
+      type: 'bar',
+      data: values.map((v, i) => ({
+        value: v,
+        itemStyle: { color: (SECTOR_COLORS[labels[i]] ?? '#58a6ff') + 'cc', borderRadius: [0, 3, 3, 0] },
+      })),
+      barMaxWidth: 22,
+    }],
+  };
 
   return (
-    <div style={{ height: '280px' }}>
-      <Bar
-        data={{
-          labels,
-          datasets: [{
-            label: 'Drawdown %',
-            data: values,
-            backgroundColor: colors,
-            borderColor: labels.map(s => SECTOR_COLORS[s] ?? '#58a6ff'),
-            borderWidth: 1,
-            borderRadius: 3,
-          }],
-        }}
-        options={{
-          indexAxis: 'y',
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: { label: (c: { raw: unknown }) => ` ${(c.raw as number).toFixed(1)}%` },
-            },
-          },
-          scales: {
-            x: {
-              ticks: { color: ct.tick, callback: (v: unknown) => `${v}%` },
-              grid: { color: ct.grid },
-            },
-            y: { ticks: { color: ct.text, font: { size: 10 } }, grid: { display: false } },
-          },
-          animation: { duration: 250 },
-        } as Record<string, unknown>}
-      />
-    </div>
+    <ReactECharts echarts={echarts} option={option} style={{ height: '280px' }} notMerge />
   );
 }
 
 // ── Cross-crisis comparison ───────────────────────────────────────
 function ComparisonChart({ crises }: { crises: CrisisEvent[] }) {
-  const ct = getChartTheme();
+  const th = getEChartsTheme();
   const labels = crises.map(c => c.date);
 
   return (
@@ -325,30 +322,43 @@ function ComparisonChart({ crises }: { crises: CrisisEvent[] }) {
         ['Recovery Days', crises.map(c => c.recoveryDays), '#60a5fa'],
         ['Buy Signal Gain (%)', crises.map(c => c.buySignalGain), '#4ade80'],
       ] as [string, number[], string][]).map(([title, values, color]) => (
-        <div key={title} style={{ height: '180px' }}>
+        <div key={title}>
           <div className="comparison-chart-title">{title}</div>
-          <Bar
-            data={{
-              labels,
-              datasets: [{
-                label: title,
-                data: values,
-                backgroundColor: color + '99',
-                borderColor: color,
-                borderWidth: 1,
-                borderRadius: 4,
+          <ReactECharts
+            echarts={echarts}
+            option={{
+              backgroundColor: 'transparent',
+              tooltip: {
+                trigger: 'axis',
+                backgroundColor: th.tooltipBg,
+                borderColor: th.tooltipBorder,
+                textStyle: { color: th.tooltipText, fontSize: 11 },
+              },
+              grid: { left: 4, right: 4, top: 4, bottom: 4, containLabel: true },
+              xAxis: {
+                type: 'category',
+                data: labels,
+                axisLabel: { color: th.textColor, fontSize: 9 },
+                splitLine: { show: false },
+                axisLine: { show: false },
+                axisTick: { show: false },
+              },
+              yAxis: {
+                type: 'value',
+                axisLabel: { color: th.textColor, fontSize: 9 },
+                splitLine: { lineStyle: { color: th.gridColor } },
+              },
+              series: [{
+                type: 'bar',
+                data: (values as number[]).map(v => ({
+                  value: v,
+                  itemStyle: { color: color + '99', borderColor: color, borderWidth: 1, borderRadius: 4 },
+                })),
+                barMaxWidth: 20,
               }],
             }}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: { legend: { display: false } },
-              scales: {
-                x: { ticks: { color: ct.tick, font: { size: 9 } }, grid: { color: ct.grid } },
-                y: { ticks: { color: ct.tick, font: { size: 9 } }, grid: { color: ct.grid } },
-              },
-              animation: { duration: 200 },
-            } as Record<string, unknown>}
+            style={{ height: '180px' }}
+            notMerge
           />
         </div>
       ))}

@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     etfs: { symbol: string; change: number }[];
   }> = {};
 
-  for (const q of getAllQuotes()) {
+  for (const q of await getAllQuotes()) {
     const sec = q.sector as string;
     if (!(sec in sectors)) {
       sectors[sec] = { sector: sec, change: 0, mcap: 0, etfs: [] };

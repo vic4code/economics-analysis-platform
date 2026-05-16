@@ -1,15 +1,9 @@
 'use client';
 import { useState, useMemo } from 'react';
-import { Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS, LineElement, PointElement, CategoryScale,
-  LinearScale, Tooltip, Legend, Filler,
-} from 'chart.js';
+import ReactECharts from 'echarts-for-react/lib/core';
+import { echarts, getEChartsTheme } from '@/lib/utils/echarts';
 import { SECTOR_COLORS } from '@/lib/utils/colors';
-import { getChartTheme } from '@/lib/utils/chartTheme';
 import type { CorrelationMatrix } from '@/types';
-
-ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend, Filler);
 
 // ── Color helpers ─────────────────────────────────────────────────
 function corrColor(v: number): string {
@@ -220,12 +214,10 @@ interface RollingChartProps {
 }
 
 function RollingCorrChart({ data, pair }: RollingChartProps) {
-  const ct = getChartTheme();
   const [i, j] = pair;
   const symA = data.symbols[i];
   const symB = data.symbols[j];
 
-  // Find rolling series for this pair
   const rollingEntry = useMemo(() => {
     const [a, b] = [Math.min(i, j), Math.max(i, j)];
     return data.rolling.find(r =>
@@ -240,72 +232,64 @@ function RollingCorrChart({ data, pair }: RollingChartProps) {
   const avg     = values.reduce((s, v) => s + v, 0) / values.length;
   const diverge = Math.abs(current - avg);
 
-  // Weekly labels (W-36 … W-0)
   const labels = values.map((_, k) => {
     const wk = values.length - 1 - k;
     return wk === 0 ? 'Now' : `−${wk}w`;
   });
 
-  const chartData = {
-    labels,
-    datasets: [
+  const th = getEChartsTheme();
+  const chartOption = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: th.tooltipBg,
+      borderColor: th.tooltipBorder,
+      textStyle: { color: th.tooltipText },
+      formatter: (params: unknown) => {
+        const p = params as Array<{ seriesName: string; value: number }>;
+        return p.map(x => `${x.seriesName}: ${x.value.toFixed(3)}`).join('<br/>');
+      },
+    },
+    legend: { data: ['Rolling 30d Corr', '1yr Avg'], textStyle: { color: th.textColor, fontSize: 11 }, top: 0 },
+    grid: { left: 8, right: 8, top: 28, bottom: 8, containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: labels,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: {
+        color: th.textColor,
+        interval: (idx: number) => idx % 4 === 0,
+      },
+      splitLine: { show: false },
+    },
+    yAxis: {
+      type: 'value',
+      min: -1, max: 1,
+      axisLabel: { color: th.textColor, formatter: (v: number) => v.toFixed(1) },
+      splitLine: { lineStyle: { color: th.gridColor } },
+    },
+    series: [
       {
-        label: 'Rolling 30d Corr',
+        name: 'Rolling 30d Corr',
+        type: 'line',
         data: values,
-        borderColor: '#4a90e2',
-        backgroundColor: 'rgba(74,144,226,0.12)',
-        borderWidth: 2,
-        pointRadius: 0,
-        fill: true,
-        tension: 0.35,
+        lineStyle: { color: '#4a90e2', width: 2 },
+        itemStyle: { color: '#4a90e2' },
+        areaStyle: { color: 'rgba(74,144,226,0.12)' },
+        symbol: 'none',
+        smooth: true,
       },
       {
-        label: '1yr Avg',
+        name: '1yr Avg',
+        type: 'line',
         data: values.map(() => avg),
-        borderColor: 'rgba(255,193,7,0.6)',
-        borderDash: [4, 4],
-        borderWidth: 1.5,
-        pointRadius: 0,
-        fill: false,
+        lineStyle: { color: 'rgba(255,193,7,0.7)', width: 1.5, type: 'dashed' },
+        itemStyle: { color: 'rgba(255,193,7,0.7)' },
+        symbol: 'none',
       },
     ],
   };
-
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        labels: { color: ct.text, font: { size: 11 }, boxWidth: 14 },
-      },
-      tooltip: {
-        callbacks: {
-          label: (c: { dataset: { label?: string }; parsed: { y: number } }) =>
-            ` ${c.dataset.label}: ${c.parsed.y.toFixed(3)}`,
-        },
-      },
-    },
-    scales: {
-      x: {
-        ticks: {
-          color: ct.tick,
-          maxTicksLimit: 10,
-          callback: (_v: unknown, idx: number) =>
-            idx % 4 === 0 ? labels[idx] : '',
-        },
-        grid: { color: ct.grid },
-      },
-      y: {
-        min: -1, max: 1,
-        ticks: {
-          color: ct.tick,
-          callback: (v: unknown) => Number(v).toFixed(1),
-        },
-        grid: { color: ct.grid },
-      },
-    },
-    animation: { duration: 300 },
-  } as Record<string, unknown>;
 
   return (
     <div className="corr-pair-detail">
@@ -318,10 +302,9 @@ function RollingCorrChart({ data, pair }: RollingChartProps) {
         <div className="corr-pair-badges">
           <span className="corr-stat-badge">
             <span className="corr-stat-label">Current</span>
-            <span
-              className="corr-stat-val"
-              style={{ color: current >= 0 ? '#4a90e2' : '#e74c3c' }}
-            >{current >= 0 ? '+' : ''}{current.toFixed(3)}</span>
+            <span className="corr-stat-val" style={{ color: current >= 0 ? '#4a90e2' : '#e74c3c' }}>
+              {current >= 0 ? '+' : ''}{current.toFixed(3)}
+            </span>
           </span>
           <span className="corr-stat-badge">
             <span className="corr-stat-label">1yr Avg</span>
@@ -329,16 +312,13 @@ function RollingCorrChart({ data, pair }: RollingChartProps) {
           </span>
           <span className="corr-stat-badge">
             <span className="corr-stat-label">Divergence</span>
-            <span
-              className="corr-stat-val"
-              style={{ color: diverge > 0.25 ? '#f7931a' : 'var(--text-muted)' }}
-            >{diverge.toFixed(3)}{diverge > 0.25 ? ' ⚠' : ''}</span>
+            <span className="corr-stat-val" style={{ color: diverge > 0.25 ? '#f7931a' : 'var(--text-muted)' }}>
+              {diverge.toFixed(3)}{diverge > 0.25 ? ' ⚠' : ''}
+            </span>
           </span>
         </div>
       </div>
-      <div style={{ height: 200 }}>
-        <Line data={chartData} options={options} />
-      </div>
+      <ReactECharts echarts={echarts} option={chartOption} style={{ height: 200 }} notMerge />
       {diverge > 0.25 && (
         <div className="corr-diverge-alert">
           <span className="corr-diverge-icon">⚠</span>

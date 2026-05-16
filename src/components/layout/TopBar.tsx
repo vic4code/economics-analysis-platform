@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import type { Period } from '@/types';
+import type { MarketStatus } from '@/lib/utils/marketHours';
+import { MARKET_STATUS_LABEL } from '@/lib/utils/marketHours';
 
 const PERIODS: Period[] = ['1d', '5d', '1m', '3m', '6m', '1y', 'ytd'];
 
@@ -8,9 +10,10 @@ interface Props {
   period: Period;
   onPeriodChange: (p: Period) => void;
   updateTime: string;
+  marketStatus: MarketStatus;
 }
 
-export default function TopBar({ period, onPeriodChange, updateTime }: Props) {
+export default function TopBar({ period, onPeriodChange, updateTime, marketStatus }: Props) {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   useEffect(() => {
@@ -57,7 +60,10 @@ export default function TopBar({ period, onPeriodChange, updateTime }: Props) {
         >
           {theme === 'dark' ? '☀️' : '🌙'}
         </button>
-        <span className="data-badge">⚙ Mock Data</span>
+        <span className={`market-status-badge market-${marketStatus}`}>
+          <span className="market-dot" />
+          {MARKET_STATUS_LABEL[marketStatus]}
+        </span>
         <span className="update-time">{updateTime}</span>
       </div>
     </header>
