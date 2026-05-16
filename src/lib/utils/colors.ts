@@ -1,21 +1,39 @@
+// Sector palette derived from the unified design system. Each sector gets one
+// identity. We use chart-1..6 as primary anchors plus tonal variants that stay
+// within the cool/warm envelope (no purple, no magenta, no indigo).
 export const SECTOR_COLORS: Record<string, string> = {
-  "Crypto":        "#f7931a",
-  "Technology":    "#4a90e2",
-  "Real Estate":   "#8b6d4f",
-  "Energy":        "#e67e22",
-  "Healthcare":    "#27ae60",
-  "Financials":    "#8e44ad",
-  "Consumer":      "#e91e8c",
-  "Industrials":   "#607d8b",
-  "Materials":     "#795548",
-  "Utilities":     "#00bcd4",
-  "Bonds":         "#3f51b5",
-  "Commodities":   "#ffc107",
-  "International": "#ff9800",
-  "Broad Market":  "#9e9e9e",
+  "Crypto":        "#C47F17",  // amber
+  "Technology":    "#4A90D9",  // blue
+  "Real Estate":   "#8B6D4F",  // taupe
+  "Energy":        "#D4564E",  // coral
+  "Healthcare":    "#2EA043",  // green
+  "Financials":    "#BFA06A",  // gold
+  "Consumer":      "#C9A87C",  // warm tan
+  "Industrials":   "#6E7A8A",  // steel
+  "Materials":     "#A0826D",  // sand
+  "Utilities":     "#5BA3C9",  // ice
+  "Bonds":         "#5C8AC6",  // muted blue
+  "Commodities":   "#D6BC85",  // light gold
+  "International": "#B87333",  // copper
+  "Broad Market":  "#8C97A6",  // neutral
 };
 
-export const TREND_PALETTE = ["#4a90e2","#f7931a","#27ae60","#e91e8c","#ffc107","#00bcd4","#e74c3c","#8e44ad"];
+// Chart palette for multi-series overlays — cool/warm alternating, no clashes.
+export const TREND_PALETTE = [
+  "#2EA043", // green
+  "#4A90D9", // blue
+  "#BFA06A", // gold
+  "#C47F17", // amber
+  "#D4564E", // coral
+  "#5BA3C9", // ice
+  "#8B6D4F", // taupe
+  "#6E7A8A", // steel
+];
+
+// Unified 6-step chart palette — exposed so components can stop hard-coding it.
+export const CHART_PALETTE = [
+  "#2EA043", "#4A90D9", "#BFA06A", "#C47F17", "#D4564E", "#5BA3C9",
+];
 
 export function changeColor(pct: number, alpha = 1): string {
   const clamp = Math.max(-6, Math.min(6, pct));

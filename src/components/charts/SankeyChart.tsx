@@ -190,7 +190,7 @@ export default function SankeyChart({ data }: Props) {
     const scoreStr = isOut
       ? `▼ ${Math.abs(n.score).toFixed(1)}`
       : `▲ ${n.score.toFixed(1)}`;
-    const scoreColor = isOut ? '#f87171' : '#4ade80';
+    const scoreColor = isOut ? '#E5534B' : '#2EA043';
 
     return (
       <g key={n.id}>
@@ -270,7 +270,7 @@ export default function SankeyChart({ data }: Props) {
       {/* Legend row */}
       <div className="sankey-legend">
         <span className="sankey-legend-item sankey-legend-out">
-          <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#f87171', marginRight: 5 }} />
+          <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#E5534B', marginRight: 5 }} />
           Outflow
         </span>
         <span className="sankey-legend-center">
@@ -278,7 +278,7 @@ export default function SankeyChart({ data }: Props) {
         </span>
         <span className="sankey-legend-item sankey-legend-in">
           Inflow
-          <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#4ade80', marginLeft: 5 }} />
+          <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#2EA043', marginLeft: 5 }} />
         </span>
       </div>
 
@@ -373,7 +373,7 @@ export default function SankeyChart({ data }: Props) {
         {/* Column headers */}
         <text
           x={sourceX + NODE_WIDTH / 2} y={14}
-          textAnchor="middle" fill="#f87171"
+          textAnchor="middle" fill="#E5534B"
           fontSize={11} fontWeight="700"
           fontFamily="Inter, sans-serif"
         >
@@ -381,7 +381,7 @@ export default function SankeyChart({ data }: Props) {
         </text>
         <text
           x={sinkX + NODE_WIDTH / 2} y={14}
-          textAnchor="middle" fill="#4ade80"
+          textAnchor="middle" fill="#2EA043"
           fontSize={11} fontWeight="700"
           fontFamily="Inter, sans-serif"
         >

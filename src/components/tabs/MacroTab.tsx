@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import ReactECharts from 'echarts-for-react/lib/core';
 import { echarts, getEChartsTheme } from '@/lib/utils/echarts';
-import { changeTextColor, fmtPct } from '@/lib/utils/colors';
+import { changeTextColor, fmtPct, CHART_PALETTE } from '@/lib/utils/colors';
 import type { MacroNode, Period } from '@/types';
 
 function findNode(tree: MacroNode, id: string): MacroNode | null {
@@ -67,9 +67,7 @@ export default function MacroTab({ macroData, period }: Props) {
 
   const theme = getEChartsTheme();
 
-  // Cool/warm alternating chart palette. Cards keep their semantic colours,
-  // but the donut uses the unified 6-step palette so segments are unambiguous.
-  const CHART_PALETTE = ['#2EA043', '#4A90D9', '#BFA06A', '#C47F17', '#D4564E', '#5BA3C9'];
+  // Donut uses the unified 6-step palette so segments are unambiguous.
   const bgColor = getComputedStyle(document.documentElement)
     .getPropertyValue('--bg-2').trim() || '#0E1420';
 

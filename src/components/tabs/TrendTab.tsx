@@ -52,7 +52,7 @@ function calcBB(series: DailySeries[], period = 20, mult = 2): BBPoint[] {
 }
 
 const EVENT_COLORS: Record<string, string> = {
-  fed: '#4a90e2', macro: '#27ae60', earnings: '#f7931a', geopolitical: '#e74c3c',
+  fed: '#4A90D9', macro: '#2EA043', earnings: '#C47F17', geopolitical: '#D4564E',
 };
 
 interface Props {
@@ -131,7 +131,7 @@ export default function TrendTab({ quotes, eventsData, period, selected, onSelec
 
     const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
     const gridColor = isDark ? 'rgba(99,179,237,0.06)' : 'rgba(59,130,246,0.08)';
-    const textColor = isDark ? '#94a3b8' : '#5a6e8a';
+    const textColor = isDark ? '#6E7A8A' : '#5a6e8a';
     const borderColor = isDark ? 'rgba(99,179,237,0.15)' : 'rgba(59,130,246,0.15)';
     const withVol = isSingle && showVolume;
     const chartH = withVol ? 500 : 380;
@@ -160,11 +160,11 @@ export default function TrendTab({ quotes, eventsData, period, selected, onSelec
       if (chartMode === 'candle') {
         // ── Candlestick ─────────────────────────────────────────────
         const cs = chart.addSeries(CandlestickSeries, {
-          upColor:      '#22c55e',
-          downColor:    '#ef4444',
+          upColor:      '#2EA043',
+          downColor:    '#E5534B',
           borderVisible: false,
-          wickUpColor:  '#22c55e',
-          wickDownColor:'#ef4444',
+          wickUpColor:  '#2EA043',
+          wickDownColor:'#E5534B',
         });
         cs.setData(s.map(d => ({
           time: d.date as TimeStr,

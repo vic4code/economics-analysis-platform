@@ -274,8 +274,8 @@ function RollingCorrChart({ data, pair }: RollingChartProps) {
         name: 'Rolling 30d Corr',
         type: 'line',
         data: values,
-        lineStyle: { color: '#4a90e2', width: 2 },
-        itemStyle: { color: '#4a90e2' },
+        lineStyle: { color: '#4A90D9', width: 2 },
+        itemStyle: { color: '#4A90D9' },
         areaStyle: { color: 'rgba(74,144,226,0.12)' },
         symbol: 'none',
         smooth: true,
@@ -302,7 +302,7 @@ function RollingCorrChart({ data, pair }: RollingChartProps) {
         <div className="corr-pair-badges">
           <span className="corr-stat-badge">
             <span className="corr-stat-label">Current</span>
-            <span className="corr-stat-val" style={{ color: current >= 0 ? '#4a90e2' : '#e74c3c' }}>
+            <span className="corr-stat-val" style={{ color: current >= 0 ? '#4A90D9' : '#D4564E' }}>
               {current >= 0 ? '+' : ''}{current.toFixed(3)}
             </span>
           </span>
@@ -312,7 +312,7 @@ function RollingCorrChart({ data, pair }: RollingChartProps) {
           </span>
           <span className="corr-stat-badge">
             <span className="corr-stat-label">Divergence</span>
-            <span className="corr-stat-val" style={{ color: diverge > 0.25 ? '#f7931a' : 'var(--text-muted)' }}>
+            <span className="corr-stat-val" style={{ color: diverge > 0.25 ? '#C47F17' : 'var(--text-muted)' }}>
               {diverge.toFixed(3)}{diverge > 0.25 ? ' ⚠' : ''}
             </span>
           </span>

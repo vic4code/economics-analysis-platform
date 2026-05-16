@@ -1,6 +1,7 @@
 import { SECTOR_ETFS, MACRO_TREE, MONTH_NAMES } from './constants';
 import { generateSeries } from './series';
 import { getAllQuotes, Quote } from './quotes';
+import { SECTOR_COLORS } from '../utils/colors';
 
 export interface CycleRow {
   sector: string;
@@ -11,22 +12,6 @@ export interface CycleRow {
   worst_months: string[];
   color: string;
 }
-
-const SECTOR_COLORS_MAP: Record<string, string> = {
-  Crypto:         '#f7931a',
-  Technology:     '#4a90e2',
-  'Real Estate':  '#8b6d4f',
-  Energy:         '#e67e22',
-  Healthcare:     '#27ae60',
-  Financials:     '#8e44ad',
-  Consumer:       '#e91e8c',
-  Industrials:    '#607d8b',
-  Materials:      '#795548',
-  Utilities:      '#00bcd4',
-  Bonds:          '#3f51b5',
-  Commodities:    '#ffc107',
-  International:  '#ff9800',
-};
 
 export async function getCycleData(): Promise<CycleRow[]> {
   const quotes = await getAllQuotes();
@@ -90,7 +75,7 @@ export async function getCycleData(): Promise<CycleRow[]> {
       current_1y:      Math.round(cur1y * 100) / 100,
       best_months:     bestMonths,
       worst_months:    worstMonths,
-      color:           SECTOR_COLORS_MAP[sector] ?? macroColor ?? '#58a6ff',
+      color:           SECTOR_COLORS[sector] ?? macroColor ?? '#5BA3C9',
     });
   }
 

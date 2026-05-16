@@ -214,9 +214,9 @@ body::before {
 }
 .update-time {
   font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  color: var(--ink-2);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--ink-1);
   white-space: nowrap;
   text-transform: uppercase;
 }
@@ -1101,8 +1101,8 @@ body::before {
   align-items: center;
   color: var(--text-muted);
 }
-.legend-candle-up   { color: #22c55e; font-weight: 600; }
-.legend-candle-down { color: #ef4444; font-weight: 600; }
+.legend-candle-up   { color: #2EA043; font-weight: 600; }
+.legend-candle-down { color: #E5534B; font-weight: 600; }
 
 /* ── Hidden utility ─────────────────────────────────────────────── */
 .hidden { display: none !important; }
@@ -1135,8 +1135,8 @@ body::before {
   color: var(--text-muted);
 }
 .ql { padding: 2px 6px; background: var(--surface2); border-radius: 4px; text-align: center; }
-.ql-tr, .ql-br { color: #4ade80; }
-.ql-tl, .ql-bl { color: #f87171; }
+.ql-tr, .ql-br { color: #2EA043; }
+.ql-tl, .ql-bl { color: #E5534B; }
 
 /* ── Chip controls ─────────────────────────────────────────────── */
 .chip-controls {
@@ -1334,8 +1334,8 @@ body::before {
 .perc-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
 .perc-rank { font-size: 0.82rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; text-align: right; }
 .perc-meta { display: flex; gap: 8px; font-size: 0.72rem; color: var(--text-muted); flex-wrap: wrap; }
-.perc-best  { color: #4ade80; }
-.perc-worst { color: #f87171; }
+.perc-best  { color: #2EA043; }
+.perc-worst { color: #E5534B; }
 
 /* ══════════════════════════════════════════════════════════════════
    ETF MAPPING TABLE
@@ -1417,8 +1417,9 @@ body::before {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--accent), var(--accent-end));
+  height: 1px;
+  background: var(--gold);
+  opacity: 0.6;
 }
 [data-theme="light"] .loader-card {
   background: #fff;
@@ -1431,20 +1432,15 @@ body::before {
   gap: 0.45rem;
 }
 .loader-brand-icon {
-  font-size: 1.3rem;
-  background: linear-gradient(135deg, var(--accent), var(--accent-end));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: 1.2rem;
+  color: var(--gold);
 }
 .loader-brand-name {
-  font-size: 1.05rem;
-  font-weight: 800;
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 400;
   letter-spacing: -0.01em;
-  background: linear-gradient(90deg, var(--accent), var(--accent-end));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--ink-0);
 }
 
 .loader-spinner-wrap {
@@ -1495,7 +1491,7 @@ body::before {
 }
 .loader-progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent-end));
+  background: var(--gold);
   border-radius: 2px;
   transition: width 0.55s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -1560,8 +1556,8 @@ body::before {
   padding: 0 0.25rem;
 }
 .sankey-legend-item { font-weight: 600; }
-.sankey-legend-out  { color: #f87171; }
-.sankey-legend-in   { color: #4ade80; }
+.sankey-legend-out  { color: #E5534B; }
+.sankey-legend-in   { color: #2EA043; }
 .sankey-legend-center {
   font-size: 0.72rem;
   color: var(--text-muted);
@@ -2137,9 +2133,9 @@ body::before {
 
 .ticker-sym {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 400;
-  color: var(--ink-2);
+  color: var(--ink-1);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -2215,13 +2211,13 @@ body::before {
 .tab-group-label {
   display: flex;
   align-items: center;
-  padding: 0 6px 0 12px;
+  padding: 0 8px 0 14px;
   font-family: var(--font-mono);
-  font-size: 8.5px;
+  font-size: 9.5px;
   font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: var(--ink-2);
+  letter-spacing: 0.14em;
+  color: var(--ink-1);
   white-space: nowrap;
   border-right: 1px solid var(--line-0);
   opacity: 1;
