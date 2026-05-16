@@ -163,7 +163,12 @@ export default function CycleTab({ eventsData, cycleData }: Props) {
             </div>
           </div>
         ) : (
-          <p style={{ color: '#64748b' }}>Loading…</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="skeleton" style={{ height: 320 }} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
+              {[1,2,3,4].map(i => <div key={i} className="skeleton" style={{ height: 80 }} />)}
+            </div>
+          </div>
         )}
       </section>
 

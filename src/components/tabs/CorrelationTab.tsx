@@ -342,7 +342,13 @@ export default function CorrelationTab({ correlationData }: Props) {
     return (
       <main className="tab-panel active">
         <div className="panel">
-          <p style={{ color: 'var(--text-muted)' }}>Loading…</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: '1.25rem' }}>
+            <div className="skeleton" style={{ height: 380 }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="skeleton" style={{ height: 180 }} />
+              <div className="skeleton" style={{ height: 180 }} />
+            </div>
+          </div>
         </div>
       </main>
     );
