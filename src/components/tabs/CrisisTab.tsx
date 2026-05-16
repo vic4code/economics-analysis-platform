@@ -432,7 +432,14 @@ export default function CrisisTab({ crisisData, allEvents }: Props) {
   if (!crisisData || !allEvents) {
     return (
       <main className="tab-panel active">
-        <div className="panel"><p style={{ color: 'var(--text-muted)' }}>Loading…</p></div>
+        <div className="crisis-wrap">
+          <div className="skeleton" style={{ height: 60, borderRadius: 'var(--radius)' }} />
+          <div className="crisis-cards-grid">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="skeleton" style={{ height: 140, borderRadius: 'var(--radius)' }} />
+            ))}
+          </div>
+        </div>
       </main>
     );
   }

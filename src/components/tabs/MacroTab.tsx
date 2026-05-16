@@ -25,7 +25,29 @@ export default function MacroTab({ macroData, period }: Props) {
   // Reset path when period changes
   useEffect(() => { setMacroPath(['global']); }, [period]);
 
-  if (!macroData) return <div className="panel"><p style={{color:'var(--text-muted)'}}>Loading…</p></div>;
+  if (!macroData) return (
+    <div className="tab-panel active">
+      <div className="panel">
+        <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem' }}>
+          {[80, 110, 95].map((w, i) => (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div className="skeleton" style={{ width: w * 0.7, height: 11 }} />
+              <div className="skeleton" style={{ width: w, height: 20 }} />
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+          <div className="skeleton" style={{ height: 200 }} />
+          <div className="skeleton" style={{ height: 200 }} />
+        </div>
+        <div className="macro-cards">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="skeleton" style={{ height: 88 }} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
   const currentId = macroPath[macroPath.length - 1];
   const current = findNode(macroData, currentId) ?? macroData;

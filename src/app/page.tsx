@@ -93,6 +93,7 @@ export default function DashboardPage() {
   // Refresh macro when period changes (skip if quotes not loaded yet)
   useEffect(() => {
     if (!quotes.length) return;
+    setMacroData(null); // show skeleton while refetching
     fetchMacro(period).then(setMacroData);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period]);

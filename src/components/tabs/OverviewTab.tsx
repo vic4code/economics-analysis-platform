@@ -199,7 +199,22 @@ export default function OverviewTab({ quotes, period, onSelectSymbolForTrend }: 
 
   if (!quotes.length) return (
     <main className="tab-panel active">
-      <div className="panel"><p style={{color:'#64748b'}}>Loading…</p></div>
+      <div className="stat-row" style={{ marginBottom: '1.25rem' }}>
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="stat-card">
+            <div className="skeleton" style={{ width: 80, height: 11, marginBottom: 10 }} />
+            <div className="skeleton" style={{ width: 56, height: 28, marginBottom: 8 }} />
+            <div className="skeleton" style={{ width: 110, height: 18, marginBottom: 6 }} />
+            <div className="skeleton" style={{ width: 70, height: 13 }} />
+          </div>
+        ))}
+      </div>
+      <div className="panel">
+        <div className="skeleton" style={{ height: 340 }} />
+      </div>
+      <div className="panel">
+        <div className="skeleton" style={{ height: 240 }} />
+      </div>
     </main>
   );
 

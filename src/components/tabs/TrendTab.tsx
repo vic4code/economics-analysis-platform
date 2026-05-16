@@ -354,7 +354,10 @@ export default function TrendTab({ quotes, eventsData, period, selected, onSelec
 
         <div style={{ position: 'relative', minHeight: `${chartH}px` }}>
           {loading && (
-            <p style={{ color: '#64748b', textAlign: 'center', paddingTop: '2rem' }}>Loading…</p>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', gap: 8, padding: '0.5rem' }}>
+              <div className="skeleton" style={{ height: '65%', borderRadius: 'var(--radius-sm)' }} />
+              <div className="skeleton" style={{ height: '30%', borderRadius: 'var(--radius-sm)' }} />
+            </div>
           )}
           <div
             ref={chartContainerRef}

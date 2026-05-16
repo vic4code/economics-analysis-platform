@@ -44,7 +44,13 @@ export default function FlowChipsTab({ quotes, period }: Props) {
     return (
       <main className="tab-panel active">
         <div className="panel">
-          <p style={{ color: '#64748b' }}>Loading…</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="skeleton" style={{ height: 260 }} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="skeleton" style={{ height: 200 }} />
+              <div className="skeleton" style={{ height: 200 }} />
+            </div>
+          </div>
         </div>
       </main>
     );
