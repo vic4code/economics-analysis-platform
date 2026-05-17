@@ -100,8 +100,9 @@ export default function MacroTab({ macroData, period }: Props) {
       })),
       label: { show: false },
       emphasis: { scale: true, scaleSize: 4, itemStyle: { shadowBlur: 0 } },
-      animationDuration: 900,
+      animationDuration: 520,
       animationEasing: 'quarticOut',
+      animationDurationUpdate: 0,
     }],
   };
 

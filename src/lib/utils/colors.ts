@@ -30,10 +30,8 @@ export const TREND_PALETTE = [
   "#6E7A8A", // steel
 ];
 
-// Unified 6-step chart palette — exposed so components can stop hard-coding it.
-export const CHART_PALETTE = [
-  "#2EA043", "#4A90D9", "#BFA06A", "#C47F17", "#D4564E", "#5BA3C9",
-];
+// Re-export the central chart palette so existing imports keep working.
+export { CHART_PALETTE, colors } from '../constants/colors';
 
 export function changeColor(pct: number, alpha = 1): string {
   const clamp = Math.max(-6, Math.min(6, pct));

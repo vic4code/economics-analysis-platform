@@ -39,7 +39,7 @@ export default function Loader({ show }: Props) {
         <div className="loader-progress">
           <div
             className="loader-progress-bar"
-            style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
+            style={{ transform: `scaleX(${(step + 1) / STEPS.length})` }}
           />
         </div>
       </div>
