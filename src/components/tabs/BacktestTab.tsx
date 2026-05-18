@@ -104,9 +104,9 @@ export default function BacktestTab({ quotes }: Props) {
   }
 
   const STRATS = [
-    { key: 'momentum' as const, label: `Momentum Rotation (Top${topN})`, color: '#4ade80' },
-    { key: 'equal_weight' as const, label: 'Equal Weight', color: '#60a5fa' },
-    { key: 'spy' as const, label: 'SPY Benchmark', color: '#94a3b8' },
+    { key: 'momentum' as const, label: `Momentum Rotation (Top${topN})`, color: '#2EA043' },
+    { key: 'equal_weight' as const, label: 'Equal Weight', color: '#BFA06A' },
+    { key: 'spy' as const, label: 'SPY Benchmark', color: '#6E7A8A' },
   ];
 
   const STAT_ROWS = [
@@ -200,7 +200,7 @@ export default function BacktestTab({ quotes }: Props) {
                       <div
                         key={s.key}
                         className="strat-cell"
-                        style={{ color: pos ? '#4ade80' : '#f87171' }}
+                        style={{ color: pos ? '#2EA043' : '#E5534B' }}
                       >
                         {disp}
                       </div>
@@ -406,7 +406,7 @@ export default function BacktestTab({ quotes }: Props) {
                   <div className="bt-stat-label">{s.label}</div>
                   <div
                     className="bt-stat-value"
-                    style={{ color: s.pos ? '#4ade80' : '#f87171' }}
+                    style={{ color: s.pos ? '#2EA043' : '#E5534B' }}
                   >
                     {s.val}
                   </div>
@@ -449,9 +449,9 @@ export default function BacktestTab({ quotes }: Props) {
                         name: 'My Portfolio',
                         type: 'line',
                         data: btData!.portfolio.map(p => p.value),
-                        lineStyle: { color: '#4a90e2', width: 2.5 },
-                        itemStyle: { color: '#4a90e2' },
-                        areaStyle: { color: '#4a90e222' },
+                        lineStyle: { color: '#4A90D9', width: 2.5 },
+                        itemStyle: { color: '#4A90D9' },
+                        areaStyle: { color: '#4A90D922' },
                         symbol: 'none',
                         smooth: true,
                       },
@@ -459,8 +459,8 @@ export default function BacktestTab({ quotes }: Props) {
                         name: 'SPY (S&P 500)',
                         type: 'line',
                         data: btData!.benchmark.map(b => b.value),
-                        lineStyle: { color: '#94a3b8', width: 1.5, type: 'dashed' },
-                        itemStyle: { color: '#94a3b8' },
+                        lineStyle: { color: '#6E7A8A', width: 1.5, type: 'dashed' },
+                        itemStyle: { color: '#6E7A8A' },
                         symbol: 'none',
                       },
                     ],
@@ -473,7 +473,7 @@ export default function BacktestTab({ quotes }: Props) {
             <div className="bt-composition">
               <h3
                 style={{
-                  color: '#94a3b8',
+                  color: '#6E7A8A',
                   fontSize: '0.85rem',
                   marginBottom: '0.75rem',
                 }}

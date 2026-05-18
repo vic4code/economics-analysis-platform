@@ -26,25 +26,25 @@ const PHASES: Phase[] = [
   {
     name: 'Expansion',   nameZh: 'Expansion',
     startAngle: 0,
-    color: '#4a90e2',
+    color: '#4A90D9',
     description: 'Tech / Industrials / Crypto lead; growth accelerates',
   },
   {
     name: 'Slowdown',    nameZh: 'Slowdown',
     startAngle: Math.PI / 2,
-    color: '#f7931a',
+    color: '#C47F17',
     description: 'Energy / Commodities strong; inflation rising',
   },
   {
     name: 'Contraction', nameZh: 'Contraction',
     startAngle: Math.PI,
-    color: '#e74c3c',
+    color: '#D4564E',
     description: 'Defensive sectors: Healthcare / Bonds / Utilities',
   },
   {
     name: 'Recovery',    nameZh: 'Recovery',
     startAngle: (3 * Math.PI) / 2,
-    color: '#27ae60',
+    color: '#2EA043',
     description: 'Financials / Real Estate / Consumer recovering',
   },
 ];

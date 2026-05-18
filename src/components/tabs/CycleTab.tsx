@@ -6,10 +6,10 @@ import type { MockEvent, CycleRow } from '@/types';
 import { useRef, useEffect } from 'react';
 
 const EVENT_COLORS: Record<string, string> = {
-  fed:          '#4a90e2',
-  macro:        '#27ae60',
-  earnings:     '#f7931a',
-  geopolitical: '#e74c3c',
+  fed:          '#4A90D9',
+  macro:        '#2EA043',
+  earnings:     '#C47F17',
+  geopolitical: '#D4564E',
 };
 const EVENT_ICONS: Record<string, string> = {
   fed:          '🏦',
@@ -140,9 +140,9 @@ export default function CycleTab({ eventsData, cycleData }: Props) {
             <div className="clock-sidebar">
               <div className="clock-sidebar-title">Sector Strength Rank</div>
               {sortedCycle.slice(0, 8).map(d => {
-                const clr = d.percentile_rank >= 70 ? '#4ade80'
+                const clr = d.percentile_rank >= 70 ? '#2EA043'
                           : d.percentile_rank >= 40 ? '#fbbf24'
-                          : '#f87171';
+                          : '#E5534B';
                 return (
                   <div key={d.sector} className="clock-rank-row">
                     <span className="clock-rank-sector" style={{ color: d.color }}>
@@ -256,9 +256,9 @@ export default function CycleTab({ eventsData, cycleData }: Props) {
         </div>
         <div className="percentile-grid">
           {sortedCycle.map(d => {
-            const clr = d.percentile_rank >= 70 ? '#4ade80'
+            const clr = d.percentile_rank >= 70 ? '#2EA043'
                       : d.percentile_rank >= 40 ? '#fbbf24'
-                      : '#f87171';
+                      : '#E5534B';
             return (
               <div key={d.sector} className="perc-row">
                 <div className="perc-sector" style={{ color: d.color }}>{d.sector}</div>

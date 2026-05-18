@@ -10,6 +10,7 @@ import type { Quote, MacroNode, MockEvent, CycleRow, CrisisEvent, CorrelationMat
 
 const TAB_ORDER = ['macro', 'overview', 'trends', 'backtest', 'flow', 'cycle', 'crisis', 'correlation'];
 import { getMarketStatus, getPollInterval, type MarketStatus } from '@/lib/utils/marketHours';
+import { formatUpdateTime } from '@/lib/utils/time';
 
 // Dynamic imports to avoid SSR for canvas/chart components
 const MacroTab = dynamic(() => import('@/components/tabs/MacroTab'), {
@@ -85,7 +86,7 @@ export default function DashboardPage() {
         setCrisisData(cr);
         setCorrelationData(corr);
         setUpdateTime(
-          'Updated ' + new Date().toLocaleTimeString('en-US'),
+          formatUpdateTime(new Date()),
         );
       })
       .finally(() => setLoading(false));
@@ -109,7 +110,7 @@ export default function DashboardPage() {
     async function refresh() {
       const q = (await fetch('/api/quotes').then(r => r.json())) as Quote[];
       setQuotes(q);
-      setUpdateTime('Updated ' + new Date().toLocaleTimeString('en-US'));
+      setUpdateTime(formatUpdateTime(new Date()));
 
       // Detect price changes for flash animation
       const newFlash: Record<string, 'up' | 'down' | null> = {};

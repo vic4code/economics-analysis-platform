@@ -11,16 +11,16 @@ interface Props {
 
 function LogoMark() {
   return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-      <rect width="28" height="28" rx="7" fill="url(#logo-g)" />
-      <polyline points="5,21 10,14 16,17 23,8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="23" cy="8" r="2" fill="white" />
-      <defs>
-        <linearGradient id="logo-g" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#3b82f6" />
-          <stop offset="100%" stopColor="#8b5cf6" />
-        </linearGradient>
-      </defs>
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <path
+        d="M1 14 L9 2 L17 14"
+        stroke="var(--gold)"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M4.5 13.5 L9 6 L13.5 13.5 Z" fill="var(--gold)" fillOpacity="0.15" />
+      <circle cx="9" cy="16.2" r="1.2" fill="var(--gold)" />
     </svg>
   );
 }
@@ -42,30 +42,33 @@ export default function TopBar({ updateTime, marketStatus }: Props) {
 
   return (
     <header className="topbar">
-      <div className="topbar-brand">
-        <LogoMark />
-        <div className="brand-text">
-          <span className="brand-name">Fund Flow</span>
-          <span className="brand-sub">Global Capital Analytics</span>
-        </div>
-      </div>
+      <div className="topbar-strip">
+        <a className="topbar-brand" href="/" aria-label="Fund Flow home">
+          <LogoMark />
+          <span className="brand-name">
+            Fund<em>Flow</em>
+          </span>
+        </a>
 
-      <div className="topbar-meta">
-        <span className={`market-status-badge market-${marketStatus}`}>
-          <span className="market-dot" />
-          {MARKET_STATUS_LABEL[marketStatus]}
-        </span>
-        <span className="update-time">{updateTime}</span>
-        <button
-          onClick={toggleTheme}
-          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-          className="theme-toggle-btn"
-          aria-label="Toggle theme"
-        >
-          {theme === 'dark'
-            ? <Sun size={15} strokeWidth={1.75} />
-            : <Moon size={15} strokeWidth={1.75} />}
-        </button>
+        <div className="topbar-spacer" />
+
+        <div className="topbar-meta">
+          <span className={`market-status-badge market-${marketStatus}`}>
+            <span className="market-dot" />
+            {MARKET_STATUS_LABEL[marketStatus]}
+          </span>
+          <span className="update-time">{updateTime}</span>
+          <button
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="theme-toggle-btn"
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark'
+              ? <Sun size={14} strokeWidth={1.6} />
+              : <Moon size={14} strokeWidth={1.6} />}
+          </button>
+        </div>
       </div>
     </header>
   );

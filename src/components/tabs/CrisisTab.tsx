@@ -6,10 +6,10 @@ import { SECTOR_COLORS } from '@/lib/utils/colors';
 import type { CrisisEvent, CrisisPricePoint } from '@/types';
 
 const TYPE_COLORS: Record<string, string> = {
-  fed:          '#4a90e2',
-  macro:        '#27ae60',
-  earnings:     '#f7931a',
-  geopolitical: '#e74c3c',
+  fed:          '#4A90D9',
+  macro:        '#2EA043',
+  earnings:     '#C47F17',
+  geopolitical: '#D4564E',
 };
 
 // ── Mini price chart (SVG sparkline) ─────────────────────────────
@@ -55,32 +55,32 @@ function CrisisSparkline({
       {/* Area fill */}
       <defs>
         <linearGradient id="spark-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="#f87171" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="#f87171" stopOpacity="0.02" />
+          <stop offset="0%"   stopColor="#E5534B" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#E5534B" stopOpacity="0.02" />
         </linearGradient>
       </defs>
       <path d={areaD} fill="url(#spark-grad)" />
 
       {/* Price line */}
-      <path d={pathD} fill="none" stroke="#f87171" strokeWidth={1.5} />
+      <path d={pathD} fill="none" stroke="#E5534B" strokeWidth={1.5} />
 
       {/* Crash start marker */}
       <line x1={px(0)} y1={0} x2={px(0)} y2={height}
-        stroke="#f87171" strokeWidth={1} strokeDasharray="2,2" strokeOpacity={0.6} />
+        stroke="#E5534B" strokeWidth={1} strokeDasharray="2,2" strokeOpacity={0.6} />
 
       {/* Bottom marker */}
       {track.find(p => p.day === bottomD) && (
         <circle cx={px(bottomD)} cy={py(track.find(p => p.day === bottomD)!.price)}
-          r={3} fill="#fbbf24" />
+          r={3} fill="#C47F17" />
       )}
 
       {/* Buy signal marker */}
       {track.find(p => p.day === signalD) && (
         <g>
           <circle cx={px(signalD)} cy={py(track.find(p => p.day === signalD)!.price)}
-            r={4} fill="#4ade80" />
+            r={4} fill="#2EA043" />
           <text x={px(signalD) + 5} y={py(track.find(p => p.day === signalD)!.price) - 4}
-            fill="#4ade80" fontSize={7} fontFamily="Inter, sans-serif">BUY</text>
+            fill="#2EA043" fontSize={7} fontFamily="Inter, sans-serif">BUY</text>
         </g>
       )}
     </svg>
@@ -139,7 +139,7 @@ function CrisisTimeline({
           const x = tx(ev.date);
           const isCrash = ev.magnitude <= -2;
           const isPositive = ev.magnitude > 0;
-          const color = isCrash ? '#f87171' : isPositive ? '#4ade80' : TYPE_COLORS[ev.type] ?? '#58a6ff';
+          const color = isCrash ? '#E5534B' : isPositive ? '#2EA043' : TYPE_COLORS[ev.type] ?? '#5BA3C9';
           const barH = Math.abs(ev.magnitude) * 12;
           const y = isPositive ? MID_Y - barH : MID_Y;
 
@@ -169,15 +169,15 @@ function CrisisTimeline({
           const x = tx(crisis.date);
           return (
             <circle cx={x} cy={MID_Y} r={10}
-              fill="none" stroke="#f87171" strokeWidth={1.5} strokeOpacity={0.7} />
+              fill="none" stroke="#E5534B" strokeWidth={1.5} strokeOpacity={0.7} />
           );
         })()}
 
         {/* Legend */}
         <g transform={`translate(${W - MARGIN.right - 160}, ${MARGIN.top - 18})`}>
-          <rect x={0} y={0} width={6} height={18} fill="#f87171" rx={1} fillOpacity={0.9} />
+          <rect x={0} y={0} width={6} height={18} fill="#E5534B" rx={1} fillOpacity={0.9} />
           <text x={10} y={13} fill="var(--text-muted)" fontSize={9} fontFamily="Inter, sans-serif">Major crash</text>
-          <rect x={80} y={0} width={6} height={18} fill="#4ade80" rx={1} fillOpacity={0.5} />
+          <rect x={80} y={0} width={6} height={18} fill="#2EA043" rx={1} fillOpacity={0.5} />
           <text x={90} y={13} fill="var(--text-muted)" fontSize={9} fontFamily="Inter, sans-serif">Rally</text>
         </g>
       </svg>
@@ -196,7 +196,7 @@ function CrisisCard({
   onClick: () => void;
 }) {
   const severity = Math.abs(crisis.magnitude);
-  const color = severity >= 3 ? '#f87171' : '#fbbf24';
+  const color = severity >= 3 ? '#E5534B' : '#C47F17';
 
   return (
     <div
@@ -210,7 +210,7 @@ function CrisisCard({
         </div>
         <div className="crisis-card-date">{crisis.date}</div>
         <span className="crisis-type-badge"
-          style={{ background: TYPE_COLORS[crisis.type] ?? '#58a6ff' }}>
+          style={{ background: TYPE_COLORS[crisis.type] ?? '#5BA3C9' }}>
           {crisis.type}
         </span>
       </div>
@@ -220,7 +220,7 @@ function CrisisCard({
       <div className="crisis-metrics">
         <div className="crisis-metric">
           <span className="crisis-metric-label">Max Drawdown</span>
-          <span className="crisis-metric-val" style={{ color: '#f87171' }}>
+          <span className="crisis-metric-val" style={{ color: '#E5534B' }}>
             {crisis.maxDrawdown.toFixed(1)}%
           </span>
         </div>
@@ -230,13 +230,13 @@ function CrisisCard({
         </div>
         <div className="crisis-metric">
           <span className="crisis-metric-label">Recovery</span>
-          <span className="crisis-metric-val" style={{ color: '#4ade80' }}>
+          <span className="crisis-metric-val" style={{ color: '#2EA043' }}>
             {crisis.recoveryDays}d
           </span>
         </div>
         <div className="crisis-metric">
           <span className="crisis-metric-label">Buy Signal Gain</span>
-          <span className="crisis-metric-val" style={{ color: '#4ade80' }}>
+          <span className="crisis-metric-val" style={{ color: '#2EA043' }}>
             +{crisis.buySignalGain}%
           </span>
         </div>
@@ -298,7 +298,7 @@ function SectorDrawdownChart({ crisis }: { crisis: CrisisEvent }) {
       type: 'bar',
       data: values.map((v, i) => ({
         value: v,
-        itemStyle: { color: (SECTOR_COLORS[labels[i]] ?? '#58a6ff') + 'cc', borderRadius: [0, 3, 3, 0] },
+        itemStyle: { color: (SECTOR_COLORS[labels[i]] ?? '#5BA3C9') + 'cc', borderRadius: [0, 3, 3, 0] },
       })),
       barMaxWidth: 22,
     }],
@@ -317,10 +317,10 @@ function ComparisonChart({ crises }: { crises: CrisisEvent[] }) {
   return (
     <div className="comparison-grid">
       {([
-        ['Max Drawdown (%)', crises.map(c => c.maxDrawdown), '#f87171'],
-        ['Days to Bottom', crises.map(c => c.drawdownDays), '#fbbf24'],
-        ['Recovery Days', crises.map(c => c.recoveryDays), '#60a5fa'],
-        ['Buy Signal Gain (%)', crises.map(c => c.buySignalGain), '#4ade80'],
+        ['Max Drawdown (%)', crises.map(c => c.maxDrawdown), '#E5534B'],
+        ['Days to Bottom', crises.map(c => c.drawdownDays), '#C47F17'],
+        ['Recovery Days', crises.map(c => c.recoveryDays), '#5BA3C9'],
+        ['Buy Signal Gain (%)', crises.map(c => c.buySignalGain), '#2EA043'],
       ] as [string, number[], string][]).map(([title, values, color]) => (
         <div key={title}>
           <div className="comparison-chart-title">{title}</div>
@@ -390,10 +390,10 @@ function BuySignalTable({ crises }: { crises: CrisisEvent[] }) {
               <td style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {c.title}
               </td>
-              <td className="mono" style={{ color: '#f87171' }}>{c.maxDrawdown.toFixed(1)}%</td>
+              <td className="mono" style={{ color: '#E5534B' }}>{c.maxDrawdown.toFixed(1)}%</td>
               <td className="mono">{c.bottomDate}</td>
               <td className="mono">+{c.buySignalDay}d</td>
-              <td className="mono" style={{ color: '#4ade80' }}>+{c.buySignalGain}%</td>
+              <td className="mono" style={{ color: '#2EA043' }}>+{c.buySignalGain}%</td>
               <td className="mono">{c.recoveryDate}</td>
               <td className="mono">{c.recoveryDays}d</td>
             </tr>
@@ -507,11 +507,11 @@ export default function CrisisTab({ crisisData, allEvents }: Props) {
               </div>
               <div className="crisis-detail-stat">
                 <span className="crisis-detail-label">Market Bottom</span>
-                <span className="crisis-detail-val" style={{ color: '#f87171' }}>{selectedCrisis.bottomDate}</span>
+                <span className="crisis-detail-val" style={{ color: '#E5534B' }}>{selectedCrisis.bottomDate}</span>
               </div>
               <div className="crisis-detail-stat">
                 <span className="crisis-detail-label">Max Drawdown</span>
-                <span className="crisis-detail-val" style={{ color: '#f87171' }}>
+                <span className="crisis-detail-val" style={{ color: '#E5534B' }}>
                   {selectedCrisis.maxDrawdown.toFixed(1)}%
                 </span>
               </div>
@@ -521,19 +521,19 @@ export default function CrisisTab({ crisisData, allEvents }: Props) {
               </div>
               <div className="crisis-detail-stat">
                 <span className="crisis-detail-label">Buy Signal</span>
-                <span className="crisis-detail-val" style={{ color: '#4ade80' }}>
+                <span className="crisis-detail-val" style={{ color: '#2EA043' }}>
                   +{selectedCrisis.buySignalDay}d from bottom
                 </span>
               </div>
               <div className="crisis-detail-stat">
                 <span className="crisis-detail-label">Signal → Recovery</span>
-                <span className="crisis-detail-val" style={{ color: '#4ade80' }}>
+                <span className="crisis-detail-val" style={{ color: '#2EA043' }}>
                   +{selectedCrisis.buySignalGain}%
                 </span>
               </div>
               <div className="crisis-detail-stat">
                 <span className="crisis-detail-label">Full Recovery</span>
-                <span className="crisis-detail-val" style={{ color: '#4ade80' }}>{selectedCrisis.recoveryDate}</span>
+                <span className="crisis-detail-val" style={{ color: '#2EA043' }}>{selectedCrisis.recoveryDate}</span>
               </div>
               <div className="crisis-detail-stat">
                 <span className="crisis-detail-label">Recovery Duration</span>

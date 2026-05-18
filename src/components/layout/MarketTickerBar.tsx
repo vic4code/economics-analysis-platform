@@ -46,7 +46,7 @@ export default function MarketTickerBar({ quotes, period, onSelectSymbol, flashM
               key={q.symbol}
               className={`ticker-item${isIndex ? ' ticker-index' : ''}${flash === 'up' ? ' flash-pos' : flash === 'down' ? ' flash-neg' : ''}`}
               onClick={() => onSelectSymbol(q.symbol)}
-              title={`${q.name} — click to view chart`}
+              title={`${q.name} · click to view chart`}
             >
               {isIndex && idx > 0 && idx === INDEX_SYMBOLS.indexOf(q.symbol) && (
                 <span className="ticker-sep" />
