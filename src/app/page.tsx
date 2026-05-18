@@ -6,6 +6,7 @@ import TabNav from '@/components/layout/TabNav';
 import Loader from '@/components/layout/Loader';
 import MarketTickerBar from '@/components/layout/MarketTickerBar';
 import QuickSearch from '@/components/layout/QuickSearch';
+import HeroSection from '@/components/layout/HeroSection';
 import type { Quote, MacroNode, MockEvent, CycleRow, CrisisEvent, CorrelationMatrix, Period } from '@/types';
 
 const TAB_ORDER = ['macro', 'overview', 'trends', 'backtest', 'flow', 'cycle', 'crisis', 'correlation'];
@@ -39,6 +40,7 @@ const CorrelationTab = dynamic(() => import('@/components/tabs/CorrelationTab'),
 });
 
 export default function DashboardPage() {
+  const [heroShown, setHeroShown] = useState(true);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('macro');
   const [tabDir, setTabDir] = useState<'left' | 'right'>('right');
@@ -155,6 +157,15 @@ export default function DashboardPage() {
   function handleViewChart(sym: string) {
     setSelected([sym]);
     changeTab('trends');
+  }
+
+  function handleEnterDashboard() {
+    setHeroShown(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  if (heroShown) {
+    return <HeroSection onEnter={handleEnterDashboard} />;
   }
 
   return (
